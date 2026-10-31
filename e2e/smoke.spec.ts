@@ -158,6 +158,25 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
+  test('every ultimate plays its cut-in and animation without errors', async ({ page }) => {
+    test.setTimeout(120_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startRun(page);
+    for (const id of ['sonic', 'tails', 'knuckles', 'amy', 'cream']) {
+      await setup(page, `
+        const F = s.player.constructor;
+        const f = s.party.find(x => x.def.id === '${id}') ?? new F('${id}', 30);
+        if (!s.party.includes(f)) s.party[2] = f;
+        s.player = f; s.player.level = 30; s.player.boost = 6; s.player.hp = s.player.maxHp; s.enemy.hp = 99999;
+        s.runTurn(window.MOVES[s.player.def.ultimate]);
+      `);
+      await expect.poll(async () => (await battle(page)).menu, { timeout: 30_000 }).not.toBe('command');
+      await waitForMenu(page, 'command');
+    }
+    expect(errors).toEqual([]);
+  });
+
   test('a lost run deletes the save', async ({ page }) => {
     await openGame(page);
     await startRun(page);

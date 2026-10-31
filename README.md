@@ -19,6 +19,7 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 - **Team of three.** Sonic, Tails and Amy are available from the start. Knuckles and Cream show up as rivals; beat them to unlock them, and they can join your current run.
 - **Boost meter instead of PP.** Spin Attack is free and builds Boost. Stronger moves cost Boost and never miss. Every character learns an ultimate at level 30 that uses the full meter.
 - **Stuns and flinches.** Some moves stop the foe from acting for a turn or more.
+- **Ultimate cut-ins.** Every ultimate opens with a Persona-style cut-in and has its own animation: Sonic turns Super Sonic, Tails calls down lightning, Knuckles hits like a meteor, Amy whips up a tornado and Cream calls in the Chao.
 - **Types.** Speed, Fly and Power, based on the team types from Sonic Advance 3 and Heroes. Fly beats Power, Power beats Speed, Speed beats Fly.
 - **Passives and ultimates.** Every character has a passive and an ultimate with its own effect: Sonic gets faster with every KO and can make the foe miss, Tails stuns foes and punishes them for it, Knuckles grows stronger the more his stats change, Amy builds up to guaranteed critical hits, and Cream heals the team. Press **C** in character select to see everything a character can do.
 - **Stat stages.** Some moves and passives raise ATK, DEF or SPD by a stage (+25% each, up to +6). Stages reset after every zone boss.
@@ -52,6 +53,7 @@ Mouse and touch work too.
 - **GitHub Actions** runs both test suites on every push to `main`, then builds the game and deploys it to GitHub Pages. A failing test blocks the deploy, and the Playwright report (screenshots and traces) is uploaded when something breaks.
 - A **balance simulation** (`npm run sim`) plays 2000 boss fights per character to check difficulty after a change.
 - An **asset pipeline in Python** (Pillow, NumPy, SciPy) that cuts sprites out of ripped sprite sheets, aligns animation frames on the character's body and builds Phaser texture atlases.
+- Ultimates and hit effects are built from sprite animations plus code-drawn effects (lightning, flames, shockwaves, masked cut-in bands), with a short hit-stop on every hit.
 - The intro recreates the Mode 7 ocean from Sonic Advance 2 by drawing the water line by line on a canvas, with perspective and distance blending.
 - Game data (characters, moves, zones, items) is kept apart from the scenes, so balance changes don't touch battle code.
 
@@ -91,7 +93,8 @@ See [ROADMAP.md](ROADMAP.md).
 Sonic the Hedgehog and all related characters, sprites and music are owned by SEGA and Sonic Team.
 This project uses community sprite rips from [The Spriters Resource](https://www.spriters-resource.com/):
 
-- **Characters:** Ren "Foxx" Ramos (Sonic Advance 3)
+- **Characters:** Ren "Foxx" Ramos (Sonic Advance 3), Bonzai (Super Sonic)
+- **Cut-in art and effects:** QuadFactor (Sonic Battle)
 - **Badniks:** SkyLights (Sonic Advance 3), Fatazz / Turtle474 (Sonic Advance 2)
 - **Backgrounds:** Παρατηρητής, Ice
 - **Title, menus and intro:** raidlandguy

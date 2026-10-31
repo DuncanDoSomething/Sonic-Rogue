@@ -12,6 +12,7 @@ import { ITEMS, ItemDef, shopStock } from '../data/items';
 import { battleTimeScale, charDelay, holdFactor, settings } from '../data/settings';
 import { addHelpButton, addMenuButton } from './ui';
 import { audio, MusicKey } from '../audio';
+import { chaoBlessing, cutIn, playUltimate, type UltCtx } from './ultimates';
 
 const W = 480;
 const H = 270;
@@ -151,7 +152,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------- setup
+  update(_t: number, dt: number) {
+    if (this.hero && this.foe) this.updateStatusFx(dt);
+  }
+
   create() {
+    this.statusFx = new Map();
     this.wave = 1;
     this.rings = 0;
     this.emeralds = 0;
@@ -939,6 +945,37 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** Status-effecten in beeld: sterretjes bij een stun, een gouden schim zolang Light Speed werkt. */
+  private statusFx = new Map<Phaser.GameObjects.Sprite, Phaser.GameObjects.Image[]>();
+  private statusClock = 0;
+  private updateStatusFx(dt: number) {
+    this.statusClock += dt;
+    const pairs: Array<[Phaser.GameObjects.Sprite, Fighter | undefined]> = [[this.hero, this.player], [this.foe, this.enemy]];
+    for (const [spr, f] of pairs) {
+      if (!spr) continue;
+      const stunned = !!f && f.stun > 0 && !f.fainted && spr.visible;
+      let stars = this.statusFx.get(spr);
+      if (stunned && !stars) {
+        stars = [0, 1, 2].map(() => this.add.image(0, 0, 'star').setTint(0xfff27a).setDepth(19));
+        this.statusFx.set(spr, stars);
+      } else if (!stunned && stars) {
+        stars.forEach(st => st.destroy());
+        this.statusFx.delete(spr);
+        stars = undefined;
+      }
+      if (stars) {
+        const top = spr.y - spr.displayHeight - 4;
+        stars.forEach((st, i) => {
+          const a = this.statusClock / 260 + (i / 3) * Math.PI * 2;
+          st.setPosition(spr.x + Math.cos(a) * 14, top + Math.sin(a) * 4).setDepth(Math.sin(a) > 0 ? 19 : spr.depth - 1);
+        });
+      }
+      if (f && f.evade > 0 && !f.fainted && Math.floor(this.statusClock / 140) !== Math.floor((this.statusClock - dt) / 140)) {
+        this.ghost(spr, 0xffd23a);
+      }
+    }
+  }
+
   /** Naam zoals hij in berichten staat: "Tails", "Foe Buzz Beetle", "Rival Knuckles". */
   private who(f: Fighter) { return `${f === this.player ? '' : this.rival ? 'Rival ' : 'Foe '}${f.name}`; }
 
@@ -1000,6 +1037,8 @@ export class BattleScene extends Phaser.Scene {
       const spr = isPlayer ? this.foe : this.hero;
       const c = this.center(spr);
       this.burst(c.x, c.y, hit.crit ? 0xf2c230 : 0xffffff, hit.crit ? 16 : 10);
+      if (move.id !== att.def.ultimate) this.impactFx(att, c.x, c.y, hit.crit, isPlayer ? 1 : -1);
+      this.hitStop(hit.crit ? 120 : 55);
       this.popNumber(spr.x, spr.y - spr.displayHeight - 4, `-${hit.damage}`, hit.crit ? '#f2c230' : '#ffffff');
       this.cameras.main.shake(hit.crit ? 220 : 120, hit.crit ? 0.008 : 0.004);
       if (isPlayer) audio.sfx(isBossWave(this.wave) ? 'bosshit' : 'enemyhit', { volume: 0.8 });
@@ -1011,6 +1050,7 @@ export class BattleScene extends Phaser.Scene {
     };
 
     this.setActionSpeed(isPlayer ? this.hero : this.foe);
+    if (isPlayer && move.id === att.def.ultimate) await cutIn(this, att.def.id, move.name);
     if (isPlayer) await this.charAttack(this.hero, this.player, this.foe, PLAYER_POS, 1, move, strike, hit.missed);
     else if (this.rival) await this.charAttack(this.foe, this.enemy, this.hero, this.foeHome, -1, move, strike, hit.missed);
     else await this.foeAttack(move, strike, hit.missed);
@@ -1071,11 +1111,16 @@ export class BattleScene extends Phaser.Scene {
     const isPlayer = att === this.player;
     const spr = isPlayer ? this.hero : this.foe;
     this.setActionSpeed(spr);
-    const anim = this.playOnce(spr, att.anim('cheer'));
-    audio.sfx('heal1');
-    this.sparkles(spr);
-    await anim;
-    await this.wait(250);
+    if (isPlayer && move.teamHeal) {
+      await cutIn(this, att.def.id, move.name);
+      await chaoBlessing({ ...this.ultCtx(spr, att, this.foe, PLAYER_POS, 1, () => undefined), clearsField: !!(move.clearField && this.fieldEffect) });
+    } else {
+      const anim = this.playOnce(spr, att.anim('cheer'));
+      audio.sfx('heal1');
+      this.sparkles(spr);
+      await anim;
+      await this.wait(250);
+    }
     this.setActionSpeed(null);
     spr.play(att.anim('idle'));
 
@@ -1185,29 +1230,10 @@ export class BattleScene extends Phaser.Scene {
       strike();
       await this.wait(260);
     } else if (move.anim === 'ultimate') {
-      // ultimate: opladen in goud licht, dan drie bliksemsnelle treffers
-      this.cameras.main.flash(250, 255, 240, 160);
-      audio.sfx('spindash', { volume: 0.8 });
-      s.play(p.anim('spin'));
-      const glow = this.time.addEvent({ delay: 60, repeat: 9, callback: () => s.setTintFill(s.isTinted ? 0xffffff : 0xffd23a) });
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
-        const sp = this.add.sprite(s.x + Math.cos(a) * 40, s.y - 20 + Math.sin(a) * 40, 'ui', 'sparkle_0').setDepth(15).setScale(2).play('sparkle');
-        this.tweens.add({ targets: sp, x: s.x, y: s.y - 20, duration: 450, onComplete: () => sp.destroy() });
-      }
-      await this.tween({ targets: s, y: home.y - 30, duration: 600, ease: 'Sine.easeOut' });
-      glow.remove();
-      s.clearTint();
-      for (let i = 0; i < 3; i++) {
-        const trail = this.time.addEvent({ delay: 20, repeat: 8, callback: () => this.ghost(s) });
-        await this.tween({ targets: s, x: tx + dir * (i - 1) * 10, y: ty - 20 * i, duration: 120, ease: 'Quad.easeIn' });
-        trail.remove();
-        strike();
-        const c = this.center(target);
-        this.burst(c.x, c.y, i === 2 ? 0xffd23a : 0xffffff, 12);
-        this.cameras.main.shake(120, 0.008);
-        if (i < 2) await this.tween({ targets: s, x: tx - dir * 50, y: ty - 50, duration: 140, ease: 'Quad.easeOut' });
-      }
+      // eigen animatie per character (ultimates.ts); die zet de sprite zelf weer thuis
+      await playUltimate(this.ultCtx(s, p, target, home, dir, strike));
+      s.play(p.anim('idle'));
+      return;
     } else if (move.anim === 'twirl') {
       // Hammer Twirl: ronddraaiend met de hamer op het doelwit af
       s.play(p.anim('twirl'));
@@ -1232,9 +1258,60 @@ export class BattleScene extends Phaser.Scene {
     s.play(p.anim('idle'));
   }
 
-  private ghost(s: Phaser.GameObjects.Sprite) {
+  /** Alles wat een ultimate-animatie van dit gevecht nodig heeft. */
+  private ultCtx(s: Phaser.GameObjects.Sprite, p: Fighter, target: Phaser.GameObjects.Sprite,
+    home: { x: number; y: number }, dir: number, strike: () => void): UltCtx {
+    return {
+      scene: this, s, p, target, home, dir, strike,
+      restoreTarget: () => { if (target === this.foe) this.startHover(); },
+      center: spr => this.center(spr),
+      ghost: (spr, tint) => this.ghost(spr, tint),
+      burst: (x, y, color, n) => this.burst(x, y, color, n),
+      teamIcons: this.partyHeads,
+    };
+  }
+
+  /** Korte bevriezing bij een treffer, zodat klappen zwaarder voelen. */
+  private hitStop(ms: number) {
+    this.tweens.pauseAll();
+    this.hero.anims.pause();
+    this.foe.anims.pause();
+    window.setTimeout(() => {
+      this.tweens.resumeAll();
+      if (this.hero.anims.isPaused) this.hero.anims.resume();
+      if (this.foe.anims.isPaused) this.foe.anims.resume();
+    }, ms);
+  }
+
+  /** Inslag-effect dat bij het character past (Sonic Battle-effecten). */
+  private impactFx(att: Fighter, x: number, y: number, crit: boolean, dir: number) {
+    const once = (anim: string, scale: number, flip = false, depth = 16) => {
+      const sp = this.add.sprite(x, y, 'fx').setScale(scale).setDepth(depth).setFlipX(flip).play({ key: anim, repeat: 0 });
+      sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
+      return sp;
+    };
+    const id = att.def.id;
+    if (id === 'sonic') once('fx_wind', crit ? 1.3 : 0.9, dir < 0);
+    else if (id === 'knuckles') once('fx_burst', crit ? 1.6 : 1.1);
+    else if (id === 'tails') {
+      const sp = this.add.sprite(x, y, 'fx').setScale(0.6).setDepth(16).setBlendMode(Phaser.BlendModes.ADD).play('fx_energy');
+      this.tweens.add({ targets: sp, scale: crit ? 1.8 : 1.3, alpha: 0, duration: 260, onComplete: () => sp.destroy() });
+    } else if (id === 'amy') {
+      for (let i = 0; i < (crit ? 8 : 4); i++) {
+        const h = this.add.image(x, y, 'heart').setTint(i % 2 ? 0xff6fb5 : 0xffffff).setDepth(17);
+        const a = Math.random() * Math.PI * 2;
+        this.tweens.add({ targets: h, x: x + Math.cos(a) * 26, y: y + Math.sin(a) * 22 - 10, alpha: 0, duration: 520, onComplete: () => h.destroy() });
+      }
+    } else if (id === 'cream') {
+      const ring = this.add.circle(x, y, 6).setStrokeStyle(2, 0x8ad8ff).setDepth(16);
+      this.tweens.add({ targets: ring, scale: 4, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
+    }
+    if (crit) once('fx_slash', 1.4, dir < 0, 17);
+  }
+
+  private ghost(s: Phaser.GameObjects.Sprite, tint = 0x6aa8ff) {
     const g = this.add.sprite(s.x, s.y, s.texture.key, s.frame.name).setOrigin(0.5, 1).setScale(s.scaleX)
-      .setFlipX(s.flipX).setTint(0x6aa8ff).setAlpha(0.5).setDepth(4);
+      .setFlipX(s.flipX).setRotation(s.rotation).setTint(tint).setAlpha(0.5).setDepth(4);
     this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
   }
 

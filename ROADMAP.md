@@ -14,6 +14,7 @@
 - [x] Passives for every character, plus unique ultimate effects
 - [x] Stuns, team heals and moves that change your own stats
 - [x] Character details screen (C) in character select
+- [x] Ultimate cut-ins and animations, impact effects and hit-stop
 - [x] Auto-save after every wave, Save & Quit in the pause menu and Continue on the title screen
 - [x] Unit tests, end-to-end tests and automatic deploys
 

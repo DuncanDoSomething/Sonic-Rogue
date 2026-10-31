@@ -21,6 +21,9 @@ import uiPng from '../assets/ui/ui.png';
 import uiAtlas from '../assets/ui/ui.json';
 import emeraldsPng from '../assets/bg/emeralds.png';
 import emeraldsAtlas from '../assets/bg/emeralds.json';
+import fxPng from '../assets/fx.png';
+import fxAtlas from '../assets/fx.json';
+import fxAnims from '../assets/fx_anims.json';
 import { EMERALDS } from '../data/zones';
 import { preloadSounds } from '../audio';
 
@@ -29,6 +32,8 @@ const BG_IMAGES = {
   ...import.meta.glob('../assets/bg/*.png', { eager: true, query: '?url', import: 'default' }),
   ...import.meta.glob('../assets/menu/*.png', { eager: true, query: '?url', import: 'default' }),
 } as Record<string, string>;
+// grote artworks voor de ultimate cut-in (key = cutin_<id>)
+const CUTINS = import.meta.glob('../assets/cutin/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
 type AnimFrame = string | { frame: string; duration: number };
 interface CharAnim { key: string; frames: AnimFrame[]; frameRate: number; repeat: number; }
@@ -50,6 +55,8 @@ export class BootScene extends Phaser.Scene {
     this.load.atlas('badniks', badniksPng, badniksAtlas as unknown as string);
     this.load.atlas('emeralds', emeraldsPng, emeraldsAtlas as unknown as string);
     this.load.atlas('ui', uiPng, uiAtlas as unknown as string);
+    this.load.atlas('fx', fxPng, fxAtlas as unknown as string);
+    for (const [path, url] of Object.entries(CUTINS)) this.load.image(`cutin_${path.split('/').pop()!.replace('.png', '')}`, url);
     preloadSounds(this);
     for (const [path, url] of Object.entries(BG_IMAGES)) {
       const key = path.split('/').pop()!.replace('.png', '');
@@ -68,6 +75,10 @@ export class BootScene extends Phaser.Scene {
           repeat: a.repeat,
         });
       }
+    }
+    // Super Sonic en effecten: 'ss_dash', 'fx_burst', 'cheese_fly', ...
+    for (const a of Object.values(fxAnims as Record<string, CharAnim>)) {
+      this.anims.create({ key: a.key, frames: a.frames.map(f => ({ key: 'fx', frame: f as string })), frameRate: a.frameRate, repeat: a.repeat });
     }
     // Badnik-animaties: '<id>_idle' loopt, '<id>_attack' speelt één keer
     for (const [name, frames] of Object.entries(badnikAnims as Record<string, string[]>)) {
@@ -134,6 +145,17 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 0.05);
     for (let y = 0; y < 64; y += 8) g.fillRect(0, y, 96 + ((y * 37) % 60), 2);
     g.generateTexture('streaks', 256, 64);
+    g.clear();
+    // hartje (Amy, Cream), 9x8
+    g.fillStyle(0xffffff).fillCircle(2.5, 2.5, 2.5).fillCircle(6.5, 2.5, 2.5).fillTriangle(0, 3, 9, 3, 4.5, 8);
+    g.generateTexture('heart', 9, 8);
+    g.clear();
+    // sterretje (stun), 7x7
+    g.fillStyle(0xffffff).fillPoints([
+      { x: 3.5, y: 0 }, { x: 4.5, y: 2.5 }, { x: 7, y: 2.7 }, { x: 5, y: 4.4 }, { x: 5.8, y: 7 },
+      { x: 3.5, y: 5.6 }, { x: 1.2, y: 7 }, { x: 2, y: 4.4 }, { x: 0, y: 2.7 }, { x: 2.5, y: 2.5 },
+    ], true);
+    g.generateTexture('star', 7, 7);
     g.destroy();
   }
 }
