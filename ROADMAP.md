@@ -11,7 +11,7 @@
 - [x] Rivals that unlock characters and can join your team
 - [x] Shop with prices that scale per zone
 - [x] Sonic Advance 2-style intro, music and sound effects
-- [x] Unit tests and automatic deploys
+- [x] Unit tests, end-to-end tests and automatic deploys
 
 ## Next
 - [ ] Rework rewards, and moves that change stats
@@ -28,4 +28,3 @@
 - [ ] Chao Garden with eggs to work towards
 - [ ] Point cost for picking your team
 - [ ] Mobile testing and polish
-- [ ] End-to-end tests (Playwright) in CI

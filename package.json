@@ -8,12 +8,14 @@
     "build:single": "tsc && vite build --mode single",
     "preview": "vite preview",
     "test": "vitest run tests",
-    "sim": "vitest run tools/bosssim.test.ts"
+    "sim": "vitest run tools/bosssim.test.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "typescript": "5.8",
     "vite": "^6.4.5",
     "vite-plugin-singlefile": "^2.3.4",

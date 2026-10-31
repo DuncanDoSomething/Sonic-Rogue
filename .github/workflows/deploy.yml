@@ -1,5 +1,5 @@
-# Bij elke push naar main: tests draaien, de game bouwen en op GitHub Pages zetten.
-# Eenmalig aanzetten: repo > Settings > Pages > Source: "GitHub Actions".
+# On every push to main: run the unit tests and the end-to-end tests, build the game
+# and deploy it to GitHub Pages. A failing test stops the deploy.
 name: Test & deploy
 
 on:
@@ -26,7 +26,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test
+      - name: Unit tests
+        run: npm test
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end tests (builds the game and plays it in Chromium)
+        run: npm run e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

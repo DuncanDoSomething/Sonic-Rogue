@@ -43,7 +43,8 @@ Mouse and touch work too.
 
 - **Phaser 3** and **TypeScript**, bundled with **Vite**.
 - **Vitest** unit tests for the battle rules: damage, stat stages, types, Boost, shop prices, zones and unlocks.
-- **GitHub Actions** runs the tests on every push to `main`, builds the game and deploys it to GitHub Pages. A failing test blocks the deploy.
+- **Playwright** end-to-end tests that start the real build in Chromium and play it with the keyboard: picking a team, taking turns, winning a wave, switching, KOs, menus, plus regression tests for bugs found during development. The game is drawn on a canvas, so the tests check the game state instead of pixels; that keeps them stable while the UI changes.
+- **GitHub Actions** runs both test suites on every push to `main`, then builds the game and deploys it to GitHub Pages. A failing test blocks the deploy, and the Playwright report (screenshots and traces) is uploaded when something breaks.
 - A **balance simulation** (`npm run sim`) plays 2000 boss fights per character to check difficulty after a change.
 - An **asset pipeline in Python** (Pillow, NumPy, SciPy) that cuts sprites out of ripped sprite sheets, aligns animation frames on the character's body and builds Phaser texture atlases.
 - The intro recreates the Mode 7 ocean from Sonic Advance 2 by drawing the water line by line on a canvas, with perspective and distance blending.
@@ -57,6 +58,7 @@ Requires Node.js 18 or newer.
 npm install
 npm run dev      # dev server with hot reload at http://localhost:5173
 npm test         # unit tests
+npm run e2e      # end-to-end tests (builds the game first)
 npm run sim      # boss balance simulation
 npm run build    # production build in dist/
 ```
@@ -70,7 +72,8 @@ src/
   assets/        sprite atlases, backgrounds and menu graphics
   audio.ts       music (streamed, with crossfades) and sound effects
 public/audio/    music, sound effects and voices
-tests/           unit tests
+tests/           unit tests (Vitest)
+e2e/             end-to-end tests (Playwright)
 tools/           Python asset pipeline and the balance simulation
 ```
 
