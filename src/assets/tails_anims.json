@@ -186,5 +186,35 @@
   ],
   "frameRate": 18,
   "repeat": -1
+ },
+ "rise": {
+  "key": "tails_rise",
+  "frames": [
+   "tails_14_19",
+   "tails_14_20",
+   "tails_14_21",
+   "tails_14_22",
+   "tails_14_23",
+   "tails_14_24",
+   "tails_15_0",
+   "tails_15_1"
+  ],
+  "frameRate": 22,
+  "repeat": -1
+ },
+ "drill": {
+  "key": "tails_drill",
+  "frames": [
+   "tails_15_2",
+   "tails_15_3",
+   "tails_15_4",
+   "tails_15_5",
+   "tails_15_6",
+   "tails_15_7",
+   "tails_15_8",
+   "tails_15_9"
+  ],
+  "frameRate": 24,
+  "repeat": -1
  }
 }

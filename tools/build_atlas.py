@@ -44,7 +44,8 @@ CHARACTERS = {
     'sonic': {
         # Idle in lagen, zoals Advance 2/3: stilstaan, na een tijdje met zijn voet tikken,
         # en als je nog langer wacht gaat hij liggen met een "..."-wolkje.
-        'idle':    {'frames': [(0, 0)], 'fps': 1, 'repeat': -1},
+        # ademhalen: frame 0 en een gemaakte variant waarin het bovenlichaam 1 pixel zakt (zie SYNTH)
+        'idle':    {'frames': [(0, 0, 700), (0, 90, 500), (0, 0, 600), (0, 90, 500)], 'repeat': -1},
         'wait':    {'frames': [(0, c) for c in range(1, 10)], 'fps': 12, 'repeat': 2},
         'sit':     {'frames': [(1, 6, 140), (1, 7, 140), (1, 8, 160), (1, 9, 160), (1, 10, 200), (1, 11, 200), (1, 12, 200), (1, 13, 300)], 'repeat': 0},
         'nap':     {'frames': [(1, 13, 900), (1, 14, 500), (1, 15, 1100)], 'repeat': -1},
@@ -76,6 +77,9 @@ CHARACTERS = {
         'sit':     {'frames': [(1, 2, 160), (1, 3, 200), (1, 4, 260)], 'repeat': 0},
         'nap':     {'frames': [(1, c) for c in range(5, 15)], 'fps': 7, 'repeat': -1},
         'run':     {'frames': [(2, c) for c in range(11, 19)], 'fps': 18, 'repeat': -1},
+        # Copter Dive: als raket omhoog (staarten eronder), dan als propellerbal omlaag boren
+        'rise':    {'frames': [(14, c) for c in range(19, 25)] + [(15, 0), (15, 1)], 'fps': 22, 'repeat': -1},
+        'drill':   {'frames': [(15, c) for c in range(2, 10)], 'fps': 24, 'repeat': -1},
     },
     'knuckles': {
         'idle':    {'frames': [(0, c) for c in range(2, 9)], 'fps': 8, 'repeat': -1},
@@ -144,8 +148,22 @@ CLIP = {
     'knuckles': {(1, 22): 32},
 }.get(char, {})
 ANIMS = CHARACTERS[char]
+# gemaakte frames: (rij, nep-kolom) -> bron-frame. Het bovenlichaam zakt 1 pixel (ademhalen).
+SYNTH = {
+    'sonic': {(0, 90): (0, 0)},
+}.get(char, {})
 
 def crop(r, c):
+    if (r, c) in SYNTH:
+        img = crop(*SYNTH[(r, c)])
+        px = np.array(img)
+        cut = int(px.shape[0] * 0.55)          # alles boven de heupen
+        out = px.copy()
+        out[1:cut + 1] = px[0:cut]
+        out[0] = 0
+        res = Image.fromarray(out)
+        res.info['anchor_x'] = img.info['anchor_x']
+        return res
     x0, y0, x1, y1, lid = rows[r][c]
     spr = a[y0:y1, x0:x1].copy()
     spr[lab[y0:y1, x0:x1] != lid] = 0  # alleen pixels van dit sprite-component

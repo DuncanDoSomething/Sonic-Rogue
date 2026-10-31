@@ -258,6 +258,22 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
+  test('Amy: a crit with Hammer Twirl heals her and costs no HP', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startRun(page);
+    await setup(page, `s.switchTo(s.party[2]).then(() => {
+      s.player.hp = 10; s.player.boost = 6; s.player.stages.atk = 6; // 100% crit
+      s.enemy.hp = 9999; s.enemy.stun = 5;                           // de vijand kan niks terugdoen
+      s.runTurn(window.MOVES.hammerTwirl);
+    });`);
+    await expect.poll(async () => (await battle(page)).menu, { timeout: 20_000 }).not.toBe('command');
+    await waitForMenu(page, 'command');
+    const amy = await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { hp: b.player.hp, max: b.player.maxHp }; });
+    expect(amy.hp).toBe(10 + Math.ceil(amy.max * 0.25));
+    expect(errors).toEqual([]);
+  });
+
   test('a lost run deletes the save', async ({ page }) => {
     await openGame(page);
     await startRun(page);

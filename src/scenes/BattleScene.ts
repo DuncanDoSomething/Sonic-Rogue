@@ -1244,7 +1244,7 @@ export class BattleScene extends Phaser.Scene {
       }
       if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (Iron Fists)`, 500);
       // Lucky Swing (Amy): elke crit kost haar 10% max-HP, maar ze gaat er zelf nooit van KO
-      if (hit.crit && att.def.passive?.id === 'luckySwing' && !move.recoil && !att.fainted) {
+      if (hit.crit && att.def.passive?.id === 'luckySwing' && !move.recoil && !move.selfHeal && !att.fainted) {
         const cost = Math.min(att.hp - 1, Math.ceil(att.maxHp * CRIT_RECOIL));
         if (cost > 0) {
           att.hp -= cost;
@@ -1419,6 +1419,24 @@ export class BattleScene extends Phaser.Scene {
       s.play(p.anim('punch'));
       await this.tween({ targets: s, x: tx - dir * 6, duration: 160, ease: 'Back.easeOut' });
       await this.wait(120);
+    } else if (move.anim === 'fly' && this.anims.exists(p.anim('drill'))) {
+      // Copter Dive (Tails): als raket omhoog met zijn staarten als propeller, dan als boor op het doelwit
+      s.play(p.anim('rise'));
+      audio.sfx('spindash', { volume: 0.5 });
+      const wash = this.time.addEvent({ delay: 70, loop: true, callback: () => this.rotorWash(s.x, s.y) });
+      await this.tween({ targets: s, x: home.x + dir * 24, y: home.y - 80, duration: 300, ease: 'Quad.easeOut' });
+      await this.tween({ targets: s, x: tx - dir * 4, y: Math.max(ty - 60, s.displayHeight + 6), duration: 300, ease: 'Sine.easeInOut' });
+      wash.remove();
+      // omdraaien: de bal blijft op dezelfde hoogte, de staarten gaan naar boven
+      s.play(p.anim('drill'));
+      s.y -= 48;
+      shockwave(this, s.x, s.y - 18, 0xffffff, 28, 200);
+      audio.sfx('jump', { volume: 0.7 });
+      await this.wait(110);
+      const trail = this.time.addEvent({ delay: 18, repeat: 10, callback: () => { this.ghost(s, 0xffb040); this.windLine(s); } });
+      await this.tween({ targets: s, x: tx, y: ty + 4, duration: 140, ease: 'Quad.easeIn' });
+      trail.remove();
+      if (!missed) shockwave(this, tx, ty - 10, 0xffb040, 50, 260);
     } else if (move.anim === 'fly') {
       // Copter Dive / Flutter Dive: omhoog vliegen, boven het doelwit hangen, dan duiken
       s.play(p.anim('fly'));
@@ -1515,6 +1533,12 @@ export class BattleScene extends Phaser.Scene {
     audio.sfx('confirm', { volume: 0.5 });
     await this.wait(90);
     g.destroy();
+  }
+
+  /** Luchtstroom onder Tails' propeller: platte ringetjes die uitdijen en vervagen. */
+  private rotorWash(x: number, y: number) {
+    const r = this.add.ellipse(x, y + 2, 14, 4).setStrokeStyle(1, 0xffffff, 0.8).setDepth(4);
+    this.tweens.add({ targets: r, scaleX: 2.4, scaleY: 1.6, y: y + 12, alpha: 0, duration: 260, onComplete: () => r.destroy() });
   }
 
   /** Dun wit windstreepje achter iemand die snel beweegt. */
