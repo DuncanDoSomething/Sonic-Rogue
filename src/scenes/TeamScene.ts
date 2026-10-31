@@ -4,8 +4,8 @@ import type { Fighter } from '../data/fighters';
 import { buildCharacterInfo } from './characterInfo';
 
 /**
- * C midden in een run: het overzicht van je team (stats, passive, moves, ultimate).
- * Pijltjes wisselen tussen teamgenoten, C / X sluit.
+ * I midden in een run: de kit van je team (passive, moves, ultimate).
+ * Pijltjes wisselen tussen teamgenoten, I / X sluit.
  */
 export class TeamScene extends Phaser.Scene {
   private from = '';
@@ -27,7 +27,7 @@ export class TeamScene extends Phaser.Scene {
       const k = e.key.toLowerCase();
       if (['arrowleft', 'arrowup', 'a', 'w'].includes(k)) this.step(-1);
       else if (['arrowright', 'arrowdown', 'd', 's'].includes(k)) this.step(1);
-      else if (['c', 'x', 'escape', 'backspace', 'z', 'enter', ' '].includes(k)) this.close();
+      else if (['i', 'c', 'x', 'escape', 'backspace', 'z', 'enter', ' '].includes(k)) this.close();
     });
   }
 
@@ -44,7 +44,7 @@ export class TeamScene extends Phaser.Scene {
     this.view = buildCharacterInfo(this, f.def.id, {
       fighter: f,
       tabs: { ids: this.party.map(p => p.def.id), index: this.index, fainted: this.party.map(p => p.fainted) },
-      footer: this.party.length > 1 ? 'C / X close    Arrows: teammates' : 'C / X close',
+      footer: this.party.length > 1 ? 'I / X close    Arrows: teammates' : 'I / X close',
       onClose: () => this.close(),
     });
   }

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { EMERALDS, isBossWave, isEliteWave, canHaveRival, RIVAL_CHANCE, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -8,11 +8,11 @@ import type { ZoneEffect } from '../data/zones';
 /** true = bosses krijgen jouw type. Met een party van 3 kun je wisselen, dus nu uit. */
 const BOSS_TYPE_NEUTRAL = false;
 import { Backdrop } from './Backdrop';
-import { ITEMS, ItemDef, shopStock } from '../data/items';
+import { BAG_SIZE, ITEMS, ItemDef, bagCount, shopStock } from '../data/items';
 import { battleTimeScale, charDelay, holdFactor, settings } from '../data/settings';
 import { addHelpButton, addMenuButton } from './ui';
 import { audio, MusicKey } from '../audio';
-import { chaoBlessing, cutIn, playUltimate, type UltCtx } from './ultimates';
+import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
 import { TEST_KEYS, TEST_MODE } from '../data/testMode';
 
 const W = 480;
@@ -73,9 +73,13 @@ export class BattleScene extends Phaser.Scene {
   /** testmodus: sneltoetsen-paneel en "volgende wave is een rival" */
   private testPanel?: Phaser.GameObjects.Container;
   private forceRival = false;
+  /** Chao Blessing: het zone-effect blijft weg tot de zone-boss verslagen is */
+  private fieldCleared = false;
   private fieldEffect?: ZoneEffect;
   private fieldText!: Phaser.GameObjects.Text;
   private fieldLayer?: Phaser.GameObjects.Container;
+  private statsLayer!: Phaser.GameObjects.Container;
+  private statsRows: Phaser.GameObjects.Text[] = [];
   /** rivals die je deze run al bent tegengekomen */
   private rivalsMet: string[] = [];
   private rings = 0;
@@ -175,6 +179,8 @@ export class BattleScene extends Phaser.Scene {
     this.party = this.partyIds.map(id => new Fighter(id, 5));
     this.player = this.party[0];
     this.expShare = 0;
+    this.fieldCleared = false;
+    this.statsRows = [];
     const sv = this.saved;
     if (sv) {
       this.party = sv.party.map(fighterFromSave);
@@ -185,6 +191,7 @@ export class BattleScene extends Phaser.Scene {
       this.expShare = sv.expShare;
       this.bag = { ...sv.bag };
       this.rivalsMet = [...sv.rivalsMet];
+      this.fieldCleared = !!sv.fieldCleared;
     }
     this.cameras.main.fadeIn(250, 0, 0, 0);
     this.backdrop = new Backdrop(this, PANEL_Y, 0);
@@ -202,6 +209,7 @@ export class BattleScene extends Phaser.Scene {
     this.bindInput();
     this.testPanel = undefined;
     if (TEST_MODE) this.drawTestBadge();
+    this.time.addEvent({ delay: 1000, loop: true, callback: () => this.maybeFidget() });
     // verdiende Chaos Emeralds uit een save meteen tonen
     for (let i = 0; i < this.emeralds; i++) this.emeraldSlots[i].clearTint().setAlpha(1).play(`emerald_${EMERALDS[i]}`);
     this.startWave();
@@ -382,9 +390,21 @@ export class BattleScene extends Phaser.Scene {
     this.infoBody = this.add.text(18, PANEL_Y - 50, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', lineSpacing: 5, wordWrap: { width: 302 } });
     this.infoLayer.add([ig, this.infoTitle, this.infoBody]);
 
-    this.cmdLayer.add(this.add.text(12, PANEL_Y + 37, 'C: team  V: field', { fontFamily: FONT, fontSize: '8px', color: '#6b7493' }));
+    // Stats-paneel (C in het hoofdmenu, of tik op je HP-box)
+    this.statsLayer = this.add.container(0, 0).setDepth(34).setVisible(false);
+    const sg = this.add.graphics();
+    sg.fillStyle(0x10131c, 0.96).fillRoundedRect(8, PANEL_Y - 126, 250, 122, 5);
+    sg.lineStyle(1, 0xf2c230).strokeRoundedRect(8.5, PANEL_Y - 125.5, 249, 121, 5);
+    this.statsLayer.add(sg);
+    for (let i = 0; i < 8; i++) {
+      const t = this.add.text(18, PANEL_Y - 118 + i * 14, '', { fontFamily: FONT, fontSize: '8px', color: i === 0 ? '#f2c230' : '#ffffff' });
+      const b = this.add.text(248, PANEL_Y - 118 + i * 14, '', { fontFamily: FONT, fontSize: '8px', color: '#4ade5a' }).setOrigin(1, 0);
+      this.statsRows.push(t, b);
+      this.statsLayer.add([t, b]);
+    }
+    this.cmdLayer.add(this.add.text(12, PANEL_Y + 37, 'C stats  I info  V field', { fontFamily: FONT, fontSize: '8px', color: '#6b7493' }));
     const statsHit = this.add.zone(this.pBox.root.x, this.pBox.root.y, 178, 40).setOrigin(0).setDepth(21).setInteractive({ useHandCursor: true });
-    statsHit.on('pointerdown', () => { if (this.menu === 'command') this.openTeam(); });
+    statsHit.on('pointerdown', () => { if (this.menu === 'command') this.toggleStats(); });
 
     // Tas (Items)
     this.bagLayer = this.add.container(0, 0).setDepth(32).setVisible(false);
@@ -411,8 +431,34 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  /** C in het hoofdmenu: overzicht van je team (stats, passive, moves, ultimate). */
+  /** C in het hoofdmenu: je stats en stat changes. */
+  private toggleStats(force?: boolean) {
+    const show = force ?? !this.statsLayer.visible;
+    this.statsLayer.setVisible(show && this.menu === 'command');
+    if (!this.statsLayer.visible) return;
+    const p = this.player;
+    // stage zoals in PokéRogue: +2, -1 (inclusief het zone-effect)
+    const st = (k: StageKey) => { const v = p.stage(k); return v === 0 ? '' : `${v > 0 ? '+' : ''}${v}`; };
+    const rows: Array<[string, string]> = [
+      [`${p.name}  Lv.${p.level}  ${p.type.toUpperCase()}`, ''],
+      [`HP   ${p.hp}/${p.maxHp}`, `BOOST ${p.boost}/${MAX_BOOST}`],
+      [`ATK  ${p.atk}`, st('atk')],
+      [`DEF  ${p.dfn}`, st('def')],
+      [`SPD  ${p.spd}`, st('spd') + (p.stage('acc') ? `  ACC ${st('acc')}` : '')],
+      [`EXP  ${p.exp}/${p.expToNext}`, ''],
+      [`Rings ${this.rings}   Emeralds ${this.emeralds}/7`, ''],
+      [p.def.passive ? `Passive: ${p.def.passive.name}` : 'Passive: -', ''],
+    ];
+    rows.forEach(([l, r], i) => {
+      this.statsRows[i * 2].setText(l);
+      // omlaag in oranje, omhoog in groen
+      this.statsRows[i * 2 + 1].setText(r).setColor(r.trim().startsWith('-') || r.includes('ACC -') ? '#ff9a3a' : '#4ade5a');
+    });
+  }
+
+  /** I in het hoofdmenu: de kit van je team (passive, moves, ultimate). Pijltjes wisselen van teamgenoot. */
   private openTeam() {
+    this.toggleStats(false);
     audio.sfx('confirm');
     this.scene.pause();
     this.scene.launch('Team', { from: this.scene.key, party: this.party, index: this.party.indexOf(this.player) });
@@ -497,7 +543,8 @@ export class BattleScene extends Phaser.Scene {
       else if (['z', 'enter', ' '].includes(k)) this.confirm();
       else if (['x', 'escape', 'backspace'].includes(k)) this.back();
       else if (k === 'c' && this.menu === 'fight') this.toggleMoveInfo();
-      else if (k === 'c' && this.menu === 'command') this.openTeam();
+      else if (k === 'c' && this.menu === 'command') this.toggleStats();
+      else if (k === 'i' && this.menu === 'command') this.openTeam();
       else if (k === 'v' && (this.menu === 'command' || this.menu === 'fight')) this.toggleField();
       else if (k === 'h') this.openHelp();
       else if (k === 'm') this.openPause();
@@ -604,9 +651,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private back() {
-    if (['fight', 'bag'].includes(this.menu)) audio.sfx('back');
+    if (['fight', 'bag'].includes(this.menu) || this.statsLayer.visible) audio.sfx('back');
     if (this.fieldLayer) { this.toggleField(false); return; }
-    if (this.menu === 'fight' && this.infoLayer.visible) this.toggleMoveInfo(false);
+    if (this.menu === 'command' && this.statsLayer.visible) this.toggleStats(false);
+    else if (this.menu === 'fight' && this.infoLayer.visible) this.toggleMoveInfo(false);
     else if (this.menu === 'fight') this.openCommand(0);
     else if (this.menu === 'bag') this.openCommand(2);
   }
@@ -617,12 +665,14 @@ export class BattleScene extends Phaser.Scene {
     this.fightLayer.setVisible(false);
     this.bagLayer.setVisible(false);
     this.infoLayer.setVisible(false);
+    this.statsLayer.setVisible(false);
     this.cmdLayer.setVisible(true);
     this.msg.setVisible(true).setText(`What will\n${this.player.name} do?`);
     this.refreshCursor();
   }
 
   private openFight() {
+    this.statsLayer.setVisible(false);
     this.menu = 'fight';
     // cursor begint op de laatst gebruikte move (gereset na een boss)
     this.cursor = this.player.moves[this.lastMove] ? this.lastMove : 0;
@@ -633,6 +683,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private openBag() {
+    this.statsLayer.setVisible(false);
     this.menu = 'bag';
     this.cursor = 0;
     this.buildBagItems();
@@ -719,6 +770,7 @@ export class BattleScene extends Phaser.Scene {
     this.fightLayer.setVisible(false);
     this.bagLayer.setVisible(false);
     this.infoLayer.setVisible(false);
+    this.statsLayer.setVisible(false);
     this.msg.setVisible(true).setText('');
     // tekstsnelheid staat los van de battle-snelheid: echte tijd, niet this.time
     const d = charDelay();
@@ -846,7 +898,7 @@ export class BattleScene extends Phaser.Scene {
   private autoSave(wave = this.wave) {
     saveRun({
       wave, rings: this.rings, emeralds: this.emeralds, expShare: this.expShare,
-      bag: { ...this.bag }, rivalsMet: [...this.rivalsMet],
+      bag: { ...this.bag }, rivalsMet: [...this.rivalsMet], fieldCleared: this.fieldCleared,
       active: Math.max(0, this.party.indexOf(this.player)), party: this.party.map(fighterToSave),
     });
   }
@@ -878,12 +930,12 @@ export class BattleScene extends Phaser.Scene {
     // nieuwe zone: achtergrond wisselen + zone-titel; boss-wave: Chaos Angel
     const firstOfZone = waveInZone(this.wave) === 1;
     this.setBackdrop(boss ? 'chaosangel' : zone.backdrop, this.wave === 1 ? 0 : 600);
-    this.applyZoneEffect(zone.effect);
+    this.applyZoneEffect(this.fieldCleared ? undefined : zone.effect);
     audio.playMusic(boss || this.rival ? 'boss' : (zone.backdrop as MusicKey));
     this.waveText.setText(`${zone.name} - Wave ${this.wave}`);
     this.hero.play(this.player.anim('idle'));
     if (firstOfZone) await this.zoneBanner(zone.name, Math.floor((this.wave - 1) / 10) + 1);
-    if (firstOfZone && zone.effect) await this.say(`${zone.effect.name}! ${zone.effect.desc}.`, 700);
+    if (firstOfZone && zone.effect && !this.fieldCleared) await this.say(`${zone.effect.name}! ${zone.effect.desc}.`, 700);
     const d = this.enemy.def;
     this.waveText.setText(`${zone.name} - Wave ${this.wave}`);
     this.ringText.setText(`${this.rings}`);
@@ -1069,6 +1121,7 @@ export class BattleScene extends Phaser.Scene {
     await this.say(`${this.who(att)} used ${move.name}!`, 150);
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
     let hit = calcHit(att, tgt, move);
+    let hungOn = false;
     // Light Speed Attack: de volgende aanvallen op Sonic missen gegarandeerd
     if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; }
     let struck = false;
@@ -1076,11 +1129,14 @@ export class BattleScene extends Phaser.Scene {
       if (hit.missed || struck) return;
       struck = true;
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
+      if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
       const spr = isPlayer ? this.foe : this.hero;
       const c = this.center(spr);
       this.burst(c.x, c.y, hit.crit ? 0xf2c230 : 0xffffff, hit.crit ? 16 : 10);
       if (move.id !== att.def.ultimate) this.impactFx(att, c.x, c.y, hit.crit, isPlayer ? 1 : -1);
       this.hitStop(hit.crit ? 120 : 55);
+      // CRITICAL! boven het doelwit (Tornado Hammer doet dat zelf al)
+      if (hit.crit && !move.alwaysCrit) void bigText(this, c.x, c.y - 40, 'CRITICAL!', isPlayer ? '#ffd23a' : '#ff6a5a');
       this.popNumber(spr.x, spr.y - spr.displayHeight - 4, `-${hit.damage}`, hit.crit ? '#f2c230' : '#ffffff');
       this.cameras.main.shake(hit.crit ? 220 : 120, hit.crit ? 0.008 : 0.004);
       if (isPlayer) audio.sfx(isBossWave(this.wave) ? 'bosshit' : 'enemyhit', { volume: 0.8 });
@@ -1106,6 +1162,23 @@ export class BattleScene extends Phaser.Scene {
       this.popMiss(spr.x + (isPlayer ? -30 : 34), spr.y - spr.displayHeight * 0.7);
       await this.say(`${tgt.name} avoided the attack!`, 400);
     }
+    if (move.spendStages && Object.values(att.stages).some(v => v !== 0)) {
+      att.stages = { atk: 0, def: 0, spd: 0, acc: 0 };
+      await this.say(`${att.name} burned up all his stat changes!`, 400);
+    }
+    if (move.recoil && !att.fainted) {
+      const cost = Math.ceil(att.maxHp * move.recoil);
+      att.hp = Math.max(0, att.hp - cost);
+      const spr = isPlayer ? this.hero : this.foe;
+      this.hitFlash(spr);
+      await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
+      if (att.fainted) {
+        spr.play(att.anim('ko'));
+        await this.say(`${att.name} gave it everything and went down!`, 600);
+      } else {
+        await this.say(`${att.name} lost ${cost} HP from the effort!`, 400);
+      }
+    }
     // Light Speed Attack geeft Sonic zijn ontwijk-beurten, ook als hij zelf mist
     if (move.evade && !att.fainted) {
       att.evade = move.evade;
@@ -1119,6 +1192,17 @@ export class BattleScene extends Phaser.Scene {
       // moves die je eigen stats verhogen (Homing Attack: SPD +1)
       for (const [k, v] of Object.entries(move.selfStages ?? {})) {
         if (!att.fainted) await this.say(att.raise(k as StageKey, v), 300);
+      }
+      if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (Iron Fists)`, 500);
+      // Lucky Swing (Amy): elke crit kost haar 10% max-HP, maar ze gaat er zelf nooit van KO
+      if (hit.crit && att.def.passive?.id === 'luckySwing' && !move.recoil && !att.fainted) {
+        const cost = Math.min(att.hp - 1, Math.ceil(att.maxHp * CRIT_RECOIL));
+        if (cost > 0) {
+          att.hp -= cost;
+          this.hitFlash(isPlayer ? this.hero : this.foe);
+          await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
+          await this.say(`${this.who(att)} lost ${cost} HP from the swing!`, 300);
+        }
       }
       // Iron Fists (Knuckles): kans dat het doelwit zijn beurt verliest
       if (att.def.passive?.id === 'flinch' && !tgt.fainted && Math.random() < FLINCH_CHANCE) this.flinched.add(tgt);
@@ -1160,8 +1244,18 @@ export class BattleScene extends Phaser.Scene {
       const anim = this.playOnce(spr, att.anim('cheer'));
       audio.sfx('heal1');
       this.sparkles(spr);
+      // Cheese vliegt naar wie er geneest wordt (op de bank: naar zijn hoofdje in de HUD)
+      const cheese = this.add.sprite(spr.x + 18, spr.y - 46, 'fx').setDepth(26).setScale(1.6).play('cheese_fly');
+      const icon = isPlayer && target !== att ? this.partyHeads[this.party.indexOf(target)] : undefined;
+      const to = icon ? { x: icon.x + 8, y: icon.y + 8 } : { x: spr.x, y: spr.y - spr.displayHeight - 10 };
+      cheese.setFlipX(to.x < cheese.x);
+      await this.tween({ targets: cheese, x: to.x, y: to.y, duration: 380, ease: 'Sine.easeInOut' });
+      hearts(this, to.x, to.y, 6, 0x7cf07c);
+      this.burst(to.x, to.y, 0x7cf07c, 8);
+      if (icon) { icon.setTintFill(0x7cf07c); this.time.delayedCall(160, () => this.refreshPartyHeads()); }
       await anim;
-      await this.wait(250);
+      this.tweens.add({ targets: cheese, alpha: 0, y: cheese.y - 16, duration: 250, onComplete: () => cheese.destroy() });
+      await this.wait(150);
     }
     this.setActionSpeed(null);
     spr.play(att.anim('idle'));
@@ -1180,7 +1274,8 @@ export class BattleScene extends Phaser.Scene {
       if (move.clearField && isPlayer && this.fieldEffect) {
         const name = this.fieldEffect.name;
         this.applyZoneEffect(undefined);
-        await this.say(`The ${name.toLowerCase()} faded away!`, 400);
+        this.fieldCleared = true;
+        await this.say(`The ${name.toLowerCase()} is gone for the rest of this zone!`, 500);
       }
       return;
     }
@@ -1215,18 +1310,24 @@ export class BattleScene extends Phaser.Scene {
     const tx = fc.x - dir * target.displayWidth * 0.3 + dir * (missed ? 14 : 0);
     const ty = fc.y + s.displayHeight * 0.4;
 
+    let finisher: (() => Promise<void>) | undefined;
     if (move.anim !== 'hammer' && move.anim !== 'ultimate') audio.sfx(move.anim === 'dash' ? 'spindash' : 'jump', { volume: move.anim === 'dash' ? 0.6 : 0.8 });
     if (move.anim === 'spin') {
       s.play(p.anim('spin'));
       await this.tween({ targets: s, y: home.y - 20, duration: 140, ease: 'Quad.easeOut' });
       await this.tween({ targets: s, x: tx, y: ty, duration: 260, ease: 'Quad.easeIn' });
     } else if (move.anim === 'homing') {
+      // Homing Attack: omhoog, vizier klikt vast op het doelwit, dan in een rechte lijn erop af
       s.play(p.anim('spin'));
       await this.tween({ targets: s, y: home.y - 70, x: home.x + dir * 20, duration: 220, ease: 'Quad.easeOut' });
-      await this.wait(120);
-      const trail = this.time.addEvent({ delay: 25, repeat: 6, callback: () => this.ghost(s) });
-      await this.tween({ targets: s, x: tx, y: ty - 10, duration: 150, ease: 'Linear' });
+      await this.lockOn(target);
+      const trail = this.time.addEvent({ delay: 16, repeat: 10, callback: () => this.ghost(s) });
+      await this.tween({ targets: s, x: tx, y: ty - 10, duration: 130, ease: 'Linear' });
       trail.remove();
+      if (!missed && this.anims.exists(p.anim('spinkick'))) finisher = async () => {
+        // na de klap nog een gouden draaitrap
+        await this.playOnce(s, p.anim('spinkick'));
+      };
     } else if (move.anim === 'dash') {
       // Spin Dash: opladen op de plek, dan lanceren
       s.play(p.anim('spin'));
@@ -1234,12 +1335,30 @@ export class BattleScene extends Phaser.Scene {
       const dust = this.time.addEvent({ delay: 60, repeat: 9, callback: () => this.burst(s.x - dir * 14, s.y - 4, 0xd8dde8, 3) });
       await this.tween({ targets: s, x: home.x - dir * 6, duration: 50, yoyo: true, repeat: 5 });
       dust.remove();
-      const trail = this.time.addEvent({ delay: 20, repeat: 10, callback: () => this.ghost(s) });
+      s.anims.timeScale /= 2;
+      shockwave(this, s.x, s.y - 14, 0xffffff, 40, 250);
+      this.cameras.main.shake(100, 0.004);
+      if (this.anims.exists(p.anim('dashfire'))) s.play(p.anim('dashfire'));
+      const trail = this.time.addEvent({ delay: 20, repeat: 10, callback: () => this.ghost(s, 0xffd23a) });
       await this.tween({ targets: s, x: tx, y: ty, duration: 200, ease: 'Expo.easeIn' });
       trail.remove();
-      s.anims.timeScale /= 2;
+      s.play(p.anim('spin'));
+    } else if (move.anim === 'punch' && move.id === 'drillPunch' && this.anims.exists(p.anim('heavypunch'))) {
+      // Knuckle Punch: even opladen (rood gloeien), dan met een vuurstoot uit de vuist op het doelwit af
+      s.play(p.anim('idle'));
+      for (let i = 0; i < 4; i++) this.time.delayedCall(i * 70, () => (i % 2 ? s.clearTint() : s.setTint(0xff8a5a)));
+      this.burst(s.x, s.y - 20, 0xff8a1a, 8);
+      await this.wait(300);
+      s.clearTint();
+      const trail = this.time.addEvent({ delay: 25, repeat: 10, callback: () => this.ghost(s, 0xff5a1a) });
+      const hitAt = this.playUntilFrame(s, p.anim('heavypunch'), '9_9');
+      await this.tween({ targets: s, x: tx - dir * 10, y: ty, duration: 260, ease: 'Quad.easeIn' });
+      await hitAt;
+      trail.remove();
+      fxOnce(this, tx + dir * 10, ty - 20, 'fx_burst', 1.6, 17);
+      shockwave(this, tx + dir * 10, ty - 20, 0xff8a1a, 60, 300);
     } else if (move.anim === 'punch') {
-      // Glove/Knuckle Punch: in één ruk naar het doelwit, stoot op het einde van de animatie
+      // Glove Punch: in één ruk naar het doelwit, stoot op het einde van de animatie
       s.play(p.anim('spin'));
       await this.tween({ targets: s, x: tx - dir * 30, y: ty, duration: 300, ease: 'Quad.easeInOut' });
       s.play(p.anim('punch'));
@@ -1250,8 +1369,8 @@ export class BattleScene extends Phaser.Scene {
       s.play(p.anim('fly'));
       await this.tween({ targets: s, y: home.y - 70, duration: 300, ease: 'Sine.easeOut' });
       await this.tween({ targets: s, x: tx - dir * 10, y: Math.max(ty - 55, s.displayHeight + 4), duration: 320, ease: 'Sine.easeInOut' });
-      s.play(p.anim('spin'));
-      const trail = this.time.addEvent({ delay: 25, repeat: 6, callback: () => this.ghost(s) });
+      s.play(this.anims.exists(p.anim('spindisc')) ? p.anim('spindisc') : p.anim('spin'));
+      const trail = this.time.addEvent({ delay: 25, repeat: 6, callback: () => this.ghost(s, p.def.id === 'cream' ? 0xffb070 : 0x6aa8ff) });
       await this.tween({ targets: s, x: tx, y: ty, duration: 140, ease: 'Quad.easeIn' });
       trail.remove();
     } else if (move.anim === 'glide') {
@@ -1259,7 +1378,7 @@ export class BattleScene extends Phaser.Scene {
       s.play(p.anim('spin'));
       await this.tween({ targets: s, x: home.x - dir * 10, y: home.y - 80, duration: 260, ease: 'Quad.easeOut' });
       s.play(p.anim('glide'));
-      const trail = this.time.addEvent({ delay: 40, repeat: 8, callback: () => this.ghost(s) });
+      const trail = this.time.addEvent({ delay: 40, repeat: 8, callback: () => { this.ghost(s, 0xff7a7a); this.windLine(s); } });
       await this.tween({ targets: s, x: tx - dir * 4, y: ty + 4, duration: 420, ease: 'Sine.easeIn' });
       trail.remove();
     } else if (move.anim === 'hammer') {
@@ -1268,7 +1387,9 @@ export class BattleScene extends Phaser.Scene {
       audio.sfx('jump', { volume: 0.6 });
       await this.tween({ targets: s, x: tx - dir * 46, y: ty, duration: 300, ease: 'Quad.easeInOut' });
       await this.playUntilFrame(s, p.anim('hammer'), '10_6');
-      this.cameras.main.shake(140, 0.006);
+      this.cameras.main.shake(160, 0.008);
+      shockwave(this, tx, ty, 0xff8fc8, 70, 320);
+      this.dust(tx, ty, 8);
       strike();
       await this.wait(260);
     } else if (move.anim === 'ultimate') {
@@ -1277,15 +1398,18 @@ export class BattleScene extends Phaser.Scene {
       s.play(p.anim('idle'));
       return;
     } else if (move.anim === 'twirl') {
-      // Hammer Twirl: ronddraaiend met de hamer op het doelwit af
+      // Hammer Twirl: als draaiende schijf met hartjes op het doelwit af, dan de hamer rond
+      s.play(this.anims.exists(p.anim('spindisc')) ? p.anim('spindisc') : p.anim('twirl'));
+      const trail = this.time.addEvent({ delay: 40, repeat: 12, callback: () => { this.ghost(s, 0xff8fc8); if (Math.random() < 0.5) hearts(this, s.x, s.y - 16, 1); } });
+      await this.tween({ targets: s, x: home.x + dir * 10, y: home.y - 30, duration: 200, ease: 'Sine.easeOut' });
+      await this.tween({ targets: s, x: tx - dir * 18, y: ty, duration: 340, ease: 'Quad.easeIn' });
       s.play(p.anim('twirl'));
-      const trail = this.time.addEvent({ delay: 50, repeat: 10, callback: () => this.ghost(s) });
-      await this.tween({ targets: s, x: home.x + dir * 10, duration: 200, ease: 'Sine.easeInOut' });
-      await this.tween({ targets: s, x: tx - dir * 18, y: ty, duration: 380, ease: 'Quad.easeIn' });
+      await this.wait(160);
       trail.remove();
     }
 
     strike();
+    if (finisher) await finisher();
     if (missed) {
       await this.tween({ targets: s, x: tx + dir * 70, alpha: 0.5, duration: 160 });
       s.setAlpha(1).setPosition(home.x - dir * 40, home.y - 40);
@@ -1311,6 +1435,59 @@ export class BattleScene extends Phaser.Scene {
       burst: (x, y, color, n) => this.burst(x, y, color, n),
       teamIcons: this.partyHeads,
     };
+  }
+
+  /** Homing Attack-vizier: vier hoekjes die op het doelwit dichtklappen. */
+  private async lockOn(target: Phaser.GameObjects.Sprite) {
+    const c = this.center(target);
+    const g = this.add.graphics().setDepth(30);
+    const draw = (r: number, color: number) => {
+      g.clear().lineStyle(2, color);
+      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        g.beginPath();
+        g.moveTo(c.x + sx * r, c.y + sy * (r - 7));
+        g.lineTo(c.x + sx * r, c.y + sy * r);
+        g.lineTo(c.x + sx * (r - 7), c.y + sy * r);
+        g.strokePath();
+      }
+    };
+    const st = { r: 40 };
+    audio.sfx('cursormove');
+    await this.tween({ targets: st, r: 18, duration: 160, ease: 'Quad.easeIn', onUpdate: () => draw(st.r, 0xff4a4a) });
+    draw(18, 0x7cf07c);
+    audio.sfx('confirm', { volume: 0.5 });
+    await this.wait(90);
+    g.destroy();
+  }
+
+  /** Dun wit windstreepje achter iemand die snel beweegt. */
+  private windLine(s: Phaser.GameObjects.Sprite) {
+    const l = this.add.rectangle(s.x - 10, s.y - Phaser.Math.Between(6, 30), Phaser.Math.Between(14, 26), 1, 0xffffff, 0.8).setDepth(4);
+    this.tweens.add({ targets: l, x: l.x - 30, alpha: 0, duration: 220, onComplete: () => l.destroy() });
+  }
+
+  /** Stofwolkjes op de grond (hamerklap). */
+  private dust(x: number, y: number, n: number) {
+    for (let i = 0; i < n; i++) {
+      const d = this.add.circle(x, y, Phaser.Math.Between(3, 6), 0xe8e0d0, 0.8).setDepth(15);
+      const side = i % 2 ? 1 : -1;
+      this.tweens.add({ targets: d, x: x + side * Phaser.Math.Between(16, 40), y: y - Phaser.Math.Between(0, 12), scale: 0.3, alpha: 0,
+        duration: Phaser.Math.Between(300, 500), ease: 'Quad.easeOut', onComplete: () => d.destroy() });
+    }
+  }
+
+  /** Af en toe een fidget in de idle (voet tikken, vuisten tegen elkaar...). */
+  private maybeFidget() {
+    const tryOne = (spr: Phaser.GameObjects.Sprite, f?: Fighter) => {
+      if (!f || f.fainted || !spr.visible) return;
+      const idle = f.anim('idle'), fid = f.anim('fidget');
+      if (!this.anims.exists(fid) || spr.anims.currentAnim?.key !== idle || Math.random() > 0.18) return;
+      spr.play(fid);
+      spr.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => { if (spr.anims.currentAnim?.key === fid) spr.play(idle); });
+    };
+    if (this.menu !== 'command' && this.menu !== 'fight') return;
+    tryOne(this.hero, this.player);
+    if (this.rival) tryOne(this.foe, this.enemy);
   }
 
   /** Korte bevriezing bij een treffer, zodat klappen zwaarder voelen. */
@@ -1452,7 +1629,7 @@ export class BattleScene extends Phaser.Scene {
       await this.say(`Sonic Speed! ${this.player.raise('spd')}`, 300);
     }
     const gained = 10 + this.wave * 3;
-    this.hero.play(this.player.anim('victory'));
+    if (!this.player.fainted) this.hero.play(this.player.anim('victory'));
     this.victoryVoice();
     if (isBossWave(this.wave)) audio.playJingle('victory', zoneForWave(this.wave + 1).backdrop as MusicKey);
     this.spillRings(c.x, c.y, gained);
@@ -1481,6 +1658,9 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     if (isBossWave(this.wave)) {
+      // nieuwe zone: zone-effect terug, Iron Fists weer beschikbaar
+      this.fieldCleared = false;
+      this.party.forEach(f => { f.sashUsed = false; });
       const down = this.party.filter(f => f.fainted);
       for (const f of down) f.hp = Math.max(1, Math.ceil(f.maxHp * BOSS_REVIVE_HP));
       if (down.length) {
@@ -1497,6 +1677,13 @@ export class BattleScene extends Phaser.Scene {
       this.expShare = share;
       audio.sfx('confirm2');
       await this.say(`Got the Exp. Share! Your team on the bench now gets ${Math.round(share * 100)}% EXP.`, 900);
+    }
+    // zelf KO gegaan bij het winnen (Tornado Hammer)? Dan eerst iemand anders erin, of game over
+    if (this.player.fainted) {
+      const alive = this.party.filter(f => !f.fainted);
+      if (!alive.length) { await this.loseRun(); return; }
+      const next = alive.length > 1 ? this.party[await this.pickTeammate('Who goes next?', false)] : alive[0];
+      await this.switchTo(next);
     }
     // wave gewonnen: opslaan alsof de volgende wave al begonnen is (Save & Quit tijdens de rewards houdt de winst)
     this.autoSave(this.wave + 1);
@@ -1650,10 +1837,11 @@ export class BattleScene extends Phaser.Scene {
   private async reviveFromShop(it: ItemDef) {
     if (!this.party.some(f => f.fainted)) {
       this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;
-      this.msg.setText(`Nobody is down, so the Revive went\nto your bag. (${this.bag[it.id]} in bag)`);
+      this.msg.setText(`Nobody is down, so the Revive went\nto your bag. (${bagCount(this.bag)}/${BAG_SIZE})`);
       return;
     }
-    const i = await this.pickReviveTarget('Revive who?', false, { label: 'Keep in bag' });
+    const full = bagCount(this.bag) >= BAG_SIZE;
+    const i = await this.pickReviveTarget('Revive who?', false, { label: full ? 'Bag is full' : 'Keep in bag', disabled: full });
     this.menu = 'reward';
     this.refreshCursor(); // eerst de cursor (die zet de reward-uitleg neer), dan ons bericht
     if (i < this.party.length) {
@@ -1663,7 +1851,7 @@ export class BattleScene extends Phaser.Scene {
       this.msg.setText(text);
     } else {
       this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;
-      this.msg.setText(`The Revive went to your bag.\n(${this.bag[it.id]} in bag)`);
+      this.msg.setText(`The Revive went to your bag.\n(${bagCount(this.bag)}/${BAG_SIZE} in bag)`);
     }
   }
 
@@ -1807,6 +1995,7 @@ export class BattleScene extends Phaser.Scene {
     this.fieldLayer?.destroy();
     this.fieldLayer = undefined;
     if (!show) return;
+    this.statsLayer.setVisible(false);
     this.infoLayer.setVisible(false);
     const c = this.add.container(0, 0).setDepth(34);
     const x = 8, y = PANEL_Y - 128, w = 300, h = 124;
@@ -2031,9 +2220,9 @@ export class BattleScene extends Phaser.Scene {
     if (id === 'hyperRing') return [this.add.sprite(0, 0, 'ui', 'bigring_0').play('bigring_spin')];
     if (id === 'chiliDog') return [this.add.image(0, 2, 'chilidog').setScale(2)];
     if (id === 'revive') {
-      // hoofdje met een gouden ring erboven als halo
-      const halo = this.add.sprite(0, -14, 'ui', 'ring_0').setScale(1.4, 0.6).play('ring_spin');
-      return [this.add.image(0, 2, 'ui', `head_${this.player.def.id}`).setScale(1.5), halo];
+      // hoofdje van wie er KO is (of van je actieve character)
+      const who = this.party.find(f => f.fainted) ?? this.player;
+      return [this.add.image(0, 0, 'ui', `head_${who.def.id}`).setScale(1.5)];
     }
     // reroll
     return [this.add.sprite(0, 0, 'ui', 'monitor_random').setScale(1)];
@@ -2086,6 +2275,16 @@ export class BattleScene extends Phaser.Scene {
     const cost = isReroll ? this.rerollCost() : it?.price;
     if (cost === undefined) return;
     const btn = this.shopButtons[i];
+    // niks om nu op te gebruiken en de tas is vol: dan niet kopen
+    if (!isReroll && bagCount(this.bag) >= BAG_SIZE) {
+      const nowUseless = it.revive ? !this.party.some(f => f.fainted) : this.player.hp >= this.player.maxHp;
+      if (nowUseless) {
+        this.msg.setText(`Your bag is full (${BAG_SIZE}/${BAG_SIZE}) and nobody\nneeds a ${it.name} right now.`);
+        audio.sfx('errorclick');
+        this.tweens.add({ targets: btn, x: btn.x + 3, duration: 40, yoyo: true, repeat: 2 });
+        return;
+      }
+    }
     if (this.rings < cost) {
       this.msg.setText(`Not enough rings!\nYou have ${this.rings}, this costs ${cost}.`);
       audio.sfx('errorclick');
@@ -2106,7 +2305,7 @@ export class BattleScene extends Phaser.Scene {
     } else if (this.player.hp >= this.player.maxHp) {
       // volle HP: niks te healen, dus meteen de tas in
       this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;
-      this.msg.setText(`HP is full, so the ${it.name} went\nto your bag. (${this.bag[it.id]} in bag)`);
+      this.msg.setText(`HP is full, so the ${it.name} went\nto your bag. (${bagCount(this.bag)}/${BAG_SIZE})`);
     } else {
       this.openPrompt(it, btn);
     }
@@ -2171,6 +2370,11 @@ export class BattleScene extends Phaser.Scene {
   private resolvePrompt(useNow: boolean) {
     const it = this.promptItem;
     if (!it) return;
+    if (!useNow && bagCount(this.bag) >= BAG_SIZE) {
+      this.msg.setText(`Your bag is full! (${BAG_SIZE}/${BAG_SIZE})\nUse it now instead.`);
+      audio.sfx('errorclick');
+      return;
+    }
     this.prompt?.destroy();
     this.prompt = undefined;
     this.promptItem = undefined;
@@ -2186,19 +2390,14 @@ export class BattleScene extends Phaser.Scene {
     } else {
       this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;
       this.refreshCursor();
-      this.msg.setText(`The ${it.name} went to your bag.\n(${this.bag[it.id]} in bag)`);
+      this.msg.setText(`The ${it.name} went to your bag.\n(${bagCount(this.bag)}/${BAG_SIZE} in bag)`);
     }
   }
 
   private async pickReward(i: number) {
     this.menu = 'busy';
     const r = this.rewardChoices[i];
-    let text = r.apply(this.player);
-    if (r.id === 'oneup') {
-      const downed = this.party.filter(f => f.fainted);
-      downed.forEach(f => { f.hp = Math.ceil(f.maxHp / 2); });
-      if (downed.length) text += ` ${downed.map(f => f.name).join(' and ')} got back up!`;
-    }
+    const text = r.apply(this.player);
     // shield-bubbel staat los van DEF-buffs; updateShield() is klaar voor een latere shield-mechaniek
     // monitor kapot: rookwolk + glinsters, net als in de game
     const card = this.rewardCards[i];

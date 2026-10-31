@@ -86,7 +86,7 @@ export class CharSelectScene extends Phaser.Scene {
     // info-paneel
     this.info = this.add.container(PANEL_W + 10, 184);
 
-    this.add.text(PANEL_W + 10, H - 12, 'Z pick  X undo  C info', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
+    this.add.text(PANEL_W + 10, H - 12, 'Z pick  X undo  I info', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
       .setShadow(1, 1, '#000', 0);
     this.teamText = this.add.text(PANEL_W + 8, 12, '', { fontFamily: FONT, fontSize: '8px', color: '#ffd23a' }).setShadow(1, 1, '#000', 0);
     addMenuButton(this, W - 12, H - 12, () => this.openSettings());
@@ -96,7 +96,7 @@ export class CharSelectScene extends Phaser.Scene {
       const k = e.key.toLowerCase();
       if (['arrowup', 'w'].includes(k)) { this.cursor = Phaser.Math.Wrap(this.cursor - 1, 0, ROSTER.length); this.moved(); }
       else if (['arrowdown', 's'].includes(k)) { this.cursor = Phaser.Math.Wrap(this.cursor + 1, 0, ROSTER.length); this.moved(); }
-      else if (k === 'c') this.toggleDetail();
+      else if (k === 'c' || k === 'i') this.toggleDetail();
       else if (['x', 'escape', 'backspace'].includes(k) && this.detail) this.toggleDetail(false);
       else if (['z', 'enter', ' '].includes(k)) { this.toggleDetail(false); this.confirm(); }
       else if (['x', 'escape', 'backspace'].includes(k)) this.back();
@@ -232,7 +232,7 @@ export class CharSelectScene extends Phaser.Scene {
     const id = ROSTER[this.cursor];
     this.detail = buildCharacterInfo(this, id, {
       locked: !this.unlocked(id),
-      footer: 'C / X close    Up / Down other characters',
+      footer: 'I / X close    Up / Down other characters',
       onClose: () => this.toggleDetail(false),
     });
   }

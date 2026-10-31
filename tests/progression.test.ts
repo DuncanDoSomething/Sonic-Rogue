@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ITEMS, priceAt, shopStock } from '../src/data/items';
+import { BAG_SIZE, ITEMS, bagCount, priceAt, shopStock } from '../src/data/items';
 import { Fighter } from '../src/data/fighters';
 import { canHaveRival, isBossWave, zoneForWave, ZONES } from '../src/data/zones';
 import { isUnlocked } from '../src/data/unlocks';
@@ -7,7 +7,7 @@ import { expShareAfter } from '../src/data/fighters';
 
 describe('shop', () => {
   it('prijzen stijgen per zone', () => {
-    expect(priceAt(ITEMS.healthRing, 1)).toBe(20);
+    expect(priceAt(ITEMS.healthRing, 1)).toBe(30);
     expect(priceAt(ITEMS.healthRing, 11)).toBeGreaterThan(20);
     expect(priceAt(ITEMS.healthRing, 41)).toBeGreaterThan(priceAt(ITEMS.healthRing, 11));
   });
@@ -15,6 +15,15 @@ describe('shop', () => {
   it('de shop gebruikt de prijs van de huidige zone', () => {
     const stock = shopStock(25);
     expect(stock.find(i => i.id === 'healthRing')?.price).toBe(priceAt(ITEMS.healthRing, 25));
+  });
+
+  it('healing gaat in procenten en de tas heeft maar 2 plekken', () => {
+    const f = new Fighter('sonic', 30);
+    f.hp = 1;
+    ITEMS.healthRing.use(f);
+    expect(f.hp).toBe(1 + Math.ceil(f.maxHp * 0.25));
+    expect(BAG_SIZE).toBe(2);
+    expect(bagCount({ healthRing: 1, revive: 1 })).toBe(2);
   });
 
   it('Revive pas vanaf wave 20, duur, en geeft 50% HP terug', () => {

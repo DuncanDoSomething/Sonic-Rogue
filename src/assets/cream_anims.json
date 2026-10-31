@@ -140,5 +140,32 @@
   ],
   "frameRate": 1000,
   "repeat": 0
+ },
+ "fidget": {
+  "key": "cream_fidget",
+  "frames": [
+   "cream_0_13",
+   "cream_0_14",
+   "cream_0_15",
+   "cream_0_16",
+   "cream_0_17",
+   "cream_0_18",
+   "cream_0_19"
+  ],
+  "frameRate": 8,
+  "repeat": 0
+ },
+ "spindisc": {
+  "key": "cream_spindisc",
+  "frames": [
+   "cream_8_10",
+   "cream_8_11",
+   "cream_8_12",
+   "cream_8_13",
+   "cream_8_14",
+   "cream_8_15"
+  ],
+  "frameRate": 18,
+  "repeat": -1
  }
 }

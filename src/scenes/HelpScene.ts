@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { audio } from '../audio';
 import { EXP_SHARE_STEPS, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MAX_STAGE, type PassiveDef, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
 import { EFFECTS, FIRST_RIVAL_WAVE, RIVAL_CHANCE } from '../data/zones';
-import { PRICE_GROWTH_PER_ZONE } from '../data/items';
+import { BAG_SIZE, PRICE_GROWTH_PER_ZONE } from '../data/items';
 
 const W = 480;
 const H = 270;
@@ -45,7 +45,7 @@ function pages(): Page[] {
         'boss. Beat it for a Chaos Emerald.',
         '',
         'C: your stats   V: field effects',
-        'M: settings',
+        'I: character kits   M: settings',
       ],
     },
     {
@@ -103,8 +103,8 @@ function pages(): Page[] {
         ...passiveLines(HEROES.slice(3)),
         '',
         'STUNNED fighters skip their turn.',
-        'Press C in character select to see',
-        'everything a character can do.',
+        'Press I (battle or character select)',
+        'to see everything a character can do.',
       ],
     },
     {
@@ -159,9 +159,8 @@ function pages(): Page[] {
         'Better healing items unlock as you',
         'get further. Prices go up',
         `${Math.round(PRICE_GROWTH_PER_ZONE * 100)}% every zone.`,
-        '',
-        'Use items in battle with Items.',
-        'Using an item costs your turn.',
+        `Your bag holds ${BAG_SIZE} items. Using one in`,
+        'battle (Items) costs your turn.',
         'From wave 20: Revive (50% HP).',
       ],
     },

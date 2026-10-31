@@ -164,6 +164,30 @@ for i, x in enumerate([548, 580]):
 for name, (x, y) in {'speed': (114, 66), 'fly': (18, 98), 'power': (98, 66)}.items():
     save(cut('comm_243037.png', (x - 1, y - 1, x + 13, y + 13), keep_border=True, trim=False), f'type_{name}')  # met zwart randje
 
+def pow_icon():
+    """Power-type: het POW-icoon uit Sonic Battle (153575) met de hand nagetekend op 14x14
+    (verkleinen van het origineel van 32 px werd een rode vlek): rood met witte stralen en een zwarte vuist."""
+    import math
+    K, R, Wt, F, G = (16, 16, 24, 255), (216, 32, 40, 255), (255, 236, 236, 255), (20, 12, 16, 255), (150, 150, 160, 255)
+    im = Image.new('RGBA', (14, 14), (0, 0, 0, 0))
+    px = im.load()
+    for y in range(14):
+        for x in range(14):
+            if x in (0, 13) or y in (0, 13):
+                if (x, y) not in [(0, 0), (13, 0), (0, 13), (13, 13)]:
+                    px[x, y] = K
+                continue
+            band = int(((math.atan2(y - 7.5, x - 6.5) + math.pi) / (2 * math.pi)) * 16) % 2
+            px[x, y] = Wt if band == 0 else R
+    fist = ['.FFFFFF.', 'FFgFgFgF', 'FFgFgFgF', 'FFFFFFFF', 'FgggFFFF', 'FFFFgFFF', '.FFFFFF.', '..FFFF..']
+    for j, row in enumerate(fist):
+        for i, c in enumerate(row):
+            if c != '.':
+                px[3 + i, 3 + j] = F if c == 'F' else G
+    return im
+
+save(pow_icon(), 'type_power')
+
 # ---- portretjes naast je HP-box (Advance 3 cutscene-portretten + losse Tails)
 # Het hele portret, verkleind naar 40 px hoog (even hoog als de HP-box). BOX-filter houdt de lijnen
 # het netst; daarna de randen weer hard maken (alpha 0 of 255) zodat het pixel-art blijft.

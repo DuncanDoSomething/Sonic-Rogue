@@ -4,608 +4,908 @@
    "frame": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_0_3": {
    "frame": {
-    "x": 60,
+    "x": 66,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_0_4": {
    "frame": {
-    "x": 120,
+    "x": 132,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_0_5": {
    "frame": {
-    "x": 180,
+    "x": 198,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_0_6": {
    "frame": {
-    "x": 240,
+    "x": 264,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_0_7": {
    "frame": {
-    "x": 300,
+    "x": 330,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_0_8": {
    "frame": {
-    "x": 360,
+    "x": 396,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_18_19": {
    "frame": {
-    "x": 420,
+    "x": 462,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_18_20": {
    "frame": {
     "x": 0,
-    "y": 47,
-    "w": 60,
-    "h": 47
+    "y": 66,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_18_21": {
    "frame": {
-    "x": 60,
-    "y": 47,
-    "w": 60,
-    "h": 47
+    "x": 66,
+    "y": 66,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_18_22": {
    "frame": {
-    "x": 120,
-    "y": 47,
-    "w": 60,
-    "h": 47
+    "x": 132,
+    "y": 66,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_3_20": {
    "frame": {
-    "x": 180,
-    "y": 47,
-    "w": 60,
-    "h": 47
+    "x": 198,
+    "y": 66,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_3_21": {
    "frame": {
-    "x": 240,
-    "y": 47,
-    "w": 60,
-    "h": 47
+    "x": 264,
+    "y": 66,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_3_22": {
    "frame": {
-    "x": 300,
-    "y": 47,
-    "w": 60,
-    "h": 47
+    "x": 330,
+    "y": 66,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_3_23": {
    "frame": {
-    "x": 360,
-    "y": 47,
-    "w": 60,
-    "h": 47
+    "x": 396,
+    "y": 66,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_3_24": {
    "frame": {
-    "x": 420,
-    "y": 47,
-    "w": 60,
-    "h": 47
+    "x": 462,
+    "y": 66,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_1_13": {
    "frame": {
     "x": 0,
-    "y": 94,
-    "w": 60,
-    "h": 47
+    "y": 132,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_1_14": {
    "frame": {
-    "x": 60,
-    "y": 94,
-    "w": 60,
-    "h": 47
+    "x": 66,
+    "y": 132,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_1_15": {
    "frame": {
-    "x": 120,
-    "y": 94,
-    "w": 60,
-    "h": 47
+    "x": 132,
+    "y": 132,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_1_16": {
    "frame": {
-    "x": 180,
-    "y": 94,
-    "w": 60,
-    "h": 47
+    "x": 198,
+    "y": 132,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_1_17": {
    "frame": {
-    "x": 240,
-    "y": 94,
-    "w": 60,
-    "h": 47
+    "x": 264,
+    "y": 132,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_22_0": {
    "frame": {
-    "x": 300,
-    "y": 94,
-    "w": 60,
-    "h": 47
+    "x": 330,
+    "y": 132,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_31_7": {
    "frame": {
-    "x": 360,
-    "y": 94,
-    "w": 60,
-    "h": 47
+    "x": 396,
+    "y": 132,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_31_8": {
    "frame": {
-    "x": 420,
-    "y": 94,
-    "w": 60,
-    "h": 47
+    "x": 462,
+    "y": 132,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_31_9": {
    "frame": {
     "x": 0,
-    "y": 141,
-    "w": 60,
-    "h": 47
+    "y": 198,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_31_12": {
    "frame": {
-    "x": 60,
-    "y": 141,
-    "w": 60,
-    "h": 47
+    "x": 66,
+    "y": 198,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_26_17": {
    "frame": {
-    "x": 120,
-    "y": 141,
-    "w": 60,
-    "h": 47
+    "x": 132,
+    "y": 198,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_26_18": {
    "frame": {
-    "x": 180,
-    "y": 141,
-    "w": 60,
-    "h": 47
+    "x": 198,
+    "y": 198,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_26_19": {
    "frame": {
-    "x": 240,
-    "y": 141,
-    "w": 60,
-    "h": 47
+    "x": 264,
+    "y": 198,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    }
   },
   "knuckles_26_20": {
    "frame": {
-    "x": 300,
-    "y": 141,
-    "w": 60,
-    "h": 47
+    "x": 330,
+    "y": 198,
+    "w": 66,
+    "h": 66
    },
    "rotated": false,
    "trimmed": false,
    "spriteSourceSize": {
     "x": 0,
     "y": 0,
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
    },
    "sourceSize": {
-    "w": 60,
-    "h": 47
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_0_10": {
+   "frame": {
+    "x": 396,
+    "y": 198,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_0_11": {
+   "frame": {
+    "x": 462,
+    "y": 198,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_0_12": {
+   "frame": {
+    "x": 0,
+    "y": 264,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_0_13": {
+   "frame": {
+    "x": 66,
+    "y": 264,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_0_14": {
+   "frame": {
+    "x": 132,
+    "y": 264,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_0_15": {
+   "frame": {
+    "x": 198,
+    "y": 264,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_0_16": {
+   "frame": {
+    "x": 264,
+    "y": 264,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_9_5": {
+   "frame": {
+    "x": 330,
+    "y": 264,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_9_6": {
+   "frame": {
+    "x": 396,
+    "y": 264,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_9_7": {
+   "frame": {
+    "x": 462,
+    "y": 264,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_9_8": {
+   "frame": {
+    "x": 0,
+    "y": 330,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_9_9": {
+   "frame": {
+    "x": 66,
+    "y": 330,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_9_10": {
+   "frame": {
+    "x": 132,
+    "y": 330,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_9_11": {
+   "frame": {
+    "x": 198,
+    "y": 330,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
+   }
+  },
+  "knuckles_9_12": {
+   "frame": {
+    "x": 264,
+    "y": 330,
+    "w": 66,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 66
    }
   }
  },
  "meta": {
   "image": "knuckles.png",
   "size": {
-   "w": 480,
-   "h": 188
+   "w": 528,
+   "h": 396
   },
   "scale": "1",
   "credits": "Sonic Advance 3 sprites by Sega/Sonic Team, ripped by Ren \"Foxx\" Ramos"

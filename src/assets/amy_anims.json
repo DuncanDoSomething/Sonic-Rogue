@@ -140,5 +140,32 @@
   ],
   "frameRate": 1000,
   "repeat": 0
+ },
+ "fidget": {
+  "key": "amy_fidget",
+  "frames": [
+   "amy_0_13",
+   "amy_0_14",
+   "amy_0_15",
+   "amy_0_16",
+   "amy_0_17",
+   "amy_0_18",
+   "amy_0_19"
+  ],
+  "frameRate": 8,
+  "repeat": 0
+ },
+ "spindisc": {
+  "key": "amy_spindisc",
+  "frames": [
+   "amy_6_24",
+   "amy_6_25",
+   "amy_6_26",
+   "amy_6_27",
+   "amy_7_0",
+   "amy_7_1"
+  ],
+  "frameRate": 18,
+  "repeat": -1
  }
 }

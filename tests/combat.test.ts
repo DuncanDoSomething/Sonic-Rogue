@@ -187,11 +187,18 @@ describe('nieuwe moves en ultimates', () => {
     expect(MOVES.glideAttack.selfStages).toEqual({ atk: 1, def: -1 });
     expect(MOVES.hammerSmash.selfStages).toEqual({ atk: 1 });
   });
-  it('Glove Punch kost 3 en verdooft 1-2 beurten, één keer per gevecht', () => {
+  it('Glove Punch kost 3 en verdooft altijd 2 beurten (geen limiet); Thunder Shoot 3 beurten', () => {
     expect(MOVES.glovePunch.cost).toBe(3);
-    expect(MOVES.glovePunch.stun).toEqual([1, 2]);
-    expect(MOVES.glovePunch.stunOnce).toBe(true);
-    expect(MOVES.thunderShoot.stun).toEqual([2, 3]);
+    expect(MOVES.glovePunch.stun).toEqual([2, 2]);
+    expect(MOVES.glovePunch.stunOnce).toBeFalsy();
+    expect(MOVES.thunderShoot.stun).toEqual([3, 3]);
+  });
+  it('Knuckle Punch gaat eerst; Maximum Heat maakt de stages op', () => {
+    expect(MOVES.drillPunch.priority).toBeGreaterThan(0);
+    expect(MOVES.maximumHeat.spendStages).toBe(true);
+  });
+  it('Tornado Hammer kost Amy 50% max-HP', () => {
+    expect(MOVES.tornadoHammer.recoil).toBe(0.5);
   });
   it('Chao Cheer kan op een teamgenoot; Chao Blessing geneest iedereen en doet geen schade', () => {
     expect(MOVES.chaoCheer.ally).toBe(true);
@@ -224,6 +231,7 @@ describe('nieuwe moves en ultimates', () => {
     const before = calcHit(tails, foe, MOVES.spinAttack, fixed(0.5)).damage;
     const amyBefore = calcHit(amy, foe, MOVES.spinAttack, fixed(0.5)).damage;
     foe.stun = 1;
+    expect(WEAK_SPOT_BONUS).toBe(2);
     expect(calcHit(tails, foe, MOVES.spinAttack, fixed(0.5)).damage).toBeCloseTo(before * WEAK_SPOT_BONUS, -1);
     expect(calcHit(amy, foe, MOVES.spinAttack, fixed(0.5)).damage).toBe(amyBefore);
   });

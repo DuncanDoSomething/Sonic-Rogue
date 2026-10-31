@@ -17,6 +17,8 @@
 - [x] Ultimate cut-ins and animations, impact effects and hit-stop
 - [x] Team overview mid-run, KOs that last until the zone boss, Revive item
 - [x] Test mode (?test) with battle hotkeys
+- [x] Idle fidgets and upgraded move animations
+- [x] Shop rebalance: percentage heals, two-item bag
 - [x] Auto-save after every wave, Save & Quit in the pause menu and Continue on the title screen
 - [x] Unit tests, end-to-end tests and automatic deploys
 

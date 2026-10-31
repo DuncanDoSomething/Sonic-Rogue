@@ -1,16 +1,16 @@
 // ---------------------------------------------------------------------------
 // Overzicht van een character: type, passive, moves en ultimate.
-// Gebruikt in character select (C) en midden in een run (C in het gevecht, dan met live stats).
+// Gebruikt in character select (C of I) en midden in een run (I in het gevecht, met tabjes voor je team).
 // ---------------------------------------------------------------------------
 import Phaser from 'phaser';
-import { FIGHTERS, Fighter, MAX_BOOST, MOVES, SPEED_POWER, ULTIMATE_LEVEL, type MoveDef, type StageKey } from '../data/fighters';
+import { FIGHTERS, Fighter, MAX_BOOST, MOVES, SPEED_POWER, ULTIMATE_LEVEL, type MoveDef } from '../data/fighters';
 
 const W = 480;
 const H = 270;
 const FONT = '"Press Start 2P", monospace';
 
 export interface InfoOptions {
-  /** het echte character uit je team: dan ook level, HP, stats en stages */
+  /** het echte character uit je team: dan ook zijn level (en of hij KO is) */
   fighter?: Fighter;
   /** nog op slot: alleen "???" */
   locked?: boolean;
@@ -89,17 +89,7 @@ export function buildCharacterInfo(scene: Phaser.Scene, id: string, o: InfoOptio
   txt(x + (f ? 150 : 110), y, `${def.type.toUpperCase()} type`, '#9aa4c4');
   y += 16;
 
-  if (f) {
-    // live stats, met stages zoals in PokéRogue (+2, -1)
-    const st = (k: StageKey) => { const v = f.stage(k); return v === 0 ? '' : `(${v > 0 ? '+' : ''}${v})`; };
-    const ko = f.fainted;
-    txt(x, y, ko ? `HP 0/${f.maxHp}  KO` : `HP ${f.hp}/${f.maxHp}`, ko ? '#e8443a' : '#7cf07c');
-    txt(x + 120, y, `BOOST ${f.boost}/${MAX_BOOST}`, '#8ad8ff');
-    txt(x + 250, y, `EXP ${f.exp}/${f.expToNext}`, '#9aa4c4');
-    y += 11;
-    txt(x, y, `ATK ${f.atk}${st('atk')}   DEF ${f.dfn}${st('def')}   SPD ${f.spd}${st('spd')}${f.stage('acc') ? `   ACC ${st('acc')}` : ''}`, '#ffffff');
-    y += 15;
-  }
+  if (f?.fainted) { txt(x, y - 4, 'KO - back after the zone boss', '#e8443a'); y += 10; }
 
   if (def.passive) {
     txt(x, y, `PASSIVE  ${def.passive.name}`, '#7cf07c');

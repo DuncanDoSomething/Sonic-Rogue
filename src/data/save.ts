@@ -8,7 +8,7 @@ import { TEST_MODE } from './testMode';
 const KEY = 'sonicrogue_run';
 const VERSION = 1;
 
-export interface SavedFighter { id: string; level: number; exp: number; hp: number; boost: number; stages: Stages; }
+export interface SavedFighter { id: string; level: number; exp: number; hp: number; boost: number; stages: Stages; sash?: boolean; }
 
 export interface RunSave {
   v: number;
@@ -18,13 +18,15 @@ export interface RunSave {
   expShare: number;
   bag: Record<string, number>;
   rivalsMet: string[];
+  /** Chao Blessing heeft het zone-effect weggehaald (tot de zone-boss) */
+  fieldCleared?: boolean;
   /** index in `party` van wie er vecht */
   active: number;
   party: SavedFighter[];
 }
 
 export function fighterToSave(f: Fighter): SavedFighter {
-  return { id: f.def.id, level: f.level, exp: f.exp, hp: f.hp, boost: f.boost, stages: { ...f.stages } };
+  return { id: f.def.id, level: f.level, exp: f.exp, hp: f.hp, boost: f.boost, stages: { ...f.stages }, sash: f.sashUsed };
 }
 
 export function fighterFromSave(s: SavedFighter): Fighter {
@@ -33,6 +35,7 @@ export function fighterFromSave(s: SavedFighter): Fighter {
   f.hp = Math.max(0, Math.min(f.maxHp, s.hp));
   f.boost = s.boost;
   f.stages = { ...f.stages, ...s.stages };
+  f.sashUsed = !!s.sash;
   return f;
 }
 

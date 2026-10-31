@@ -121,18 +121,27 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Glove Punch stuns the foe, but only once per fight', async ({ page }) => {
+  test('Glove Punch stuns the foe for 2 turns, every time', async ({ page }) => {
     const errors = trackErrors(page);
     await openGame(page);
     await startRun(page);
-    await setup(page, 's.player.boost = 6; s.enemy.hp = 9999; s.runTurn({ ...window.MOVES.glovePunch, priority: 9 });');
-    await waitForMenu(page, 'command');
-    const used = () => page.evaluate(() => (window as any).game.scene.getScene('Battle').stunUsed.has('p:glovePunch'));
-    expect(await used()).toBe(true);
-    await setup(page, 's.enemy.stun = 0; s.player.boost = 6; s.runTurn({ ...window.MOVES.glovePunch, priority: 9 });');
-    await waitForMenu(page, 'command');
-    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.stun)).toBe(0);
+    const stun = () => page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.stun);
+    for (let i = 0; i < 2; i++) {
+      // Glove Punch eerst: 2 beurten verdoofd, de vijand slaat er meteen één over
+      await setup(page, 's.enemy.stun = 0; s.player.boost = 6; s.enemy.hp = 9999; s.runTurn({ ...window.MOVES.glovePunch, priority: 9 });');
+      await waitForMenu(page, 'command');
+      expect(await stun()).toBe(1);
+    }
     expect(errors).toEqual([]);
+  });
+
+  test('C shows your stats, I shows the kits of your team', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await press(page, 'c');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').statsLayer.visible)).toBe(true);
+    await press(page, 'c');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').statsLayer.visible)).toBe(false);
   });
 
   test('Chao Cheer heals the teammate you pick', async ({ page }) => {
@@ -177,17 +186,17 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
-  test('C mid-run opens the team overview; arrows switch teammates', async ({ page }) => {
+  test('I mid-run opens the team kits; arrows switch teammates', async ({ page }) => {
     const errors = trackErrors(page);
     await openGame(page);
     await startRun(page);
-    await press(page, 'c');
+    await press(page, 'i');
     await expect.poll(() => activeScenes(page)).toContain('Team');
     const idx = () => page.evaluate(() => (window as any).game.scene.getScene('Team').index);
     expect(await idx()).toBe(0);
     await press(page, 'ArrowRight');
     expect(await idx()).toBe(1);
-    await press(page, 'c');
+    await press(page, 'i');
     await expect.poll(() => activeScenes(page)).not.toContain('Team');
     await waitForMenu(page, 'command');
     expect(errors).toEqual([]);
@@ -228,6 +237,24 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').player.level)).toBe(30);
     expect(await page.evaluate(() => localStorage.getItem('sonicrogue_run'))).toBeNull();
     expect(await page.evaluate(() => localStorage.getItem('sonicrogue_unlocked'))).toBeNull();
+    expect(errors).toEqual([]);
+  });
+
+  test('Amy below half HP: Tornado Hammer wins the wave but she goes down, and the next teammate steps in', async ({ page }) => {
+    test.setTimeout(90_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startRun(page);
+    await setup(page, `s.switchTo(s.party[2]).then(() => {
+      s.player.level = 30; s.player.boost = 6; s.player.hp = Math.floor(s.player.maxHp * 0.4); s.enemy.hp = 1;
+      s.runTurn(window.MOVES.tornadoHammer);
+    });`);
+    await waitForMenu(page, 'choice');            // "Who goes next?"
+    await press(page, 'z');
+    await waitForMenu(page, 'reward');
+    const st = await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { active: b.player.def.id, amyHp: b.party[2].hp }; });
+    expect(st.amyHp).toBe(0);
+    expect(st.active).not.toBe('amy');
     expect(errors).toEqual([]);
   });
 

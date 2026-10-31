@@ -112,5 +112,44 @@
   ],
   "frameRate": 1000,
   "repeat": 0
+ },
+ "fidget": {
+  "key": "sonic_fidget",
+  "frames": [
+   "sonic_0_10",
+   "sonic_0_11",
+   "sonic_0_12",
+   "sonic_0_13",
+   "sonic_0_14",
+   "sonic_0_15",
+   "sonic_0_16",
+   "sonic_0_17"
+  ],
+  "frameRate": 8,
+  "repeat": 0
+ },
+ "dashfire": {
+  "key": "sonic_dashfire",
+  "frames": [
+   "sonic_7_17",
+   "sonic_7_19"
+  ],
+  "frameRate": 16,
+  "repeat": -1
+ },
+ "spinkick": {
+  "key": "sonic_spinkick",
+  "frames": [
+   "sonic_16_16",
+   "sonic_16_17",
+   "sonic_16_18",
+   "sonic_16_19",
+   "sonic_16_20",
+   "sonic_16_21",
+   "sonic_17_0",
+   "sonic_17_1"
+  ],
+  "frameRate": 18,
+  "repeat": 0
  }
 }

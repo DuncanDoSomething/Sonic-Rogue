@@ -100,5 +100,40 @@
   ],
   "frameRate": 1000,
   "repeat": 0
+ },
+ "fidget": {
+  "key": "tails_fidget",
+  "frames": [
+   {
+    "frame": "tails_0_16",
+    "duration": 159
+   },
+   {
+    "frame": "tails_0_18",
+    "duration": 199
+   },
+   {
+    "frame": "tails_0_19",
+    "duration": 399
+   },
+   {
+    "frame": "tails_1_0",
+    "duration": 199
+   },
+   {
+    "frame": "tails_1_1",
+    "duration": 399
+   },
+   {
+    "frame": "tails_0_19",
+    "duration": 159
+   },
+   {
+    "frame": "tails_0_16",
+    "duration": 159
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
  }
 }

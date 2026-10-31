@@ -51,6 +51,12 @@ CHARACTERS = {
         # vuist omhoog, dan wijzen met vingertje-wiebel; eindigt op de wijs-pose
         'victory': {'frames': [(14, 8, 110), (14, 9, 110), (14, 10, 110), (14, 11, 380),
                                (14, 12, 120), (14, 13, 120), (14, 12, 120), (14, 13, 120)], 'repeat': 0},
+        # af en toe in de idle: ongeduldig rondkijken en met zijn voet tikken
+        'fidget':  {'frames': [(0, c) for c in range(10, 18)], 'fps': 8, 'repeat': 0},
+        # Spin Dash-lancering: bal met vuurstaart
+        'dashfire': {'frames': [(7, 17), (7, 19)], 'fps': 16, 'repeat': -1},
+        # gouden draaitrap (na de Homing Attack)
+        'spinkick': {'frames': [(16, c) for c in range(16, 22)] + [(17, 0), (17, 1)], 'fps': 18, 'repeat': 0},
     },
     'tails': {
         # staart-zwiep is een cyclus van 8 frames; 14-15 zijn varianten die de loop laten haperen
@@ -62,6 +68,7 @@ CHARACTERS = {
         'ko':      {'frames': [(25, 0), (26, 17), (26, 18), (27, 0), (27, 1)], 'fps': 6, 'repeat': 0},
         # duim omhoog, dan saluut met een grijns; eindigt op 1.1
         'victory': {'frames': [(0, 16, 120), (0, 17, 260), (0, 18, 140), (0, 19, 140), (1, 0, 140), (1, 1, 200)], 'repeat': 0},
+        'fidget':  {'frames': [(0, 16, 160), (0, 18, 200), (0, 19, 400), (1, 0, 200), (1, 1, 400), (0, 19, 160), (0, 16, 160)], 'repeat': 0},
     },
     'knuckles': {
         'idle':    {'frames': [(0, c) for c in range(2, 9)], 'fps': 8, 'repeat': -1},
@@ -73,6 +80,10 @@ CHARACTERS = {
         'ko':      {'frames': [(22, 0, 200), (31, 7, 120), (31, 8, 120), (31, 9, 140), (31, 12, 500)], 'repeat': 0},
         # vuist balanceren, dan duim omhoog met glimmer
         'victory': {'frames': [(26, 17, 120), (26, 18, 120), (26, 19, 160), (26, 20, 600)], 'repeat': 0},
+        # vuisten tegen elkaar slaan (met vonkje)
+        'fidget':  {'frames': [(0, c) for c in range(10, 17)], 'fps': 10, 'repeat': 0},
+        # Knuckle Punch: vuist vooruit met een vuurstoot
+        'heavypunch': {'frames': [(9, c) for c in range(5, 13)], 'fps': 16, 'repeat': 0},
     },
     'cream': {
         # staan, knipperen, oortje laten wiebelen
@@ -85,6 +96,9 @@ CHARACTERS = {
         'ko':      {'frames': [(25, 3, 160), (25, 8, 160), (25, 9, 160), (25, 10, 160), (25, 11, 400)], 'repeat': 0},
         # V-teken met knipoog
         'victory': {'frames': [(15, 17, 160), (15, 18, 140), (15, 19, 140), (15, 20, 600)], 'repeat': 0},
+        'fidget':  {'frames': [(0, c) for c in range(13, 20)], 'fps': 8, 'repeat': 0},
+        # draaiende schijf (Flutter Dive)
+        'spindisc': {'frames': [(8, c) for c in range(10, 16)], 'fps': 18, 'repeat': -1},
     },
     'amy': {
         'idle':    {'frames': [(0, 3, 600), (0, 5, 600), (0, 3, 600), (0, 5, 600), (0, 11, 120)], 'repeat': -1},
@@ -95,11 +109,14 @@ CHARACTERS = {
         'hurt':    {'frames': [(28, 8)], 'fps': 8, 'repeat': 0},
         'ko':      {'frames': [(28, 8), (22, 0)], 'fps': 4, 'repeat': 0},
         'victory': {'frames': [(40, 0, 140), (40, 1, 140), (40, 2, 140), (40, 3, 140), (40, 4, 600)], 'repeat': 0},
+        'fidget':  {'frames': [(0, c) for c in range(13, 20)], 'fps': 8, 'repeat': 0},
+        # roze/gouden draaischijf (Hammer Twirl)
+        'spindisc': {'frames': [(6, 24), (6, 25), (6, 26), (6, 27), (7, 0), (7, 1)], 'fps': 18, 'repeat': -1},
     },
 }
 # handmatige anker-correctie (pixels, + = naar rechts) voor frames waar een hamer o.i.d. het lichaam scheef trekt
 OFFSETS = {
-    'knuckles': {(1, 14): -7, (1, 15): -7, (1, 16): -5},
+    'knuckles': {(1, 14): -7, (1, 15): -7, (1, 16): -5, (9, 5): 3, (9, 10): 4},
     'amy': {(10, 0): 3, (10, 1): 8, (10, 2): 8, (10, 3): 8, (10, 4): 7, (10, 6): -7, (10, 7): -7, (10, 8): -7, (10, 9): -7,
             (17, 6): -12, (17, 8): 11, (17, 9): 10, (17, 11): -4},
 }.get(char, {})

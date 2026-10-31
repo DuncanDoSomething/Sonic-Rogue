@@ -45,7 +45,7 @@ const rnd = Phaser.Math.Between;
 const rndF = Phaser.Math.FloatBetween;
 
 /** Effect-sprite dat één keer afspeelt en zichzelf opruimt. */
-function fxOnce(scene: Phaser.Scene, x: number, y: number, anim: string, scale = 1, depth = 16, flip = false) {
+export function fxOnce(scene: Phaser.Scene, x: number, y: number, anim: string, scale = 1, depth = 16, flip = false) {
   // repeat 0: ook een loop-animatie (energiebal) speelt hier maar één keer
   const sp = scene.add.sprite(x, y, 'fx').setScale(scale).setDepth(depth).setFlipX(flip).play({ key: anim, repeat: 0 });
   sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
@@ -79,7 +79,7 @@ function drawBolt(g: Phaser.GameObjects.Graphics, x1: number, y1: number, x2: nu
 }
 
 /** Hartjes die alle kanten op springen. */
-function hearts(scene: Phaser.Scene, x: number, y: number, n: number, color = 0xff6fb5) {
+export function hearts(scene: Phaser.Scene, x: number, y: number, n: number, color = 0xff6fb5) {
   for (let i = 0; i < n; i++) {
     const h = scene.add.image(x, y, 'heart').setTint(i % 3 ? color : 0xffffff).setDepth(17).setScale(rndF(1, 1.8));
     const a = rndF(0, Math.PI * 2), d = rndF(20, 60);
@@ -96,13 +96,13 @@ function flame(scene: Phaser.Scene, x: number, y: number, big = 1) {
 }
 
 /** Schokgolf: uitdijende ring. */
-function shockwave(scene: Phaser.Scene, x: number, y: number, color = 0xffffff, size = 90, ms = 450) {
+export function shockwave(scene: Phaser.Scene, x: number, y: number, color = 0xffffff, size = 90, ms = 450) {
   const ring = scene.add.circle(x, y, 8).setStrokeStyle(4, color, 1).setDepth(17).setFillStyle(0, 0);
   scene.tweens.add({ targets: ring, scale: size / 8, alpha: 0, duration: ms, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
 }
 
 /** Grote tekst die even opploft (bijv. "CRITICAL!"). */
-async function bigText(scene: Phaser.Scene, x: number, y: number, text: string, color: string) {
+export async function bigText(scene: Phaser.Scene, x: number, y: number, text: string, color: string) {
   const t = scene.add.text(x, y, text, { fontFamily: FONT, fontSize: '16px', color, stroke: '#000000', strokeThickness: 5 })
     .setOrigin(0.5).setDepth(40).setScale(0).setAngle(-8);
   await tween(scene, { targets: t, scale: 1.2, duration: 160, ease: 'Back.easeOut' });
@@ -123,6 +123,17 @@ const CUTIN: Record<string, { color: number; focus: [number, number]; voice: str
  * character voorbij, met de naam van de ultimate eronder. Daarna een witte flits en terug naar het gevecht.
  */
 export async function cutIn(scene: Phaser.Scene, id: string, title: string) {
+  // de cut-in speelt altijd op normale snelheid, ook op Battle Speed 2x/3x
+  const speed = { tweens: scene.tweens.timeScale, time: scene.time.timeScale };
+  scene.tweens.timeScale = 1;
+  scene.time.timeScale = 1;
+  try { await playCutIn(scene, id, title); } finally {
+    scene.tweens.timeScale = speed.tweens;
+    scene.time.timeScale = speed.time;
+  }
+}
+
+async function playCutIn(scene: Phaser.Scene, id: string, title: string) {
   const cfg = CUTIN[id] ?? CUTIN.sonic;
   const D = 60;
   const cx = W / 2, cy = H / 2 - 10;
@@ -234,7 +245,8 @@ async function superSonic(c: UltCtx) {
 
   // 2. transformatie: wit licht, dan goud
   scene.cameras.main.flash(350, 255, 255, 255);
-  audio.sfx('levelup');
+  audio.sfx('explosion2', { volume: 0.6 });
+  audio.sfx('ringchime', { volume: 0.8 });
   shockwave(scene, s.x, s.y - 22, 0xffe14a, 120, 600);
   await playDone(scene, s, 'ss_transform', 1200);
   s.play('ss_idle');

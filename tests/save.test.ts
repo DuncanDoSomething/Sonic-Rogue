@@ -22,6 +22,13 @@ describe('auto-save', () => {
     expect([back.def.id, back.level, back.hp, back.exp, back.boost, back.stages.atk]).toEqual(['amy', 17, 12, 40, 5, 1]);
   });
 
+  it('Iron Fists (al gebruikt deze zone) blijft bewaard', () => {
+    const k = new Fighter('knuckles', 20);
+    k.sashUsed = true;
+    expect(fighterFromSave(fighterToSave(k)).sashUsed).toBe(true);
+    expect(fighterFromSave(fighterToSave(new Fighter('knuckles', 20))).sashUsed).toBe(false);
+  });
+
   it('opslaan, laden en wissen', () => {
     expect(loadRun()).toBeNull();
     saveRun({ wave: 23, rings: 140, emeralds: 2, expShare: 0.5, bag: { healthRing: 2 }, rivalsMet: ['knuckles'], active: 1,

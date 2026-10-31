@@ -120,5 +120,34 @@
   ],
   "frameRate": 1000,
   "repeat": 0
+ },
+ "fidget": {
+  "key": "knuckles_fidget",
+  "frames": [
+   "knuckles_0_10",
+   "knuckles_0_11",
+   "knuckles_0_12",
+   "knuckles_0_13",
+   "knuckles_0_14",
+   "knuckles_0_15",
+   "knuckles_0_16"
+  ],
+  "frameRate": 10,
+  "repeat": 0
+ },
+ "heavypunch": {
+  "key": "knuckles_heavypunch",
+  "frames": [
+   "knuckles_9_5",
+   "knuckles_9_6",
+   "knuckles_9_7",
+   "knuckles_9_8",
+   "knuckles_9_9",
+   "knuckles_9_10",
+   "knuckles_9_11",
+   "knuckles_9_12"
+  ],
+  "frameRate": 16,
+  "repeat": 0
  }
 }
