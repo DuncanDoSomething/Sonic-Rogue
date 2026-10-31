@@ -42,11 +42,8 @@ rows = [sorted(r['b'], key=lambda b: b[0]) for r in rows]
 # --- 3. welke frames horen bij welke animatie ("rij.kolom" op de sheet)
 CHARACTERS = {
     'sonic': {
-        # Idle in lagen, zoals Advance 2/3: stilstaan, na een tijdje met zijn voet tikken,
-        # en als je nog langer wacht gaat hij liggen met een "..."-wolkje.
-        # ademhalen: frame 0 en een gemaakte variant waarin het bovenlichaam 1 pixel zakt (zie SYNTH)
-        'idle':    {'frames': [(0, 0, 700), (0, 90, 500), (0, 0, 600), (0, 90, 500)], 'repeat': -1},
-        'wait':    {'frames': [(0, c) for c in range(1, 10)], 'fps': 12, 'repeat': 2},
+        # zijn gewone idle; als je lang niks doet gaat hij liggen met een "..."-wolkje (zoals in Advance 2/3)
+        'idle':    {'frames': [(0, c) for c in range(0, 10)], 'fps': 8, 'repeat': -1},
         'sit':     {'frames': [(1, 6, 140), (1, 7, 140), (1, 8, 160), (1, 9, 160), (1, 10, 200), (1, 11, 200), (1, 12, 200), (1, 13, 300)], 'repeat': 0},
         'nap':     {'frames': [(1, 13, 900), (1, 14, 500), (1, 15, 1100)], 'repeat': -1},
         'spin':    {'frames': [(5, 3), (5, 4), (5, 5), (5, 6)], 'fps': 20, 'repeat': -1},
@@ -149,9 +146,7 @@ CLIP = {
 }.get(char, {})
 ANIMS = CHARACTERS[char]
 # gemaakte frames: (rij, nep-kolom) -> bron-frame. Het bovenlichaam zakt 1 pixel (ademhalen).
-SYNTH = {
-    'sonic': {(0, 90): (0, 0)},
-}.get(char, {})
+SYNTH = {}.get(char, {})
 
 def crop(r, c):
     if (r, c) in SYNTH:

@@ -2,29 +2,7 @@
  "idle": {
   "key": "sonic_idle",
   "frames": [
-   {
-    "frame": "sonic_0_0",
-    "duration": 699
-   },
-   {
-    "frame": "sonic_0_90",
-    "duration": 499
-   },
-   {
-    "frame": "sonic_0_0",
-    "duration": 599
-   },
-   {
-    "frame": "sonic_0_90",
-    "duration": 499
-   }
-  ],
-  "frameRate": 1000,
-  "repeat": -1
- },
- "wait": {
-  "key": "sonic_wait",
-  "frames": [
+   "sonic_0_0",
    "sonic_0_1",
    "sonic_0_2",
    "sonic_0_3",
@@ -35,8 +13,8 @@
    "sonic_0_8",
    "sonic_0_9"
   ],
-  "frameRate": 12,
-  "repeat": 2
+  "frameRate": 8,
+  "repeat": -1
  },
  "sit": {
   "key": "sonic_sit",

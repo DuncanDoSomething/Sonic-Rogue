@@ -184,7 +184,9 @@ export class BattleScene extends Phaser.Scene {
         continue;
       }
       st.t += dt;
-      if (st.stage === 0 && st.t > 4500 && this.anims.exists(wait) && key === idle) {
+      if (st.stage === 0 && st.t > 4500 && !this.anims.exists(wait)) {
+        st.stage = 1; // geen ongeduld-animatie (Sonic): meteen door naar zitten/liggen later
+      } else if (st.stage === 0 && st.t > 4500 && key === idle) {
         st.stage = 1;
         spr.play(wait);
         spr.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => { if (spr.anims.currentAnim?.key === wait) spr.play(idle); });
