@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from '../audio';
-import { EXP_SHARE_STEPS, MAX_BOOST, MAX_PARTY, MAX_STAGE, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
+import { EXP_SHARE_STEPS, MAX_BOOST, MAX_PARTY, MAX_STAGE, PASSIVES, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
 import { EFFECTS, FIRST_RIVAL_WAVE, RIVAL_CHANCE } from '../data/zones';
 import { PRICE_GROWTH_PER_ZONE } from '../data/items';
 
@@ -10,6 +10,17 @@ const FONT = '"Press Start 2P", monospace';
 
 /** Een pagina: titel, regels tekst en optioneel icoontjes die naast bepaalde regels staan. */
 interface Page { title: string; lines: string[]; icons?: Array<[number, string]>; }
+
+/** Knipt een zin op in regels van max `n` tekens (op woorden). */
+function wrap(text: string, n: number): string[] {
+  const out: string[] = [];
+  let line = '';
+  for (const w of text.split(' ')) {
+    if ((line + ' ' + w).trim().length > n) { out.push(line); line = w; } else line = (line + ' ' + w).trim();
+  }
+  if (line) out.push(line);
+  return out;
+}
 
 /** Alle uitleg op één plek. Getallen komen uit de data-bestanden, zodat het altijd klopt. */
 function pages(): Page[] {
@@ -63,8 +74,8 @@ function pages(): Page[] {
     {
       title: 'STAT STAGES',
       lines: [
-        'Power Up, Speed Shoes and Shield give',
-        'ATK, SPD or DEF +1.',
+        'Some moves and passives raise stats,',
+        'like Homing Attack (SPD +1).',
         '',
         `Each stage is +25%, up to +${MAX_STAGE} (x2.5).`,
         'Going down: -1 = x0.8, -6 = x0.4,',
@@ -72,6 +83,12 @@ function pages(): Page[] {
         '',
         'Your stages reset after every',
         'zone boss.',
+      ],
+    },
+    {
+      title: 'PASSIVES',
+      lines: [
+        ...Object.values(PASSIVES).flatMap(pa => [pa.name.toUpperCase(), ...wrap(pa.desc, 38)]),
       ],
     },
     {

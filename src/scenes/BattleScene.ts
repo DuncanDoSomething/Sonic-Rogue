@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, emptyStages, expShareAfter, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { EMERALDS, isBossWave, isEliteWave, canHaveRival, RIVAL_CHANCE, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
+import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
 import type { ZoneEffect } from '../data/zones';
 
 /** true = bosses krijgen jouw type. Met een party van 3 kun je wisselen, dus nu uit. */
@@ -61,6 +62,10 @@ export class BattleScene extends Phaser.Scene {
   private wave = 1;
   /** true als de huidige wave een rival-gevecht is (een ander character in plaats van een badnik) */
   private rival = false;
+  /** save waarmee deze run verder gaat (Continue op het title screen) */
+  private saved?: RunSave;
+  /** wie deze beurt geflinched is (Knuckles' Iron Fists) */
+  private flinched = new Set<Fighter>();
   private fieldEffect?: ZoneEffect;
   private fieldText!: Phaser.GameObjects.Text;
   private fieldLayer?: Phaser.GameObjects.Container;
@@ -130,7 +135,8 @@ export class BattleScene extends Phaser.Scene {
 
   constructor() { super('Battle'); }
 
-  init(data: { party?: string[]; starter?: string }) {
+  init(data: { party?: string[]; starter?: string; save?: RunSave }) {
+    this.saved = data.save;
     this.partyIds = data.party?.length ? data.party : [data.starter ?? 'sonic'];
     this.cmdItems = [];
     this.statsRows = [];
@@ -160,6 +166,17 @@ export class BattleScene extends Phaser.Scene {
     this.party = this.partyIds.map(id => new Fighter(id, 5));
     this.player = this.party[0];
     this.expShare = 0;
+    const sv = this.saved;
+    if (sv) {
+      this.party = sv.party.map(fighterFromSave);
+      this.player = this.party[sv.active] ?? this.party.find(f => !f.fainted) ?? this.party[0];
+      this.wave = sv.wave;
+      this.rings = sv.rings;
+      this.emeralds = sv.emeralds;
+      this.expShare = sv.expShare;
+      this.bag = { ...sv.bag };
+      this.rivalsMet = [...sv.rivalsMet];
+    }
     this.cameras.main.fadeIn(250, 0, 0, 0);
     this.backdrop = new Backdrop(this, PANEL_Y, 0);
     this.platformGfx = this.add.graphics().setDepth(1);
@@ -174,6 +191,8 @@ export class BattleScene extends Phaser.Scene {
     this.drawHud();
     this.drawPanel();
     this.bindInput();
+    // verdiende Chaos Emeralds uit een save meteen tonen
+    for (let i = 0; i < this.emeralds; i++) this.emeraldSlots[i].clearTint().setAlpha(1).play(`emerald_${EMERALDS[i]}`);
     this.startWave();
   }
 
@@ -354,12 +373,12 @@ export class BattleScene extends Phaser.Scene {
     // Stats-paneel (C in het hoofdmenu, of tik op je HP-box)
     this.statsLayer = this.add.container(0, 0).setDepth(34).setVisible(false);
     const sg = this.add.graphics();
-    sg.fillStyle(0x10131c, 0.96).fillRoundedRect(8, PANEL_Y - 112, 250, 108, 5);
-    sg.lineStyle(1, 0xf2c230).strokeRoundedRect(8.5, PANEL_Y - 111.5, 249, 107, 5);
+    sg.fillStyle(0x10131c, 0.96).fillRoundedRect(8, PANEL_Y - 126, 250, 122, 5);
+    sg.lineStyle(1, 0xf2c230).strokeRoundedRect(8.5, PANEL_Y - 125.5, 249, 121, 5);
     this.statsLayer.add(sg);
-    for (let i = 0; i < 7; i++) {
-      const t = this.add.text(18, PANEL_Y - 104 + i * 14, '', { fontFamily: FONT, fontSize: '8px', color: i === 0 ? '#f2c230' : '#ffffff' });
-      const b = this.add.text(248, PANEL_Y - 104 + i * 14, '', { fontFamily: FONT, fontSize: '8px', color: '#4ade5a' }).setOrigin(1, 0);
+    for (let i = 0; i < 8; i++) {
+      const t = this.add.text(18, PANEL_Y - 118 + i * 14, '', { fontFamily: FONT, fontSize: '8px', color: i === 0 ? '#f2c230' : '#ffffff' });
+      const b = this.add.text(248, PANEL_Y - 118 + i * 14, '', { fontFamily: FONT, fontSize: '8px', color: '#4ade5a' }).setOrigin(1, 0);
       this.statsRows.push(t, b);
       this.statsLayer.add([t, b]);
     }
@@ -408,6 +427,7 @@ export class BattleScene extends Phaser.Scene {
       [`SPD  ${p.spd}`, st('spd') + (p.stage('acc') ? `  ACC ${st('acc')}` : '')],
       [`EXP  ${p.exp}/${p.expToNext}`, ''],
       [`Rings ${this.rings}   Emeralds ${this.emeralds}/7`, ''],
+      [p.def.passive ? `Passive: ${p.def.passive.name}` : 'Passive: -', ''],
     ];
     rows.forEach(([l, r], i) => { this.statsRows[i * 2].setText(l); this.statsRows[i * 2 + 1].setText(r); });
   }
@@ -820,7 +840,17 @@ export class BattleScene extends Phaser.Scene {
   private center(s: Phaser.GameObjects.Sprite) { return { x: s.x, y: s.y - s.displayHeight * 0.4 }; }
 
   // ---------------------------------------------------------------- flow
+  /** Auto-save: de run zoals hij nu is, zodat je na het sluiten verder kunt bij deze wave. */
+  private autoSave() {
+    saveRun({
+      wave: this.wave, rings: this.rings, emeralds: this.emeralds, expShare: this.expShare,
+      bag: { ...this.bag }, rivalsMet: [...this.rivalsMet],
+      active: Math.max(0, this.party.indexOf(this.player)), party: this.party.map(fighterToSave),
+    });
+  }
+
   private async startWave() {
+    this.autoSave();
     this.menu = 'busy';
     this.pointer.setVisible(false);
     this.cmdLayer.setVisible(false);
@@ -901,11 +931,17 @@ export class BattleScene extends Phaser.Scene {
       ? [[this.player, this.enemy, playerMove], [this.enemy, this.player, enemyMove]]
       : [[this.enemy, this.player, enemyMove], [this.player, this.enemy, playerMove]];
 
+    this.flinched.clear();
     for (const [att, tgt, move] of order) {
       if (att.fainted || tgt.fainted) continue;
+      if (this.flinched.has(att)) {
+        await this.say(`${att === this.player ? '' : this.rival ? 'Rival ' : 'Foe '}${att.name} flinched and couldn't move!`, 400);
+        continue;
+      }
       if (att === this.player) { this.player.spendBoost(move); this.setBox(this.pBox, this.player, false); }
       await this.doAttack(att, tgt, move);
     }
+    this.flinched.clear();
 
     if (this.enemy.fainted) return this.winWave();
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(); return; }
@@ -956,6 +992,12 @@ export class BattleScene extends Phaser.Scene {
       if (hit.effect > 1) await this.say("It's super effective!", 350);
       else if (hit.effect < 1) await this.say("It's not very effective...", 350);
       if (!hit.crit && hit.effect === 1) await this.wait(250);
+      // moves die je eigen stats verhogen (Homing Attack: SPD +1)
+      for (const [k, v] of Object.entries(move.selfStages ?? {})) {
+        if (!att.fainted) await this.say(att.raise(k as StageKey, v), 300);
+      }
+      // Iron Fists (Knuckles): kans dat het doelwit zijn beurt verliest
+      if (att.def.passive?.id === 'flinch' && !tgt.fainted && Math.random() < FLINCH_CHANCE) this.flinched.add(tgt);
     }
   }
 
@@ -1208,6 +1250,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async finishWin(c: { x: number; y: number }) {
+    // Sonic Speed: na elke KO SPD +1
+    if (this.player.def.passive?.id === 'speedster' && !this.player.fainted) {
+      await this.say(`Sonic Speed! ${this.player.raise('spd')}`, 300);
+    }
     const gained = 10 + this.wave * 3;
     this.hero.play(this.player.anim('victory'));
     this.victoryVoice();
@@ -1650,6 +1696,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async loseRun() {
+    clearRun();
     audio.stopMusic(1200);
     await this.say(this.party.length > 1 ? 'The whole team is down!' : `${this.player.name} is down!`, 400);
     await this.say(`Run over at wave ${this.wave}.\nPress Z / tap to retry.`, 0);

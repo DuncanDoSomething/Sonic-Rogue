@@ -21,7 +21,7 @@ export interface ZoneEffect {
 }
 
 export const EFFECTS = {
-  heat:     { name: 'HEAT', short: 'ATK-1  BURN', desc: 'ATK -1, burns 1/16 HP each turn', color: '#ff8a3a', stages: { atk: -1 }, burn: 1 / 16 },
+  heat:     { name: 'HEAT', short: 'BURN', desc: 'Burns 1/16 HP each turn', color: '#ff8a3a', stages: {}, burn: 1 / 16 },
   joy:      { name: 'JOY', short: 'DEF-1', desc: 'Too much fun! DEF -1', color: '#ff7ad0', stages: { def: -1 } },
   freezing: { name: 'FREEZING', short: 'SPD-1', desc: 'Cold paws: SPD -1', color: '#9ad8ff', stages: { spd: -1 } },
   clouds:   { name: 'CLOUDS', short: 'ACC-1', desc: 'Hard to see: ACC -1', color: '#e8eef8', stages: { acc: -1 } },

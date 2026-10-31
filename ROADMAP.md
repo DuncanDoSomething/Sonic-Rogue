@@ -11,10 +11,14 @@
 - [x] Rivals that unlock characters and can join your team
 - [x] Shop with prices that scale per zone
 - [x] Sonic Advance 2-style intro, music and sound effects
+- [x] Character passives for Sonic, Knuckles and Amy
+- [x] Auto-save at the start of every wave, with Continue on the title screen
 - [x] Unit tests, end-to-end tests and automatic deploys
 
 ## Next
-- [ ] Rework rewards, and moves that change stats
+- [ ] New rewards to replace the old stat boosts: moves and passives
+- [ ] Passives for Tails and Cream
+- [ ] Team ultimates
 - [ ] More badniks from Sonic Advance 1, 2 and 3, with unique enemies per zone
 - [ ] Minibosses and a unique boss per zone
 - [ ] Eggman boss fight every 20 waves, with a relic as a reward
@@ -24,7 +28,6 @@
 
 ## Later
 - [ ] Run summary after a game over
-- [ ] Save in the middle of a run
 - [ ] Chao Garden with eggs to work towards
 - [ ] Point cost for picking your team
 - [ ] Mobile testing and polish

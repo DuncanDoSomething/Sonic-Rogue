@@ -19,11 +19,13 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 - **Team of three.** Sonic, Tails and Amy are available from the start. Knuckles and Cream show up as rivals; beat them to unlock them, and they can join your current run.
 - **Boost meter instead of PP.** Spin Attack is free and builds Boost. Stronger moves cost Boost and never miss. Every character learns an ultimate at level 30 that uses the full meter.
 - **Types.** Speed, Fly and Power, based on the team types from Sonic Advance 3 and Heroes. Fly beats Power, Power beats Speed, Speed beats Fly.
-- **Stat stages.** Rewards raise ATK, DEF or SPD by one stage (+25% each, up to +6). Stages reset after every zone boss.
+- **Passives.** Sonic gets faster after every KO and hits harder the faster he is than his foe. Knuckles can make foes flinch. Amy lands more critical hits as her ATK goes up.
+- **Stat stages.** Some moves and passives raise ATK, DEF or SPD by a stage (+25% each, up to +6). Stages reset after every zone boss.
 - **Nine zones** from Sonic Advance 2 and 3, each with its own music. Some zones affect your team, like the heat in Hot Crater or the cold in Twinkle Snow.
 - **Bosses and Chaos Emeralds.** Every tenth wave is a boss. Beat it to collect a Chaos Emerald.
 - **Rewards and a shop** after every wave. Prices go up as you progress.
 - **Exp. Share** after the first boss, so the whole team keeps up.
+- **Auto-save** at the start of every wave. Close the tab and pick up where you left off.
 
 Press **H** (or the **?** button) in game for the full rules.
 
@@ -44,8 +46,8 @@ Mouse and touch work too.
 ## Tech
 
 - **Phaser 3** and **TypeScript**, bundled with **Vite**.
-- **Vitest** unit tests for the battle rules: damage, stat stages, types, Boost, shop prices, zones and unlocks.
-- **Playwright** end-to-end tests that start the real build in Chromium and play it with the keyboard: picking a team, taking turns, winning a wave, switching, KOs, menus, plus regression tests for bugs found during development. The game is drawn on a canvas, so the tests check the game state instead of pixels; that keeps them stable while the UI changes.
+- **Vitest** unit tests for the battle rules: damage, stat stages, types, Boost, shop prices, zones, passives, saves and unlocks.
+- **Playwright** end-to-end tests that start the real build in Chromium and play it with the keyboard: picking a team, taking turns, winning a wave, switching, KOs, saving and continuing, menus, plus regression tests for bugs found during development. The game is drawn on a canvas, so the tests check the game state instead of pixels; that keeps them stable while the UI changes.
 - **GitHub Actions** runs both test suites on every push to `main`, then builds the game and deploys it to GitHub Pages. A failing test blocks the deploy, and the Playwright report (screenshots and traces) is uploaded when something breaks.
 - A **balance simulation** (`npm run sim`) plays 2000 boss fights per character to check difficulty after a change.
 - An **asset pipeline in Python** (Pillow, NumPy, SciPy) that cuts sprites out of ripped sprite sheets, aligns animation frames on the character's body and builds Phaser texture atlases.
@@ -69,7 +71,7 @@ npm run build    # production build in dist/
 
 ```
 src/
-  data/          characters, moves, types, zones, items, settings, unlocks
+  data/          characters, moves, passives, zones, items, saves, settings, unlocks
   scenes/        title/intro, character select, battle, help, settings, credits
   assets/        sprite atlases, backgrounds and menu graphics
   audio.ts       music (streamed, with crossfades) and sound effects

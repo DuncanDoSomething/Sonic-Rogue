@@ -84,6 +84,32 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect((await battle(page)).cursorMove).toBe('lightSpeed');
   });
 
+  test('auto-save: after a reload you can continue from the same wave with the same team', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.enemy.hp = 1;');
+    await press(page, 'z', 'ArrowRight', 'z');  // win wave 1
+    await waitForMenu(page, 'reward');
+    await press(page, 'z');
+    await waitForMenu(page, 'choice');          // wave 2 started (and was saved)
+    await page.reload();
+    await expect.poll(() => activeScenes(page)).toContain('Title');
+    await press(page, 'z');
+    await page.waitForTimeout(400);
+    await press(page, 'z', 'z', 'z');           // skip intro, menu, Game Start -> Continue prompt
+    await press(page, 'z');                     // Continue
+    await expect.poll(() => activeScenes(page)).toContain('Battle');
+    await expect.poll(async () => (await battle(page)).wave).toBe(2);
+    expect((await battle(page)).party).toEqual(['sonic', 'tails', 'amy']);
+  });
+
+  test('a lost run deletes the save', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.party.forEach(f => { f.hp = 0; }); s.loseRun();');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('sonicrogue_run'))).toBeNull();
+  });
+
   test('help and settings open and close again', async ({ page }) => {
     await openGame(page);
     await startRun(page);

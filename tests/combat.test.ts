@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower, REWARDS,
+  speedBonus, critChance, BASE_CRIT,
 } from '../src/data/fighters';
 
 /** Vaste "random": geeft steeds dezelfde waarde terug, zodat de uitkomst voorspelbaar is. */
@@ -145,7 +146,38 @@ describe('Spin Dash schaalt met snelheid (Electro Ball)', () => {
 });
 
 describe('rewards', () => {
-  it('alle stat-rewards zijn gemarkeerd (zodat ze na een boss niet verschijnen)', () => {
-    expect(REWARDS.filter(r => r.stage).map(r => r.id).sort()).toEqual(['gloves', 'shield', 'shoes']);
+  it('geen stat-rewards meer (stats komen uit moves en passives)', () => {
+    expect(REWARDS.some(r => r.stage)).toBe(false);
+    expect(REWARDS.map(r => r.id).sort()).toEqual(['oneup', 'rings', 'thunder']);
+  });
+});
+
+describe('moves en passives', () => {
+  it('Homing Attack geeft SPD +1', () => {
+    expect(MOVES.homingAttack.selfStages).toEqual({ spd: 1 });
+  });
+
+  it('Sonic Speed: meer schade als Sonic sneller is, max +50%', () => {
+    const sonic = new Fighter('sonic', 20), slow = new Fighter('turtle', 20);
+    expect(speedBonus(sonic, sonic)).toBe(1);
+    expect(speedBonus(sonic, slow)).toBeGreaterThan(1);
+    for (let i = 0; i < 6; i++) sonic.raise('spd');
+    expect(speedBonus(sonic, slow)).toBe(1.5);
+    expect(speedBonus(new Fighter('tails', 20), slow)).toBe(1);   // alleen Sonic
+  });
+
+  it('Lucky Swing: Amy +25% crit per ATK stage', () => {
+    const amy = new Fighter('amy', 10);
+    expect(critChance(amy)).toBe(BASE_CRIT);
+    amy.raise('atk'); amy.raise('atk');
+    expect(critChance(amy)).toBeCloseTo(BASE_CRIT + 0.5);
+    const sonic = new Fighter('sonic', 10); sonic.raise('atk'); sonic.raise('atk');
+    expect(critChance(sonic)).toBe(BASE_CRIT);
+  });
+
+  it('elke passive hoort bij het juiste character', () => {
+    expect(new Fighter('sonic', 5).def.passive?.id).toBe('speedster');
+    expect(new Fighter('knuckles', 5).def.passive?.id).toBe('flinch');
+    expect(new Fighter('amy', 5).def.passive?.id).toBe('luckySwing');
   });
 });

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { Mode7 } from './Mode7';
 import { audio } from '../audio';
+import { clearRun, loadRun } from '../data/save';
+import { FIGHTERS } from '../data/fighters';
 
 const W = 480;
 const H = 270;
@@ -12,7 +14,7 @@ const TITLE_MUSIC_SKIP_TO = 14;
 /** y van de lucht op het title screen (eind van de intro-kanteling) */
 const SKY_END = -60;
 
-type Phase = 'boot' | 'intro' | 'press' | 'menu' | 'leaving';
+type Phase = 'boot' | 'intro' | 'press' | 'menu' | 'continue' | 'leaving';
 
 /** Na de eerste keer (geluid ontgrendeld) slaan we het "press any button"-scherm over. */
 let booted = false;
@@ -337,7 +339,7 @@ export class TitleScene extends Phaser.Scene {
   // ---------------------------------------------------------------- menu
   private buildMenu() {
     const entries: Array<[string, () => void]> = [
-      ['game_start', () => this.startGame()],
+      ['game_start', () => this.openContinue()],
       ['credits', () => this.openCredits()],
       ['options', () => this.openSettings()],
     ];
@@ -373,6 +375,12 @@ export class TitleScene extends Phaser.Scene {
 
   private onKey(k: string) {
     if (this.phase === 'leaving') return;
+    if (this.phase === 'continue') {
+      if (['arrowup', 'w', 'arrowdown', 's'].includes(k)) { this.contChoice = 1 - this.contChoice; audio.sfx('cursormove'); this.refreshContinue(); }
+      else if (['z', 'enter', ' '].includes(k)) this.pickContinue(this.contChoice);
+      else if (['x', 'escape', 'backspace'].includes(k)) this.closeContinue();
+      return;
+    }
     if (this.phase === 'boot') { this.startIntro(); return; }
     if (this.phase !== 'menu') {
       if (['z', 'enter', ' ', 'x', 'escape'].includes(k)) this.advance();
@@ -384,6 +392,71 @@ export class TitleScene extends Phaser.Scene {
       this.refreshMenu();
     } else if (['z', 'enter', ' '].includes(k)) this.items[this.cursor].act();
     else if (k === 'm') this.openSettings();
+  }
+
+  // ---------------------------------------------------------------- continue
+  private contLayer?: Phaser.GameObjects.Container;
+  private contTexts: Phaser.GameObjects.Text[] = [];
+  private contArrow?: Phaser.GameObjects.Triangle;
+  private contChoice = 0;
+
+  /** Game Start met een opgeslagen run: verder spelen of opnieuw beginnen. */
+  private openContinue() {
+    const sv = loadRun();
+    if (!sv) { this.startGame(); return; }
+    audio.sfx('confirm');
+    this.phase = 'continue';
+    this.contChoice = 0;
+    const c = this.add.container(W / 2, 200).setDepth(40);
+    const g = this.add.graphics();
+    g.fillStyle(0x10131c, 0.95).fillRoundedRect(-120, -26, 240, 62, 6);
+    g.lineStyle(1, 0xf2c230).strokeRoundedRect(-119.5, -25.5, 239, 61, 6);
+    const team = sv.party.map(f => FIGHTERS[f.id]?.name ?? f.id).join(', ');
+    const t1 = this.add.text(-96, -16, `CONTINUE  (wave ${sv.wave})`, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' });
+    const sub = this.add.text(-96, -4, team, { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4' });
+    const t2 = this.add.text(-96, 16, 'NEW RUN', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' });
+    const arrow = this.add.triangle(-108, -16, 0, 0, 0, 8, 5, 4, 0xffd23a).setOrigin(0);
+    [t1, t2].forEach((t, i) => t.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => { this.contChoice = i; this.refreshContinue(); })
+      .on('pointerdown', () => this.pickContinue(i)));
+    c.add([g, t1, sub, t2, arrow]);
+    this.contLayer = c;
+    this.contTexts = [t1, t2];
+    this.contArrow = arrow;
+    this.items.forEach(it => { it.off.setVisible(false); it.on.setVisible(false); });
+    this.refreshContinue();
+  }
+
+  private refreshContinue() {
+    this.contTexts.forEach((t, i) => t.setColor(i === this.contChoice ? '#ffd23a' : '#ffffff'));
+    this.contArrow?.setY(this.contTexts[this.contChoice].y);
+  }
+
+  private closeContinue() {
+    audio.sfx('back');
+    this.contLayer?.destroy();
+    this.contLayer = undefined;
+    this.phase = 'menu';
+    this.refreshMenu();
+  }
+
+  private pickContinue(i: number) {
+    if (i === 0) {
+      const sv = loadRun();
+      this.phase = 'leaving';
+      audio.sfx('confirm2');
+      this.cameras.main.fadeOut(350, 255, 255, 255);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.input.keyboard!.removeAllListeners();
+        this.input.removeAllListeners();
+        this.scene.start('Battle', { save: sv });
+      });
+    } else {
+      clearRun();
+      this.contLayer?.destroy();
+      this.contLayer = undefined;
+      this.startGame();
+    }
   }
 
   private startGame() {

@@ -50,6 +50,30 @@ export function expShareAfter(cleared: number) {
   return EXP_SHARE_STEPS.reduce((rate, [wave, r]) => (cleared >= wave ? r : rate), 0);
 }
 
+// ---------------------------------------------------------------- passives
+export type PassiveId = 'speedster' | 'flinch' | 'luckySwing';
+export interface PassiveDef { id: PassiveId; name: string; desc: string; }
+export const PASSIVES: Record<PassiveId, PassiveDef> = {
+  speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. Hits harder the faster he is than the foe (+25% per 1x faster, up to +50%).' },
+  flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'Every hit has a 20% chance to make the foe flinch and lose its turn.' },
+  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance for every ATK stage she has.' },
+};
+export const FLINCH_CHANCE = 0.2;
+export const BASE_CRIT = 0.0625;
+
+/** Sonic Speed: x1 bij gelijke snelheid, +25% per keer zo snel, max +50%. */
+export function speedBonus(attacker: Fighter, target: Fighter) {
+  if (attacker.def.passive?.id !== 'speedster') return 1;
+  const ratio = attacker.spd / Math.max(1, target.spd);
+  return Math.min(1.5, Math.max(1, 1 + 0.25 * (ratio - 1)));
+}
+
+/** Critical-kans: 1/16, plus Lucky Swing (Amy). */
+export function critChance(attacker: Fighter) {
+  const bonus = attacker.def.passive?.id === 'luckySwing' ? 0.25 * Math.max(0, attacker.stage('atk')) : 0;
+  return Math.min(1, BASE_CRIT + bonus);
+}
+
 export interface MoveDef {
   id: string;
   name: string;
@@ -67,12 +91,14 @@ export interface MoveDef {
   /** Boost-kosten (0 = gratis). Gratis moves geven juist Boost: zie `boostGain`. */
   cost?: number;
   boostGain?: number;
+  /** Stat stages die de gebruiker krijgt als de move raakt (bijv. Homing Attack: SPD +1). */
+  selfStages?: Partial<Record<StageKey, number>>;
 }
 
 export const MOVES: Record<string, MoveDef> = {
   // --- team
   spinAttack:   { id: 'spinAttack', name: 'Spin Attack', power: 40, accuracy: 95, priority: 0, anim: 'spin', boostGain: 1, desc: 'Curls into a ball and rolls into the foe.' },
-  homingAttack: { id: 'homingAttack', name: 'Homing Attack', power: 30, accuracy: 100, priority: 1, anim: 'homing', cost: 1, desc: 'Locks on and strikes first. Never misses.' },
+  homingAttack: { id: 'homingAttack', name: 'Homing Attack', power: 30, accuracy: 100, priority: 1, anim: 'homing', cost: 1, selfStages: { spd: 1 }, desc: 'Locks on and strikes first. Never misses. Raises SPD by 1.' },
   spinDash:     { id: 'spinDash', name: 'Spin Dash', power: 70, scaling: 'speed', accuracy: 100, priority: 0, anim: 'dash', cost: 3, desc: 'Revs up and launches. The faster Sonic is than the foe, the harder it hits (50-150). Never misses.' },
   glovePunch:   { id: 'glovePunch', name: 'Glove Punch', power: 55, accuracy: 100, priority: 0, anim: 'punch', cost: 2, desc: 'A double punch with spring-loaded boxing gloves.' },
   glideAttack:  { id: 'glideAttack', name: 'Glide Attack', power: 45, accuracy: 100, priority: 0, anim: 'glide', cost: 2, desc: 'Glides in from above, fists first. Never misses.' },
@@ -120,12 +146,14 @@ export interface FighterDef {
   type: FighterType;
   /** ultimate-move (alleen speelbare characters) */
   ultimate?: string;
+  /** vaste eigenschap van het character (werkt ook als hij een rival is) */
+  passive?: PassiveDef;
 }
 
 export const FIGHTERS: Record<string, FighterDef> = {
   // ------------------------------------------------------------- team
   sonic: {
-    type: 'speed', ultimate: 'lightSpeed',
+    type: 'speed', ultimate: 'lightSpeed', passive: PASSIVES.speedster,
     id: 'sonic', name: 'Sonic', atlas: 'sonic', animPrefix: 'sonic', scale: 2,
     base: { hp: 24, atk: 12, def: 7, spd: 14 },
     growth: { hp: 3.2, atk: 2.0, def: 1.1, spd: 1.8 },
@@ -141,7 +169,7 @@ export const FIGHTERS: Record<string, FighterDef> = {
     expYield: 20, // alleen als rival
   },
   knuckles: {
-    type: 'power', ultimate: 'maximumHeat',
+    type: 'power', ultimate: 'maximumHeat', passive: PASSIVES.flinch,
     id: 'knuckles', name: 'Knuckles', atlas: 'knuckles', animPrefix: 'knuckles', scale: 2,
     base: { hp: 28, atk: 14, def: 9, spd: 9 },
     growth: { hp: 3.6, atk: 2.2, def: 1.4, spd: 1.3 },
@@ -157,7 +185,7 @@ export const FIGHTERS: Record<string, FighterDef> = {
     expYield: 20, // alleen als rival
   },
   amy: {
-    type: 'power', ultimate: 'tornadoHammer',
+    type: 'power', ultimate: 'tornadoHammer', passive: PASSIVES.luckySwing,
     id: 'amy', name: 'Amy', atlas: 'amy', animPrefix: 'amy', scale: 2,
     base: { hp: 25, atk: 13, def: 7, spd: 12 },
     growth: { hp: 3.2, atk: 2.1, def: 1.1, spd: 1.6 },
@@ -275,10 +303,11 @@ export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: 
   const effect = typeMultiplier(attacker.type, target.type);
   const accuracy = move.accuracy * stageMultiplier(attacker.stage('acc'));
   if (rng() * 100 >= accuracy) return { damage: 0, crit: false, missed: true, effect };
-  const crit = rng() < 0.0625;
+  const crit = rng() < critChance(attacker);
   const base = (((2 * attacker.level) / 5 + 2) * movePower(move, attacker, target) * (attacker.atk / target.dfn)) / 50 + 2;
   const roll = 0.85 + rng() * 0.15;
-  return { damage: Math.max(1, Math.floor(base * roll * effect * (crit ? 1.5 : 1))), crit, missed: false, effect };
+  const dmg = base * roll * effect * speedBonus(attacker, target) * (crit ? 1.5 : 1);
+  return { damage: Math.max(1, Math.floor(dmg)), crit, missed: false, effect };
 }
 
 export interface RewardDef {
@@ -294,17 +323,12 @@ export interface RewardDef {
   stage?: boolean;
 }
 
+/** Geen stat-rewards meer: met een team van 3 waren die te zwak. Stats komen nu uit moves en passives. */
 export const REWARDS: RewardDef[] = [
   { id: 'rings', name: 'Ring Bundle', desc: 'Heal 50% HP', icon: 'monitor_ring10',
     apply: f => { const h = Math.min(f.maxHp - f.hp, Math.ceil(f.maxHp / 2)); f.hp += h; return `${f.name} healed ${h} HP!`; } },
-  { id: 'gloves', name: 'Power Up', desc: 'ATK +1', icon: 'monitor_power',
-    apply: f => f.raise('atk'), available: f => f.stages.atk < MAX_STAGE, stage: true },
-  { id: 'shoes', name: 'Speed Shoes', desc: 'SPD +1', icon: 'monitor_shoes',
-    apply: f => f.raise('spd'), available: f => f.stages.spd < MAX_STAGE, stage: true },
-  { id: 'shield', name: 'Shield', desc: 'DEF +1', icon: 'monitor_shield',
-    apply: f => f.raise('def'), available: f => f.stages.def < MAX_STAGE, stage: true },
   { id: 'thunder', name: 'Boost Charge', desc: 'Boost +3', icon: 'monitor_thunder',
-    apply: f => { f.gainBoost(3); return `${f.name}'s Boost was charged!`; }, available: f => f.boost < MAX_BOOST },
+    apply: f => { f.gainBoost(3); return `${f.name}'s Boost was charged!`; } },
   { id: 'oneup', name: '1-Up', desc: 'Heal 100% HP', icon: 'oneup_{hero}',
     apply: f => { const h = f.maxHp - f.hp; f.hp = f.maxHp; return `1-Up! ${f.name} healed ${h} HP!`; } },
 ];
