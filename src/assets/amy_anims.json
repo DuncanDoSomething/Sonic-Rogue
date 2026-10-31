@@ -1,31 +1,4 @@
 {
- "idle": {
-  "key": "amy_idle",
-  "frames": [
-   {
-    "frame": "amy_0_3",
-    "duration": 599
-   },
-   {
-    "frame": "amy_0_5",
-    "duration": 599
-   },
-   {
-    "frame": "amy_0_3",
-    "duration": 599
-   },
-   {
-    "frame": "amy_0_5",
-    "duration": 599
-   },
-   {
-    "frame": "amy_0_11",
-    "duration": 119
-   }
-  ],
-  "frameRate": 1000,
-  "repeat": -1
- },
  "spin": {
   "key": "amy_spin",
   "frames": [

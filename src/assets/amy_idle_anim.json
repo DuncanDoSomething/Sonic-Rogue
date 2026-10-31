@@ -1,0 +1,46 @@
+{
+ "key": "amy_idle",
+ "texture": "amyidle",
+ "frames": [
+  {
+   "frame": "amyidle_0",
+   "duration": 90
+  },
+  {
+   "frame": "amyidle_1",
+   "duration": 90
+  },
+  {
+   "frame": "amyidle_2",
+   "duration": 90
+  },
+  {
+   "frame": "amyidle_3",
+   "duration": 90
+  },
+  {
+   "frame": "amyidle_4",
+   "duration": 90
+  },
+  {
+   "frame": "amyidle_5",
+   "duration": 90
+  },
+  {
+   "frame": "amyidle_6",
+   "duration": 90
+  },
+  {
+   "frame": "amyidle_7",
+   "duration": 90
+  },
+  {
+   "frame": "amyidle_8",
+   "duration": 90
+  },
+  {
+   "frame": "amyidle_9",
+   "duration": 90
+  }
+ ]
+}

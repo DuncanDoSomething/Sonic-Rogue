@@ -27,6 +27,15 @@ import fxAnims from '../assets/fx_anims.json';
 import sonicIdlePng from '../assets/sonic_idle.png';
 import sonicIdleAtlas from '../assets/sonic_idle.json';
 import sonicIdleAnim from '../assets/sonic_idle_anim.json';
+import amyIdlePng from '../assets/amy_idle.png';
+import amyIdleAtlas from '../assets/amy_idle.json';
+import amyIdleAnim from '../assets/amy_idle_anim.json';
+
+/** Idles uit een referentie-GIF (tools/build_idle_gif.py): eigen atlas met de originele uitlijning en timing. */
+const GIF_IDLES: Array<[string, unknown, { key: string; texture: string; frames: Array<{ frame: string; duration: number }> }]> = [
+  [sonicIdlePng, sonicIdleAtlas, sonicIdleAnim],
+  [amyIdlePng, amyIdleAtlas, amyIdleAnim],
+];
 import { EMERALDS } from '../data/zones';
 import { preloadSounds } from '../audio';
 
@@ -59,7 +68,7 @@ export class BootScene extends Phaser.Scene {
     this.load.atlas('emeralds', emeraldsPng, emeraldsAtlas as unknown as string);
     this.load.atlas('ui', uiPng, uiAtlas as unknown as string);
     this.load.atlas('fx', fxPng, fxAtlas as unknown as string);
-    this.load.atlas('sonicidle', sonicIdlePng, sonicIdleAtlas as unknown as string);
+    for (const [png, json, anim] of GIF_IDLES) this.load.atlas(anim.texture, png, json as string);
     for (const [path, url] of Object.entries(CUTINS)) this.load.image(`cutin_${path.split('/').pop()!.replace('.png', '')}`, url);
     preloadSounds(this);
     for (const [path, url] of Object.entries(BG_IMAGES)) {
@@ -80,13 +89,15 @@ export class BootScene extends Phaser.Scene {
         });
       }
     }
-    // Sonic's idle: eigen atlas met de originele uitlijning en timing (zie tools/build_sonic_idle.py)
-    this.anims.create({
-      key: sonicIdleAnim.key,
-      frames: sonicIdleAnim.frames.map(f => ({ key: 'sonicidle', frame: f.frame, duration: f.duration - 1 })),
-      frameRate: 1000,
-      repeat: -1,
-    });
+    // idles uit een referentie-GIF (Sonic, Amy)
+    for (const [, , anim] of GIF_IDLES) {
+      this.anims.create({
+        key: anim.key,
+        frames: anim.frames.map(f => ({ key: anim.texture, frame: f.frame, duration: f.duration - 1 })),
+        frameRate: 1000,
+        repeat: -1,
+      });
+    }
     // Super Sonic en effecten: 'ss_dash', 'fx_burst', 'cheese_fly', ...
     for (const a of Object.values(fxAnims as Record<string, CharAnim>)) {
       this.anims.create({ key: a.key, frames: a.frames.map(f => ({ key: 'fx', frame: f as string })), frameRate: a.frameRate, repeat: a.repeat });

@@ -1,17 +1,18 @@
 {
  "key": "sonic_idle",
+ "texture": "sonicidle",
  "frames": [
   {
    "frame": "sonicidle_0",
-   "duration": 60
+   "duration": 90
   },
   {
    "frame": "sonicidle_1",
-   "duration": 30
+   "duration": 90
   },
   {
    "frame": "sonicidle_2",
-   "duration": 30
+   "duration": 90
   },
   {
    "frame": "sonicidle_3",
@@ -19,35 +20,35 @@
   },
   {
    "frame": "sonicidle_4",
-   "duration": 60
+   "duration": 90
   },
   {
    "frame": "sonicidle_5",
-   "duration": 30
+   "duration": 90
   },
   {
    "frame": "sonicidle_6",
-   "duration": 60
+   "duration": 90
   },
   {
    "frame": "sonicidle_7",
-   "duration": 30
+   "duration": 90
   },
   {
    "frame": "sonicidle_8",
-   "duration": 60
+   "duration": 90
   },
   {
    "frame": "sonicidle_9",
-   "duration": 30
+   "duration": 90
   },
   {
    "frame": "sonicidle_10",
-   "duration": 60
+   "duration": 90
   },
   {
    "frame": "sonicidle_11",
-   "duration": 30
+   "duration": 90
   },
   {
    "frame": "sonicidle_12",
@@ -55,123 +56,15 @@
   },
   {
    "frame": "sonicidle_13",
-   "duration": 60
+   "duration": 90
   },
   {
    "frame": "sonicidle_14",
-   "duration": 30
+   "duration": 90
   },
   {
    "frame": "sonicidle_15",
    "duration": 90
-  },
-  {
-   "frame": "sonicidle_16",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_17",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_18",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_19",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_20",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_21",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_22",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_23",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_24",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_25",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_26",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_27",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_28",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_29",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_30",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_31",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_32",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_33",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_34",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_35",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_36",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_37",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_38",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_39",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_40",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_41",
-   "duration": 90
-  },
-  {
-   "frame": "sonicidle_42",
-   "duration": 30
   }
  ]
 }

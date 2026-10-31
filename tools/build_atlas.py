@@ -42,7 +42,7 @@ rows = [sorted(r['b'], key=lambda b: b[0]) for r in rows]
 # --- 3. welke frames horen bij welke animatie ("rij.kolom" op de sheet)
 CHARACTERS = {
     'sonic': {
-        # 'idle' komt uit tools/build_sonic_idle.py (referentie-GIF met de echte uitlijning en timing).
+        # 'idle' komt uit tools/build_idle_gif.py (referentie-GIF met de echte uitlijning en timing).
         # Als je lang niks doet gaat hij liggen met een "..."-wolkje (zoals in Advance 2/3).
         'sit':     {'frames': [(1, 6, 140), (1, 7, 140), (1, 8, 160), (1, 9, 160), (1, 10, 200), (1, 11, 200), (1, 12, 200), (1, 13, 300)], 'repeat': 0},
         'nap':     {'frames': [(1, 13, 900), (1, 14, 500), (1, 15, 1100)], 'repeat': -1},
@@ -116,7 +116,7 @@ CHARACTERS = {
         'spindisc': {'frames': [(8, c) for c in range(10, 16)], 'fps': 18, 'repeat': -1},
     },
     'amy': {
-        'idle':    {'frames': [(0, 3, 600), (0, 5, 600), (0, 3, 600), (0, 5, 600), (0, 11, 120)], 'repeat': -1},
+        # 'idle' komt uit tools/build_idle_gif.py (referentie-GIF, met hartjes)
         'spin':    {'frames': [(5, 21), (5, 22), (5, 23), (5, 24)], 'fps': 20, 'repeat': -1},
         'hammer':  {'frames': [(10, 0, 90), (10, 1, 70), (10, 2, 70), (10, 3, 70), (10, 4, 70), (10, 5, 90),
                                (10, 6, 70), (10, 7, 70), (10, 8, 90), (10, 9, 160)], 'repeat': 0},
