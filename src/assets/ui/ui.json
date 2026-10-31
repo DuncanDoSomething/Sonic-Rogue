@@ -1,0 +1,733 @@
+{
+ "frames": {
+  "ring_0": {
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "ring_1": {
+   "frame": {
+    "x": 16,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "ring_2": {
+   "frame": {
+    "x": 32,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "ring_3": {
+   "frame": {
+    "x": 48,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "sparkle_0": {
+   "frame": {
+    "x": 64,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "sparkle_1": {
+   "frame": {
+    "x": 80,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "sparkle_2": {
+   "frame": {
+    "x": 96,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "sparkle_3": {
+   "frame": {
+    "x": 112,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "bigring_0": {
+   "frame": {
+    "x": 128,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 48,
+    "h": 48
+   }
+  },
+  "bigring_1": {
+   "frame": {
+    "x": 176,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 48,
+    "h": 48
+   }
+  },
+  "bigring_2": {
+   "frame": {
+    "x": 0,
+    "y": 48,
+    "w": 48,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 48,
+    "h": 48
+   }
+  },
+  "bigring_3": {
+   "frame": {
+    "x": 48,
+    "y": 48,
+    "w": 48,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 48,
+    "h": 48
+   }
+  },
+  "bigring_4": {
+   "frame": {
+    "x": 96,
+    "y": 48,
+    "w": 48,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 48,
+    "h": 48
+   }
+  },
+  "bigring_5": {
+   "frame": {
+    "x": 144,
+    "y": 48,
+    "w": 48,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 48,
+    "h": 48
+   }
+  },
+  "bigring_6": {
+   "frame": {
+    "x": 192,
+    "y": 48,
+    "w": 48,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 48,
+    "h": 48
+   }
+  },
+  "monitor_ring5": {
+   "frame": {
+    "x": 0,
+    "y": 96,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "monitor_ring10": {
+   "frame": {
+    "x": 26,
+    "y": 96,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "monitor_random": {
+   "frame": {
+    "x": 52,
+    "y": 96,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "monitor_shield": {
+   "frame": {
+    "x": 78,
+    "y": 96,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "monitor_thunder": {
+   "frame": {
+    "x": 104,
+    "y": 96,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "monitor_power": {
+   "frame": {
+    "x": 130,
+    "y": 96,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "monitor_shoes": {
+   "frame": {
+    "x": 156,
+    "y": 96,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "oneup_sonic": {
+   "frame": {
+    "x": 182,
+    "y": 96,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "oneup_tails": {
+   "frame": {
+    "x": 208,
+    "y": 96,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "oneup_knuckles": {
+   "frame": {
+    "x": 0,
+    "y": 125,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "oneup_amy": {
+   "frame": {
+    "x": 26,
+    "y": 125,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "oneup_cream": {
+   "frame": {
+    "x": 52,
+    "y": 125,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
+  },
+  "smoke_0": {
+   "frame": {
+    "x": 78,
+    "y": 125,
+    "w": 29,
+    "h": 28
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 29,
+    "h": 28
+   },
+   "sourceSize": {
+    "w": 29,
+    "h": 28
+   }
+  },
+  "smoke_1": {
+   "frame": {
+    "x": 107,
+    "y": 125,
+    "w": 29,
+    "h": 28
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 29,
+    "h": 28
+   },
+   "sourceSize": {
+    "w": 29,
+    "h": 28
+   }
+  },
+  "smoke_2": {
+   "frame": {
+    "x": 136,
+    "y": 125,
+    "w": 29,
+    "h": 28
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 29,
+    "h": 28
+   },
+   "sourceSize": {
+    "w": 29,
+    "h": 28
+   }
+  },
+  "smoke_3": {
+   "frame": {
+    "x": 165,
+    "y": 125,
+    "w": 29,
+    "h": 28
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 29,
+    "h": 28
+   },
+   "sourceSize": {
+    "w": 29,
+    "h": 28
+   }
+  },
+  "head_sonic": {
+   "frame": {
+    "x": 194,
+    "y": 125,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "head_tails": {
+   "frame": {
+    "x": 210,
+    "y": 125,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "head_knuckles": {
+   "frame": {
+    "x": 226,
+    "y": 125,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "head_amy": {
+   "frame": {
+    "x": 0,
+    "y": 154,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "head_cream": {
+   "frame": {
+    "x": 16,
+    "y": 154,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  }
+ },
+ "meta": {
+  "image": "ui.png",
+  "size": {
+   "w": 256,
+   "h": 170
+  },
+  "scale": "1",
+  "credits": "Sonic Advance 3 rings and monitors, ripped by Spitfya"
+ }
+}

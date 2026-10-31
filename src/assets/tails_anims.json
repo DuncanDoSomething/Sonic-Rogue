@@ -1,0 +1,104 @@
+{
+ "idle": {
+  "key": "tails_idle",
+  "frames": [
+   "tails_0_0",
+   "tails_0_1",
+   "tails_0_2",
+   "tails_0_3",
+   "tails_0_4",
+   "tails_0_5",
+   "tails_0_6",
+   "tails_0_7"
+  ],
+  "frameRate": 10,
+  "repeat": -1
+ },
+ "spin": {
+  "key": "tails_spin",
+  "frames": [
+   "tails_14_7",
+   "tails_14_8",
+   "tails_14_9",
+   "tails_14_10"
+  ],
+  "frameRate": 20,
+  "repeat": -1
+ },
+ "fly": {
+  "key": "tails_fly",
+  "frames": [
+   "tails_19_0",
+   "tails_19_1",
+   "tails_19_2",
+   "tails_19_3"
+  ],
+  "frameRate": 16,
+  "repeat": -1
+ },
+ "punch": {
+  "key": "tails_punch",
+  "frames": [
+   "tails_20_6",
+   "tails_20_7",
+   "tails_20_8",
+   "tails_20_9",
+   "tails_20_10",
+   "tails_20_11"
+  ],
+  "frameRate": 14,
+  "repeat": 0
+ },
+ "hurt": {
+  "key": "tails_hurt",
+  "frames": [
+   "tails_25_0",
+   "tails_25_1"
+  ],
+  "frameRate": 8,
+  "repeat": 0
+ },
+ "ko": {
+  "key": "tails_ko",
+  "frames": [
+   "tails_25_0",
+   "tails_26_17",
+   "tails_26_18",
+   "tails_27_0",
+   "tails_27_1"
+  ],
+  "frameRate": 6,
+  "repeat": 0
+ },
+ "victory": {
+  "key": "tails_victory",
+  "frames": [
+   {
+    "frame": "tails_0_16",
+    "duration": 119
+   },
+   {
+    "frame": "tails_0_17",
+    "duration": 259
+   },
+   {
+    "frame": "tails_0_18",
+    "duration": 139
+   },
+   {
+    "frame": "tails_0_19",
+    "duration": 139
+   },
+   {
+    "frame": "tails_1_0",
+    "duration": 139
+   },
+   {
+    "frame": "tails_1_1",
+    "duration": 199
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ }
+}

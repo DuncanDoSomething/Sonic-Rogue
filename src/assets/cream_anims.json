@@ -1,0 +1,144 @@
+{
+ "idle": {
+  "key": "cream_idle",
+  "frames": [
+   {
+    "frame": "cream_0_0",
+    "duration": 1399
+   },
+   {
+    "frame": "cream_0_10",
+    "duration": 109
+   },
+   {
+    "frame": "cream_0_0",
+    "duration": 899
+   },
+   {
+    "frame": "cream_0_5",
+    "duration": 179
+   },
+   {
+    "frame": "cream_0_6",
+    "duration": 259
+   },
+   {
+    "frame": "cream_0_5",
+    "duration": 179
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": -1
+ },
+ "spin": {
+  "key": "cream_spin",
+  "frames": [
+   "cream_6_14",
+   "cream_6_15",
+   "cream_6_16",
+   "cream_6_17",
+   "cream_6_18",
+   "cream_6_19",
+   "cream_6_20",
+   "cream_6_21"
+  ],
+  "frameRate": 20,
+  "repeat": -1
+ },
+ "fly": {
+  "key": "cream_fly",
+  "frames": [
+   "cream_18_5",
+   "cream_18_6",
+   "cream_18_7",
+   "cream_18_6"
+  ],
+  "frameRate": 14,
+  "repeat": -1
+ },
+ "cheer": {
+  "key": "cream_cheer",
+  "frames": [
+   {
+    "frame": "cream_20_9",
+    "duration": 119
+   },
+   {
+    "frame": "cream_20_10",
+    "duration": 119
+   },
+   {
+    "frame": "cream_20_11",
+    "duration": 119
+   },
+   {
+    "frame": "cream_20_12",
+    "duration": 159
+   },
+   {
+    "frame": "cream_20_13",
+    "duration": 499
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "hurt": {
+  "key": "cream_hurt",
+  "frames": [
+   "cream_25_3"
+  ],
+  "frameRate": 8,
+  "repeat": 0
+ },
+ "ko": {
+  "key": "cream_ko",
+  "frames": [
+   {
+    "frame": "cream_25_3",
+    "duration": 159
+   },
+   {
+    "frame": "cream_25_8",
+    "duration": 159
+   },
+   {
+    "frame": "cream_25_9",
+    "duration": 159
+   },
+   {
+    "frame": "cream_25_10",
+    "duration": 159
+   },
+   {
+    "frame": "cream_25_11",
+    "duration": 399
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "victory": {
+  "key": "cream_victory",
+  "frames": [
+   {
+    "frame": "cream_15_17",
+    "duration": 159
+   },
+   {
+    "frame": "cream_15_18",
+    "duration": 139
+   },
+   {
+    "frame": "cream_15_19",
+    "duration": 139
+   },
+   {
+    "frame": "cream_15_20",
+    "duration": 599
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ }
+}

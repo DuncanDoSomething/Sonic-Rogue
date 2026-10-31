@@ -1,0 +1,593 @@
+{
+ "frames": {
+  "cream_0_0": {
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_0_10": {
+   "frame": {
+    "x": 40,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_0_5": {
+   "frame": {
+    "x": 80,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_0_6": {
+   "frame": {
+    "x": 120,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_6_14": {
+   "frame": {
+    "x": 160,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_6_15": {
+   "frame": {
+    "x": 200,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_6_16": {
+   "frame": {
+    "x": 240,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_6_17": {
+   "frame": {
+    "x": 280,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_6_18": {
+   "frame": {
+    "x": 0,
+    "y": 49,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_6_19": {
+   "frame": {
+    "x": 40,
+    "y": 49,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_6_20": {
+   "frame": {
+    "x": 80,
+    "y": 49,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_6_21": {
+   "frame": {
+    "x": 120,
+    "y": 49,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_18_5": {
+   "frame": {
+    "x": 160,
+    "y": 49,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_18_6": {
+   "frame": {
+    "x": 200,
+    "y": 49,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_18_7": {
+   "frame": {
+    "x": 240,
+    "y": 49,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_20_9": {
+   "frame": {
+    "x": 280,
+    "y": 49,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_20_10": {
+   "frame": {
+    "x": 0,
+    "y": 98,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_20_11": {
+   "frame": {
+    "x": 40,
+    "y": 98,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_20_12": {
+   "frame": {
+    "x": 80,
+    "y": 98,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_20_13": {
+   "frame": {
+    "x": 120,
+    "y": 98,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_25_3": {
+   "frame": {
+    "x": 160,
+    "y": 98,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_25_8": {
+   "frame": {
+    "x": 200,
+    "y": 98,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_25_9": {
+   "frame": {
+    "x": 240,
+    "y": 98,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_25_10": {
+   "frame": {
+    "x": 280,
+    "y": 98,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_25_11": {
+   "frame": {
+    "x": 0,
+    "y": 147,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_15_17": {
+   "frame": {
+    "x": 40,
+    "y": 147,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_15_18": {
+   "frame": {
+    "x": 80,
+    "y": 147,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_15_19": {
+   "frame": {
+    "x": 120,
+    "y": 147,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_15_20": {
+   "frame": {
+    "x": 160,
+    "y": 147,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  }
+ },
+ "meta": {
+  "image": "cream.png",
+  "size": {
+   "w": 320,
+   "h": 196
+  },
+  "scale": "1",
+  "credits": "Sonic Advance 3 sprites by Sega/Sonic Team, ripped by Ren \"Foxx\" Ramos"
+ }
+}

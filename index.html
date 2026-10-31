@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Sonic Rogue</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" />
+  <style>
+    :root { --bg: #0b0d14; --fg: #cfd6ee; --dim: #6b7493; --accent: #f2c230; --font: "Press Start 2P", ui-monospace, monospace; color-scheme: dark; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
+    .shell { height: 100%; display: flex; flex-direction: column; }
+    #game { flex: 1; min-height: 0; }
+    canvas { image-rendering: pixelated; }
+    .bar { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; align-items: center;
+      padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+      font: 8px/1.8 var(--font); color: var(--dim); }
+    .bar b { color: var(--accent); font-weight: normal; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div id="game"></div>
+    <div class="bar">
+      <span><b>Arrows</b> move · <b>Z</b> confirm · <b>X</b> back · <b>C</b> stats / move info · <b>M</b> settings · or click/tap</span>
+      <span>Fan game, non-commercial. Sprites © Sega/Sonic Team. Sonic &amp; Tails ripped by Ren "Foxx" Ramos, enemies by SkyLights and Fatazz (Turtle474), backgrounds by Παρατηρητής and Ice, Chao Garden by Spitfya and Roj, menus by raidlandguy, Random Talking Bush and EternalLight, objects by Flare and Techokami.</span>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

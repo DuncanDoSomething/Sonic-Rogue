@@ -1,0 +1,144 @@
+{
+ "idle": {
+  "key": "amy_idle",
+  "frames": [
+   {
+    "frame": "amy_0_3",
+    "duration": 599
+   },
+   {
+    "frame": "amy_0_5",
+    "duration": 599
+   },
+   {
+    "frame": "amy_0_3",
+    "duration": 599
+   },
+   {
+    "frame": "amy_0_5",
+    "duration": 599
+   },
+   {
+    "frame": "amy_0_11",
+    "duration": 119
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": -1
+ },
+ "spin": {
+  "key": "amy_spin",
+  "frames": [
+   "amy_5_21",
+   "amy_5_22",
+   "amy_5_23",
+   "amy_5_24"
+  ],
+  "frameRate": 20,
+  "repeat": -1
+ },
+ "hammer": {
+  "key": "amy_hammer",
+  "frames": [
+   {
+    "frame": "amy_10_0",
+    "duration": 89
+   },
+   {
+    "frame": "amy_10_1",
+    "duration": 69
+   },
+   {
+    "frame": "amy_10_2",
+    "duration": 69
+   },
+   {
+    "frame": "amy_10_3",
+    "duration": 69
+   },
+   {
+    "frame": "amy_10_4",
+    "duration": 69
+   },
+   {
+    "frame": "amy_10_5",
+    "duration": 89
+   },
+   {
+    "frame": "amy_10_6",
+    "duration": 69
+   },
+   {
+    "frame": "amy_10_7",
+    "duration": 69
+   },
+   {
+    "frame": "amy_10_8",
+    "duration": 89
+   },
+   {
+    "frame": "amy_10_9",
+    "duration": 159
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "twirl": {
+  "key": "amy_twirl",
+  "frames": [
+   "amy_17_6",
+   "amy_17_7",
+   "amy_17_8",
+   "amy_17_9",
+   "amy_17_10",
+   "amy_17_11"
+  ],
+  "frameRate": 18,
+  "repeat": -1
+ },
+ "hurt": {
+  "key": "amy_hurt",
+  "frames": [
+   "amy_28_8"
+  ],
+  "frameRate": 8,
+  "repeat": 0
+ },
+ "ko": {
+  "key": "amy_ko",
+  "frames": [
+   "amy_28_8",
+   "amy_22_0"
+  ],
+  "frameRate": 4,
+  "repeat": 0
+ },
+ "victory": {
+  "key": "amy_victory",
+  "frames": [
+   {
+    "frame": "amy_40_0",
+    "duration": 139
+   },
+   {
+    "frame": "amy_40_1",
+    "duration": 139
+   },
+   {
+    "frame": "amy_40_2",
+    "duration": 139
+   },
+   {
+    "frame": "amy_40_3",
+    "duration": 139
+   },
+   {
+    "frame": "amy_40_4",
+    "duration": 599
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ }
+}

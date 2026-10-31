@@ -1,0 +1,45 @@
+// ---------------------------------------------------------------------------
+// Items voor de shop en je tas. Betere items komen vrij naarmate je verder komt
+// (minWave), net als in PokéRogue.
+// ---------------------------------------------------------------------------
+import type { Fighter } from './fighters';
+
+export interface ItemDef {
+  id: string;
+  name: string;
+  desc: string;
+  price: number;
+  minWave: number;
+  /** aantal ring-icoontjes op de shop-knop (0 = chili dog-icoon via 1-up) */
+  rings: number;
+  use: (f: Fighter) => string;
+}
+
+function heal(f: Fighter, amount: number) {
+  const h = Math.min(f.maxHp - f.hp, amount);
+  f.hp += h;
+  return h;
+}
+
+export const ITEMS: Record<string, ItemDef> = {
+  healthRing: { id: 'healthRing', name: 'Health Ring', desc: 'Heals 25 HP', price: 20, minWave: 1, rings: 1,
+    use: f => `${f.name} recovered ${heal(f, 25)} HP!` },
+  superRing:  { id: 'superRing', name: 'Super Ring', desc: 'Heals 60 HP', price: 45, minWave: 11, rings: 2,
+    use: f => `${f.name} recovered ${heal(f, 60)} HP!` },
+  hyperRing:  { id: 'hyperRing', name: 'Hyper Ring', desc: 'Heals 150 HP', price: 90, minWave: 21, rings: 3,
+    use: f => `${f.name} recovered ${heal(f, 150)} HP!` },
+  chiliDog:   { id: 'chiliDog', name: 'Chili Dog', desc: 'Fully heals HP', price: 160, minWave: 31, rings: 0,
+    use: f => `Delicious! ${f.name} recovered ${heal(f, f.maxHp)} HP!` },
+};
+
+/** Prijzen stijgen per zone (net als in PokéRogue), anders kun je healing items oneindig stacken. */
+export const PRICE_GROWTH_PER_ZONE = 0.75;
+export function priceAt(item: ItemDef, wave: number) {
+  const zone = Math.floor((wave - 1) / 10);
+  return Math.round((item.price * (1 + PRICE_GROWTH_PER_ZONE * zone)) / 5) * 5;
+}
+
+/** Wat de shop verkoopt op deze wave (max 4, beste items rechts), met de prijs van deze zone. */
+export function shopStock(wave: number): ItemDef[] {
+  return Object.values(ITEMS).filter(i => wave >= i.minWave).slice(-4).map(i => ({ ...i, price: priceAt(i, wave) }));
+}

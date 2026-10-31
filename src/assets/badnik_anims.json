@@ -1,0 +1,129 @@
+{
+ "beetle_idle": [
+  "beetle_idle_0",
+  "beetle_idle_1",
+  "beetle_idle_2"
+ ],
+ "sharkjet_idle": [
+  "sharkjet_idle_0",
+  "sharkjet_idle_1",
+  "sharkjet_idle_2"
+ ],
+ "sharkjet_attack": [
+  "sharkjet_attack_0",
+  "sharkjet_attack_1",
+  "sharkjet_attack_2",
+  "sharkjet_attack_3"
+ ],
+ "octo_idle": [
+  "octo_idle_0",
+  "octo_idle_1",
+  "octo_idle_2",
+  "octo_idle_3",
+  "octo_idle_4"
+ ],
+ "octo_attack": [
+  "octo_attack_0",
+  "octo_attack_1",
+  "octo_attack_2"
+ ],
+ "frog_idle": [
+  "frog_idle_0",
+  "frog_idle_1"
+ ],
+ "frog_attack": [
+  "frog_attack_0",
+  "frog_attack_1",
+  "frog_attack_2",
+  "frog_attack_3"
+ ],
+ "bee_idle": [
+  "bee_idle_0",
+  "bee_idle_1",
+  "bee_idle_2",
+  "bee_idle_3"
+ ],
+ "bee_attack": [
+  "bee_attack_0",
+  "bee_attack_1",
+  "bee_attack_2",
+  "bee_attack_3",
+  "bee_attack_4"
+ ],
+ "snowman_idle": [
+  "snowman_idle_0",
+  "snowman_idle_1"
+ ],
+ "snowman_attack": [
+  "snowman_attack_0",
+  "snowman_attack_1",
+  "snowman_attack_2",
+  "snowman_attack_3",
+  "snowman_attack_4",
+  "snowman_attack_5",
+  "snowman_attack_6",
+  "snowman_attack_7",
+  "snowman_attack_8",
+  "snowman_attack_9",
+  "snowman_attack_10",
+  "snowman_attack_11"
+ ],
+ "pig_idle": [
+  "pig_idle_0",
+  "pig_idle_1",
+  "pig_idle_2",
+  "pig_idle_3",
+  "pig_idle_4"
+ ],
+ "soldier_idle": [
+  "soldier_idle_0",
+  "soldier_idle_1",
+  "soldier_idle_2",
+  "soldier_idle_3",
+  "soldier_idle_4"
+ ],
+ "soldier_attack": [
+  "soldier_attack_0",
+  "soldier_attack_1",
+  "soldier_attack_2",
+  "soldier_attack_3",
+  "soldier_attack_4",
+  "soldier_attack_5"
+ ],
+ "penguin_idle": [
+  "penguin_idle_0",
+  "penguin_idle_1",
+  "penguin_idle_2",
+  "penguin_idle_3",
+  "penguin_idle_4"
+ ],
+ "mine_idle": [
+  "mine_idle_0",
+  "mine_idle_1",
+  "mine_idle_2",
+  "mine_idle_3",
+  "mine_idle_4"
+ ],
+ "mine_attack": [
+  "mine_attack_0",
+  "mine_attack_1",
+  "mine_attack_2",
+  "mine_attack_3",
+  "mine_attack_4"
+ ],
+ "turtle_idle": [
+  "turtle_idle_0",
+  "turtle_idle_1",
+  "turtle_idle_2",
+  "turtle_idle_3"
+ ],
+ "turtle_attack": [
+  "turtle_attack_0"
+ ],
+ "explosion_idle": [
+  "explosion_idle_0",
+  "explosion_idle_1",
+  "explosion_idle_2",
+  "explosion_idle_3"
+ ]
+}

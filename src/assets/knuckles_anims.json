@@ -1,0 +1,124 @@
+{
+ "idle": {
+  "key": "knuckles_idle",
+  "frames": [
+   "knuckles_0_2",
+   "knuckles_0_3",
+   "knuckles_0_4",
+   "knuckles_0_5",
+   "knuckles_0_6",
+   "knuckles_0_7",
+   "knuckles_0_8"
+  ],
+  "frameRate": 8,
+  "repeat": -1
+ },
+ "spin": {
+  "key": "knuckles_spin",
+  "frames": [
+   "knuckles_18_19",
+   "knuckles_18_20",
+   "knuckles_18_21",
+   "knuckles_18_22"
+  ],
+  "frameRate": 20,
+  "repeat": -1
+ },
+ "glide": {
+  "key": "knuckles_glide",
+  "frames": [
+   "knuckles_3_20",
+   "knuckles_3_21",
+   "knuckles_3_22",
+   "knuckles_3_23",
+   "knuckles_3_24"
+  ],
+  "frameRate": 14,
+  "repeat": -1
+ },
+ "punch": {
+  "key": "knuckles_punch",
+  "frames": [
+   {
+    "frame": "knuckles_1_13",
+    "duration": 89
+   },
+   {
+    "frame": "knuckles_1_14",
+    "duration": 89
+   },
+   {
+    "frame": "knuckles_1_15",
+    "duration": 139
+   },
+   {
+    "frame": "knuckles_1_16",
+    "duration": 89
+   },
+   {
+    "frame": "knuckles_1_17",
+    "duration": 119
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "hurt": {
+  "key": "knuckles_hurt",
+  "frames": [
+   "knuckles_22_0"
+  ],
+  "frameRate": 8,
+  "repeat": 0
+ },
+ "ko": {
+  "key": "knuckles_ko",
+  "frames": [
+   {
+    "frame": "knuckles_22_0",
+    "duration": 199
+   },
+   {
+    "frame": "knuckles_31_7",
+    "duration": 119
+   },
+   {
+    "frame": "knuckles_31_8",
+    "duration": 119
+   },
+   {
+    "frame": "knuckles_31_9",
+    "duration": 139
+   },
+   {
+    "frame": "knuckles_31_12",
+    "duration": 499
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "victory": {
+  "key": "knuckles_victory",
+  "frames": [
+   {
+    "frame": "knuckles_26_17",
+    "duration": 119
+   },
+   {
+    "frame": "knuckles_26_18",
+    "duration": 119
+   },
+   {
+    "frame": "knuckles_26_19",
+    "duration": 159
+   },
+   {
+    "frame": "knuckles_26_20",
+    "duration": 599
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ }
+}
