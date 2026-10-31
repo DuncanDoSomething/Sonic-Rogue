@@ -24,8 +24,8 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 - **Nine zones** from Sonic Advance 2 and 3, each with its own music. Some zones affect your team, like the heat in Hot Crater or the cold in Twinkle Snow.
 - **Bosses and Chaos Emeralds.** Every tenth wave is a boss. Beat it to collect a Chaos Emerald.
 - **Rewards and a shop** after every wave. Prices go up as you progress.
-- **Exp. Share** after the first boss, so the whole team keeps up.
-- **Auto-save** at the start of every wave. Close the tab and pick up where you left off.
+- **Exp. Share** after the first boss, and catch-up EXP for anyone who falls behind the rest of the team.
+- **Auto-save** after every wave. Use Save & Quit in the pause menu, or just close the tab, and continue later.
 
 Press **H** (or the **?** button) in game for the full rules.
 
@@ -39,7 +39,7 @@ Press **H** (or the **?** button) in game for the full rules.
 | C | Your stats / move info |
 | V | Field: zone effect, stat stages, type matchup |
 | H | How to play |
-| M | Settings |
+| M | Pause menu: settings, how to play, save & quit |
 
 Mouse and touch work too.
 

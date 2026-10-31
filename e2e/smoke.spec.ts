@@ -103,6 +103,24 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect((await battle(page)).party).toEqual(['sonic', 'tails', 'amy']);
   });
 
+  test('pause menu: Save & Quit goes to the title screen and the run can be continued', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startRun(page);
+    await waitForMenu(page, 'command');
+    await press(page, 'm');
+    await expect.poll(() => activeScenes(page)).toContain('Pause');
+    await press(page, 'ArrowUp', 'z');          // Save & Quit (last row)
+    await expect.poll(() => activeScenes(page)).toContain('Title');
+    expect(await activeScenes(page)).not.toContain('Battle');
+    await page.waitForTimeout(300);
+    await press(page, 'z', 'z');                // title menu: Game Start, Continue
+    await expect.poll(() => activeScenes(page)).toContain('Battle');
+    await expect.poll(async () => (await battle(page)).wave).toBe(1);
+    expect((await battle(page)).party).toEqual(['sonic', 'tails', 'amy']);
+    expect(errors).toEqual([]);
+  });
+
   test('a lost run deletes the save', async ({ page }) => {
     await openGame(page);
     await startRun(page);
@@ -117,10 +135,14 @@ test.describe('Sonic Rogue smoke tests', () => {
     await expect.poll(() => activeScenes(page)).toContain('Help');
     await press(page, 'ArrowRight', 'ArrowRight', 'x');
     await expect.poll(() => activeScenes(page)).not.toContain('Help');
-    await press(page, 'm');
+    await press(page, 'm');                     // pause menu > Settings
+    await expect.poll(() => activeScenes(page)).toContain('Pause');
+    await press(page, 'ArrowDown', 'z');
     await expect.poll(() => activeScenes(page)).toContain('Settings');
     await press(page, 'x');
     await expect.poll(() => activeScenes(page)).not.toContain('Settings');
+    await press(page, 'x');
+    await expect.poll(() => activeScenes(page)).not.toContain('Pause');
     await waitForMenu(page, 'command');
   });
 });

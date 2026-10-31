@@ -41,7 +41,12 @@ export class TitleScene extends Phaser.Scene {
   private flares: Phaser.GameObjects.Image[] = [];
   private fxTime = 0;
 
+  /** true als je via Save & Quit terugkomt: dan meteen naar het menu, zonder intro */
+  private toMenu = false;
+
   constructor() { super('Title'); }
+
+  init(data: { toMenu?: boolean }) { this.toMenu = !!data?.toMenu; }
 
   create() {
     this.phase = 'boot';
@@ -66,7 +71,8 @@ export class TitleScene extends Phaser.Scene {
     this.input.on('pointerdown', () => { if (this.phase !== 'menu') this.advance(); });
     this.events.on('resume', () => this.input.keyboard!.resetKeys());
 
-    if (booted) this.startIntro();
+    if (this.toMenu) { this.startIntro(); this.finishIntro(); this.toPress(); this.openMenu(); }
+    else if (booted) this.startIntro();
     else this.showBoot();
   }
 

@@ -46,6 +46,13 @@ export const MAX_PARTY = 3;
 /** Exp Share: na de boss van wave 10 krijgt de bank 50% van de EXP, na wave 20 100%. */
 export const EXP_SHARE_STEPS: Array<[number, number]> = [[10, 0.5], [20, 1]];
 /** Deel van de EXP dat teamleden op de bank krijgen, als je wave `cleared` net gehaald hebt. */
+/** Catch-up EXP: wie achterloopt op de hoogste in het team krijgt +50% EXP per level verschil (max 3x). */
+export const CATCH_UP_PER_LEVEL = 0.5;
+export const CATCH_UP_MAX = 3;
+export function catchUpMultiplier(f: { level: number }, party: Array<{ level: number }>) {
+  const top = Math.max(f.level, ...party.map(p => p.level));
+  return Math.min(CATCH_UP_MAX, 1 + CATCH_UP_PER_LEVEL * (top - f.level));
+}
 export function expShareAfter(cleared: number) {
   return EXP_SHARE_STEPS.reduce((rate, [wave, r]) => (cleared >= wave ? r : rate), 0);
 }

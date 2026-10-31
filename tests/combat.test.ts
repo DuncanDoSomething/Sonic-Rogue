@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower, REWARDS,
-  speedBonus, critChance, BASE_CRIT,
+  speedBonus, critChance, BASE_CRIT, catchUpMultiplier, CATCH_UP_MAX,
 } from '../src/data/fighters';
 
 /** Vaste "random": geeft steeds dezelfde waarde terug, zodat de uitkomst voorspelbaar is. */
@@ -179,5 +179,18 @@ describe('moves en passives', () => {
     expect(new Fighter('sonic', 5).def.passive?.id).toBe('speedster');
     expect(new Fighter('knuckles', 5).def.passive?.id).toBe('flinch');
     expect(new Fighter('amy', 5).def.passive?.id).toBe('luckySwing');
+  });
+});
+
+describe('catch-up EXP', () => {
+  it('wie even hoog is als de hoogste in het team krijgt gewoon 1x', () => {
+    expect(catchUpMultiplier({ level: 10 }, [{ level: 10 }, { level: 8 }])).toBe(1);
+  });
+  it('+50% per level achterstand', () => {
+    expect(catchUpMultiplier({ level: 8 }, [{ level: 10 }, { level: 8 }])).toBe(2);
+    expect(catchUpMultiplier({ level: 9 }, [{ level: 10 }])).toBe(1.5);
+  });
+  it('maximaal 3x', () => {
+    expect(catchUpMultiplier({ level: 5 }, [{ level: 20 }])).toBe(CATCH_UP_MAX);
   });
 });

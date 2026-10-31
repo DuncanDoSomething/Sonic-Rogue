@@ -12,7 +12,8 @@
 - [x] Shop with prices that scale per zone
 - [x] Sonic Advance 2-style intro, music and sound effects
 - [x] Character passives for Sonic, Knuckles and Amy
-- [x] Auto-save at the start of every wave, with Continue on the title screen
+- [x] Auto-save after every wave, Save & Quit in the pause menu and Continue on the title screen
+- [x] Catch-up EXP for team members who fall behind
 - [x] Unit tests, end-to-end tests and automatic deploys
 
 ## Next

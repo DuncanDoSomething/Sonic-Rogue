@@ -4,6 +4,7 @@ import { BattleScene } from './scenes/BattleScene';
 import { TitleScene } from './scenes/TitleScene';
 import { CharSelectScene } from './scenes/CharSelectScene';
 import { SettingsScene } from './scenes/SettingsScene';
+import { PauseScene } from './scenes/PauseScene';
 import { CreditsScene } from './scenes/CreditsScene';
 import { HelpScene } from './scenes/HelpScene';
 import { audio } from './audio';
@@ -23,7 +24,7 @@ async function start() {
     pixelArt: true,
     roundPixels: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    scene: [BootScene, TitleScene, CharSelectScene, BattleScene, SettingsScene, CreditsScene, HelpScene],
+    scene: [BootScene, TitleScene, CharSelectScene, BattleScene, SettingsScene, PauseScene, CreditsScene, HelpScene],
   });
   audio.init(game);
   // handig voor debuggen in de console: game.scene.getScene('Battle')

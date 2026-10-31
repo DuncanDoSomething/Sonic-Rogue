@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, catchUpMultiplier, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { EMERALDS, isBossWave, isEliteWave, canHaveRival, RIVAL_CHANCE, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -209,9 +209,10 @@ export class BattleScene extends Phaser.Scene {
     if (this.foeHover) this.foeHover.timeScale = 1 / t; // zweven blijft rustig
   }
 
-  private openSettings() {
+  /** Pauzemenu (drie streepjes / M): Resume, Settings, How to Play, Save & Quit. */
+  private openPause() {
     this.scene.pause();
-    this.scene.launch('Settings', { from: this.scene.key });
+    this.scene.launch('Pause', { from: this.scene.key });
   }
 
   /** Platforms in de kleuren van de huidige zone. */
@@ -308,7 +309,7 @@ export class BattleScene extends Phaser.Scene {
       .setDepth(20).setShadow(1, 1, '#000', 0);
     // je team als kleine hoofdjes boven het portret (donker = KO)
     this.partyHeads = this.party.map(() => this.add.image(0, 154, 'ui', 'head_sonic').setOrigin(0, 0).setDepth(20));
-    addMenuButton(this, W - 12, 10, () => this.openSettings()).setDepth(21);
+    addMenuButton(this, W - 12, 10, () => this.openPause()).setDepth(21);
     addHelpButton(this, W - 12, 30, () => this.openHelp()).setDepth(21);
     this.waveText = this.add.text(W - 24, 6, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
       .setOrigin(1, 0).setDepth(20).setShadow(1, 1, '#000', 0);
@@ -513,7 +514,7 @@ export class BattleScene extends Phaser.Scene {
       else if (k === 'c' && this.menu === 'command') this.toggleStats();
       else if (k === 'v' && (this.menu === 'command' || this.menu === 'fight')) this.toggleField();
       else if (k === 'h') this.openHelp();
-      else if (k === 'm') this.openSettings();
+      else if (k === 'm') this.openPause();
     });
   }
 
@@ -841,9 +842,9 @@ export class BattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- flow
   /** Auto-save: de run zoals hij nu is, zodat je na het sluiten verder kunt bij deze wave. */
-  private autoSave() {
+  private autoSave(wave = this.wave) {
     saveRun({
-      wave: this.wave, rings: this.rings, emeralds: this.emeralds, expShare: this.expShare,
+      wave, rings: this.rings, emeralds: this.emeralds, expShare: this.expShare,
       bag: { ...this.bag }, rivalsMet: [...this.rivalsMet],
       active: Math.max(0, this.party.indexOf(this.player)), party: this.party.map(fighterToSave),
     });
@@ -1260,14 +1261,17 @@ export class BattleScene extends Phaser.Scene {
     if (isBossWave(this.wave)) audio.playJingle('victory', zoneForWave(this.wave + 1).backdrop as MusicKey);
     this.spillRings(c.x, c.y, gained);
 
-    const exp = this.enemy.def.expYield + this.enemy.level * 3;
+    const baseExp = this.enemy.def.expYield + this.enemy.level * 3;
+    // loopt hij achter op de rest van het team? dan extra EXP om bij te trekken
+    const catchUp = catchUpMultiplier(this.player, this.party);
+    const exp = Math.round(baseExp * catchUp);
     const before = { level: this.player.level, exp: this.player.exp };
     const ups = this.player.gainExp(exp);
     this.pBox.expAnimating = true;
-    this.say(`${this.player.name} got ${exp} EXP and ${gained} rings!`, 0);
+    this.say(`${this.player.name} got ${exp} EXP${catchUp > 1 ? ' (catch-up)' : ''} and ${gained} rings!`, 0);
     await this.animateExp(before.level, before.exp);
     if (ups) await this.say(`${this.player.name} grew to Lv.${this.player.level}!`, 500);
-    await this.teamExp(exp);
+    await this.teamExp(baseExp);
     const ult = this.player.def.ultimate;
     if (ult && before.level < ULTIMATE_LEVEL && this.player.level >= ULTIMATE_LEVEL) {
       audio.sfx('confirm2');
@@ -1292,6 +1296,8 @@ export class BattleScene extends Phaser.Scene {
       audio.sfx('confirm2');
       await this.say(`Got the Exp. Share! Your team on the bench now gets ${Math.round(share * 100)}% EXP.`, 900);
     }
+    // wave gewonnen: opslaan alsof de volgende wave al begonnen is (Save & Quit tijdens de rewards houdt de winst)
+    this.autoSave(this.wave + 1);
     this.openRewards();
   }
 
@@ -1486,16 +1492,16 @@ export class BattleScene extends Phaser.Scene {
     return true;
   }
 
-  /** EXP voor wie op de bank zit (Exp Share). KO-teamleden krijgen niks. */
+  /** EXP voor wie op de bank zit (Exp Share), met catch-up voor wie achterloopt. KO-teamleden krijgen niks. */
   private async teamExp(exp: number) {
     if (this.expShare <= 0) return;
     const bench = this.party.filter(f => f !== this.player && !f.fainted);
     if (!bench.length) return;
-    const share = Math.max(1, Math.floor(exp * this.expShare));
-    await this.say(`The team got ${share} EXP from the Exp. Share!`, 300);
-    for (const f of bench) {
+    const gains = bench.map(f => Math.max(1, Math.round(exp * this.expShare * catchUpMultiplier(f, this.party))));
+    await this.say(`Exp. Share: ${bench.map((f, i) => `${f.name} +${gains[i]}`).join(', ')} EXP`, 300);
+    for (const [i, f] of bench.entries()) {
       const before = f.level;
-      if (f.gainExp(share)) await this.say(`${f.name} grew to Lv.${f.level}!`, 350);
+      if (f.gainExp(gains[i])) await this.say(`${f.name} grew to Lv.${f.level}!`, 350);
       const ult = f.def.ultimate;
       if (ult && before < ULTIMATE_LEVEL && f.level >= ULTIMATE_LEVEL) {
         await this.say(`${f.name} learned the ultimate ${MOVES[ult].name}!`, 700);

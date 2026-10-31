@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from '../audio';
-import { EXP_SHARE_STEPS, MAX_BOOST, MAX_PARTY, MAX_STAGE, PASSIVES, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
+import { CATCH_UP_PER_LEVEL, EXP_SHARE_STEPS, MAX_BOOST, MAX_PARTY, MAX_STAGE, PASSIVES, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
 import { EFFECTS, FIRST_RIVAL_WAVE, RIVAL_CHANCE } from '../data/zones';
 import { PRICE_GROWTH_PER_ZONE } from '../data/items';
 
@@ -124,14 +124,14 @@ function pages(): Page[] {
       lines: [
         `Pick a team of up to ${MAX_PARTY}. The first one`,
         'starts the fight.',
-        '',
         'Before each wave you may switch for',
         'free (Battle Style "Switch").',
         'Party in battle: switch, but the foe',
         'gets a free turn. Switching resets',
         'stat stages. KO = send in the next.',
-        `Exp. Share: the bench gets ${EXP_SHARE_STEPS[0][1] * 100}% EXP`,
-        `after wave ${EXP_SHARE_STEPS[0][0]}, ${EXP_SHARE_STEPS[1][1] * 100}% after wave ${EXP_SHARE_STEPS[1][0]}.`,
+        `Exp. Share: bench gets ${EXP_SHARE_STEPS[0][1] * 100}% EXP after`,
+        `wave ${EXP_SHARE_STEPS[0][0]}, ${EXP_SHARE_STEPS[1][1] * 100}% after wave ${EXP_SHARE_STEPS[1][0]}.`,
+        `Behind the team? +${CATCH_UP_PER_LEVEL * 100}% EXP per level.`,
       ],
     },
     {
