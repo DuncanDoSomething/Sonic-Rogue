@@ -67,7 +67,8 @@ test.describe('Sonic Rogue smoke tests', () => {
     await openGame(page);
     await startRun(page);
     // Sonic on 1 HP, the foe always hits first and Sonic's attack can't land
-    await setup(page, 's.player.hp = 1; s.enemy.hp = 9999; s.runTurn({ ...s.player.moves.map((m) => window.MOVES[m])[0], accuracy: 0, priority: -9 });');
+    // de vijand raakt altijd (anders is de test afhankelijk van zijn accuracy)
+    await setup(page, 's.player.hp = 1; s.enemy.hp = 9999; s.pickEnemyMove = () => ({ ...window.MOVES.bodyCheck, accuracy: 1000 }); s.runTurn({ ...s.player.moves.map((m) => window.MOVES[m])[0], accuracy: 0, priority: -9 });');
     await waitForMenu(page, 'choice');          // "Who goes next?"
     await press(page, 'z');
     await waitForMenu(page, 'command');
