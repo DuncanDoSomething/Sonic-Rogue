@@ -11,14 +11,14 @@
 - [x] Rivals that unlock characters and can join your team
 - [x] Shop with prices that scale per zone
 - [x] Sonic Advance 2-style intro, music and sound effects
-- [x] Character passives for Sonic, Knuckles and Amy
+- [x] Passives for every character, plus unique ultimate effects
+- [x] Stuns, team heals and moves that change your own stats
+- [x] Character details screen (C) in character select
 - [x] Auto-save after every wave, Save & Quit in the pause menu and Continue on the title screen
-- [x] Catch-up EXP for team members who fall behind
 - [x] Unit tests, end-to-end tests and automatic deploys
 
 ## Next
 - [ ] New rewards to replace the old stat boosts: moves and passives
-- [ ] Passives for Tails and Cream
 - [ ] Team ultimates
 - [ ] More badniks from Sonic Advance 1, 2 and 3, with unique enemies per zone
 - [ ] Minibosses and a unique boss per zone

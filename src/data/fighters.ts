@@ -43,29 +43,29 @@ export const ULTIMATE_LEVEL = 30;
 
 // ---------------------------------------------------------------- party
 export const MAX_PARTY = 3;
-/** Exp Share: na de boss van wave 10 krijgt de bank 50% van de EXP, na wave 20 100%. */
-export const EXP_SHARE_STEPS: Array<[number, number]> = [[10, 0.5], [20, 1]];
+/**
+ * Exp Share: na wave 10 krijgt de bank 50% van de EXP, na wave 20 80%.
+ * Bewust nooit 100%: wie vecht, levelt het snelst.
+ */
+export const EXP_SHARE_STEPS: Array<[number, number]> = [[10, 0.5], [20, 0.8]];
 /** Deel van de EXP dat teamleden op de bank krijgen, als je wave `cleared` net gehaald hebt. */
-/** Catch-up EXP: wie achterloopt op de hoogste in het team krijgt +50% EXP per level verschil (max 3x). */
-export const CATCH_UP_PER_LEVEL = 0.5;
-export const CATCH_UP_MAX = 3;
-export function catchUpMultiplier(f: { level: number }, party: Array<{ level: number }>) {
-  const top = Math.max(f.level, ...party.map(p => p.level));
-  return Math.min(CATCH_UP_MAX, 1 + CATCH_UP_PER_LEVEL * (top - f.level));
-}
 export function expShareAfter(cleared: number) {
   return EXP_SHARE_STEPS.reduce((rate, [wave, r]) => (cleared >= wave ? r : rate), 0);
 }
 
 // ---------------------------------------------------------------- passives
-export type PassiveId = 'speedster' | 'flinch' | 'luckySwing';
+export type PassiveId = 'speedster' | 'weakSpot' | 'flinch' | 'luckySwing' | 'chaoCare';
 export interface PassiveDef { id: PassiveId; name: string; desc: string; }
 export const PASSIVES: Record<PassiveId, PassiveDef> = {
-  speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. Hits harder the faster he is than the foe (+25% per 1x faster, up to +50%).' },
+  speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. Hits harder the faster he is than the foe (up to +50%).' },
+  weakSpot:   { id: 'weakSpot', name: 'Weak Spot', desc: 'Stunned foes take 1.5x damage from Tails.' },
   flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'Every hit has a 20% chance to make the foe flinch and lose its turn.' },
   luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance for every ATK stage she has.' },
+  chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'If Cream is on the field when a wave starts, the whole team heals 10% HP.' },
 };
 export const FLINCH_CHANCE = 0.2;
+export const WEAK_SPOT_BONUS = 1.5;
+export const CHAO_CARE_HEAL = 0.1;
 export const BASE_CRIT = 0.0625;
 
 /** Sonic Speed: x1 bij gelijke snelheid, +25% per keer zo snel, max +50%. */
@@ -93,13 +93,30 @@ export interface MoveDef {
   tint?: number;
   /** Geneest de gebruiker met dit deel van zijn max-HP in plaats van aan te vallen. */
   heal?: number;
-  /** 'speed' = power hangt af van hoeveel sneller je bent dan het doelwit (zie speedPower). */
-  scaling?: 'speed';
+  /**
+   * 'speed' = power hangt af van hoeveel sneller je bent dan het doelwit (zie speedPower).
+   * 'stages' = power stijgt met elke stat stage van de gebruiker, plus of min (zie stagesPower).
+   */
+  scaling?: 'speed' | 'stages';
   /** Boost-kosten (0 = gratis). Gratis moves geven juist Boost: zie `boostGain`. */
   cost?: number;
   boostGain?: number;
   /** Stat stages die de gebruiker krijgt als de move raakt (bijv. Homing Attack: SPD +1). */
   selfStages?: Partial<Record<StageKey, number>>;
+  /** Doelwit kan 1..n beurten niets doen: [min, max]. */
+  stun?: [number, number];
+  /** Stun werkt maar één keer per gevecht (daarna doet de move alleen schade). */
+  stunOnce?: boolean;
+  /** De volgende n aanvallen op de gebruiker missen gegarandeerd. */
+  evade?: number;
+  /** Altijd een critical hit. Staat de crit-kans al op 100%, dan is de power dubbel. */
+  alwaysCrit?: boolean;
+  /** Genees-move die je ook op een teamgenoot kunt gebruiken (je kiest wie). */
+  ally?: boolean;
+  /** Geneest het hele team met dit deel van hun max-HP (en doet geen schade). */
+  teamHeal?: number;
+  /** Haalt het zone-effect weg voor de rest van de wave. */
+  clearField?: boolean;
 }
 
 export const MOVES: Record<string, MoveDef> = {
@@ -107,20 +124,20 @@ export const MOVES: Record<string, MoveDef> = {
   spinAttack:   { id: 'spinAttack', name: 'Spin Attack', power: 40, accuracy: 95, priority: 0, anim: 'spin', boostGain: 1, desc: 'Curls into a ball and rolls into the foe.' },
   homingAttack: { id: 'homingAttack', name: 'Homing Attack', power: 30, accuracy: 100, priority: 1, anim: 'homing', cost: 1, selfStages: { spd: 1 }, desc: 'Locks on and strikes first. Never misses. Raises SPD by 1.' },
   spinDash:     { id: 'spinDash', name: 'Spin Dash', power: 70, scaling: 'speed', accuracy: 100, priority: 0, anim: 'dash', cost: 3, desc: 'Revs up and launches. The faster Sonic is than the foe, the harder it hits (50-150). Never misses.' },
-  glovePunch:   { id: 'glovePunch', name: 'Glove Punch', power: 55, accuracy: 100, priority: 0, anim: 'punch', cost: 2, desc: 'A double punch with spring-loaded boxing gloves.' },
-  glideAttack:  { id: 'glideAttack', name: 'Glide Attack', power: 45, accuracy: 100, priority: 0, anim: 'glide', cost: 2, desc: 'Glides in from above, fists first. Never misses.' },
+  glovePunch:   { id: 'glovePunch', name: 'Glove Punch', power: 55, accuracy: 100, priority: 0, anim: 'punch', cost: 3, stun: [1, 2], stunOnce: true, desc: 'Spring-loaded boxing gloves. Stuns the foe for 1-2 turns (once per fight). Never misses.' },
+  glideAttack:  { id: 'glideAttack', name: 'Glide Attack', power: 45, accuracy: 100, priority: 0, anim: 'glide', cost: 2, selfStages: { atk: 1, def: -1 }, desc: 'Glides in fists first. Raises ATK by 1, lowers DEF by 1. Never misses.' },
   drillPunch:   { id: 'drillPunch', name: 'Knuckle Punch', power: 80, accuracy: 100, priority: 0, anim: 'punch', cost: 3, desc: 'A full-power punch from the strongest fists on Angel Island. Never misses.' },
   flutterDive:  { id: 'flutterDive', name: 'Flutter Dive', power: 30, accuracy: 100, priority: 1, anim: 'fly', cost: 1, desc: 'Flaps her ears, flies up and dives. Always strikes first.' },
-  chaoCheer:    { id: 'chaoCheer', name: 'Chao Cheer', power: 0, accuracy: 100, priority: 0, anim: 'heal', heal: 0.3, cost: 3, desc: 'Cheers herself on and heals 30% of her max HP.' },
-  hammerSmash:  { id: 'hammerSmash', name: 'Piko Hammer', power: 60, accuracy: 100, priority: 0, anim: 'hammer', cost: 2, desc: 'Swings her Piko Piko Hammer down on the foe.' },
+  chaoCheer:    { id: 'chaoCheer', name: 'Chao Cheer', power: 0, accuracy: 100, priority: 0, anim: 'heal', heal: 0.3, ally: true, cost: 3, desc: 'Heals 30% max HP. Use it on Cream or on a teammate.' },
+  hammerSmash:  { id: 'hammerSmash', name: 'Piko Hammer', power: 60, accuracy: 100, priority: 0, anim: 'hammer', cost: 2, selfStages: { atk: 1 }, desc: 'Swings her Piko Piko Hammer down on the foe. Raises ATK by 1.' },
   hammerTwirl:  { id: 'hammerTwirl', name: 'Hammer Twirl', power: 80, accuracy: 100, priority: 0, anim: 'twirl', cost: 3, desc: 'Spins around with her hammer out. Never misses.' },
   copterDive:   { id: 'copterDive', name: 'Copter Dive', power: 30, accuracy: 100, priority: 1, anim: 'fly', cost: 1, desc: 'Flies up with spinning tails and dives down. Always strikes first.' },
   // --- ultimates (kosten de hele Boost-meter, geleerd op ULTIMATE_LEVEL)
-  lightSpeed:   { id: 'lightSpeed', name: 'Light Speed Atk', power: 130, accuracy: 100, priority: 1, anim: 'ultimate', cost: MAX_BOOST, desc: 'A chain of homing attacks faster than light. Uses all Boost.' },
-  thunderShoot: { id: 'thunderShoot', name: 'Thunder Shoot', power: 130, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, desc: 'Charges up and fires himself like a lightning bolt. Uses all Boost.' },
-  maximumHeat:  { id: 'maximumHeat', name: 'Maximum Heat', power: 150, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, desc: 'Burns with power and slams into the foe. Uses all Boost.' },
-  chaoAttack:   { id: 'chaoAttack', name: 'Chao Attack', power: 120, accuracy: 100, priority: 1, anim: 'ultimate', cost: MAX_BOOST, desc: 'Cheese rushes the foe again and again. Uses all Boost.' },
-  tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 140, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, desc: 'A spinning hammer storm that swallows the foe. Uses all Boost.' },
+  lightSpeed:   { id: 'lightSpeed', name: 'Light Speed Atk', power: 130, accuracy: 100, priority: 1, anim: 'ultimate', cost: MAX_BOOST, evade: 2, desc: 'Homing attacks faster than light. The foe misses its next 2 attacks on Sonic. Uses all Boost.' },
+  thunderShoot: { id: 'thunderShoot', name: 'Thunder Shoot', power: 40, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, stun: [2, 3], desc: 'Fires himself like a lightning bolt. Little damage, but stuns the foe for 2-3 turns. Uses all Boost.' },
+  maximumHeat:  { id: 'maximumHeat', name: 'Maximum Heat', power: 100, scaling: 'stages', accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, desc: 'Burns with power and slams into the foe. +25 power for every stat stage Knuckles has, up or down. Uses all Boost.' },
+  chaoAttack:   { id: 'chaoAttack', name: 'Chao Blessing', power: 0, accuracy: 100, priority: 1, anim: 'heal', teamHeal: 1, clearField: true, cost: MAX_BOOST, desc: 'Cheese and friends heal the whole team to full HP and clear the zone effect. No damage. Uses all Boost.' },
+  tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 120, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, desc: 'A spinning hammer storm. Always a critical hit; at 100% crit chance the power doubles. Uses all Boost.' },
   // --- badniks
   stingShot:  { id: 'stingShot', name: 'Sting Shot', power: 38, accuracy: 92, priority: 0, anim: 'shoot', desc: '', tint: 0xffb340 },
   snowball:   { id: 'snowball', name: 'Snowball', power: 34, accuracy: 95, priority: 0, anim: 'shoot', desc: '', tint: 0xffffff },
@@ -168,7 +185,7 @@ export const FIGHTERS: Record<string, FighterDef> = {
     expYield: 20, // alleen als rival
   },
   tails: {
-    type: 'fly', ultimate: 'thunderShoot',
+    type: 'fly', ultimate: 'thunderShoot', passive: PASSIVES.weakSpot,
     id: 'tails', name: 'Tails', atlas: 'tails', animPrefix: 'tails', scale: 2,
     base: { hp: 26, atk: 10, def: 8, spd: 16 },
     growth: { hp: 3.4, atk: 1.8, def: 1.3, spd: 1.9 },
@@ -184,7 +201,7 @@ export const FIGHTERS: Record<string, FighterDef> = {
     expYield: 20, // alleen als rival
   },
   cream: {
-    type: 'fly', ultimate: 'chaoAttack',
+    type: 'fly', ultimate: 'chaoAttack', passive: PASSIVES.chaoCare,
     id: 'cream', name: 'Cream', atlas: 'cream', animPrefix: 'cream', scale: 2,
     base: { hp: 25, atk: 9, def: 8, spd: 15 },
     growth: { hp: 3.3, atk: 1.7, def: 1.2, spd: 1.8 },
@@ -238,6 +255,10 @@ export class Fighter {
   /** Tijdelijke stages van de zone (bijv. Twinkle Snow: SPD -1). Telt op bij `stages`. */
   field: Stages = emptyStages();
   boost = START_BOOST;
+  /** Aantal beurten dat hij nog verdoofd is (Glove Punch, Thunder Shoot). */
+  stun = 0;
+  /** Aantal aanvallen op hem die nog gegarandeerd missen (Light Speed Attack). */
+  evade = 0;
 
   constructor(id: string, level: number) {
     this.def = FIGHTERS[id];
@@ -298,9 +319,18 @@ export function speedPower(userSpd: number, targetSpd: number) {
   const r = userSpd / Math.max(1, targetSpd);
   return SPEED_POWER.find(([min]) => r >= min)![1];
 }
+/** Maximum Heat: +25 power per stat stage, of die nu omhoog of omlaag staat (max 300). */
+export const STAGES_POWER_STEP = 25;
+export const STAGES_POWER_MAX = 300;
+export function stagesPower(base: number, user: Fighter) {
+  const total = (['atk', 'def', 'spd', 'acc'] as StageKey[]).reduce((n, k) => n + Math.abs(user.stage(k)), 0);
+  return Math.min(STAGES_POWER_MAX, base + STAGES_POWER_STEP * total);
+}
 /** De echte power van een move tegen dit doelwit. */
 export function movePower(m: MoveDef, user: Fighter, target?: Fighter) {
-  return m.scaling === 'speed' && target ? speedPower(user.spd, target.spd) : m.power;
+  if (m.scaling === 'speed' && target) return speedPower(user.spd, target.spd);
+  if (m.scaling === 'stages') return stagesPower(m.power, user);
+  return m.power;
 }
 
 export interface HitResult { damage: number; crit: boolean; missed: boolean; effect: number; }
@@ -310,10 +340,15 @@ export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: 
   const effect = typeMultiplier(attacker.type, target.type);
   const accuracy = move.accuracy * stageMultiplier(attacker.stage('acc'));
   if (rng() * 100 >= accuracy) return { damage: 0, crit: false, missed: true, effect };
-  const crit = rng() < critChance(attacker);
-  const base = (((2 * attacker.level) / 5 + 2) * movePower(move, attacker, target) * (attacker.atk / target.dfn)) / 50 + 2;
+  const chance = critChance(attacker);
+  const crit = rng() < chance || !!move.alwaysCrit;
+  // Tornado Hammer: crit-kans al op 100%? Dan dubbele power
+  const power = movePower(move, attacker, target) * (move.alwaysCrit && chance >= 1 ? 2 : 1);
+  const base = (((2 * attacker.level) / 5 + 2) * power * (attacker.atk / target.dfn)) / 50 + 2;
   const roll = 0.85 + rng() * 0.15;
-  const dmg = base * roll * effect * speedBonus(attacker, target) * (crit ? 1.5 : 1);
+  // Weak Spot (Tails): verdoofde vijanden krijgen extra schade
+  const weakSpot = attacker.def.passive?.id === 'weakSpot' && target.stun > 0 ? WEAK_SPOT_BONUS : 1;
+  const dmg = base * roll * effect * speedBonus(attacker, target) * weakSpot * (crit ? 1.5 : 1);
   return { damage: Math.max(1, Math.floor(dmg)), crit, missed: false, effect };
 }
 

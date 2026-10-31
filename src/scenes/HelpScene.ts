@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from '../audio';
-import { CATCH_UP_PER_LEVEL, EXP_SHARE_STEPS, MAX_BOOST, MAX_PARTY, MAX_STAGE, PASSIVES, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
+import { EXP_SHARE_STEPS, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MAX_STAGE, type PassiveDef, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
 import { EFFECTS, FIRST_RIVAL_WAVE, RIVAL_CHANCE } from '../data/zones';
 import { PRICE_GROWTH_PER_ZONE } from '../data/items';
 
@@ -20,6 +20,14 @@ function wrap(text: string, n: number): string[] {
   }
   if (line) out.push(line);
   return out;
+}
+
+/** Per character: "SONIC SPEED  Sonic" en de uitleg eronder. */
+function passiveLines(ids: string[]): string[] {
+  return ids.flatMap(id => {
+    const pa = FIGHTERS[id].passive as PassiveDef | undefined;
+    return pa ? [`${pa.name.toUpperCase()}  (${FIGHTERS[id].name})`, ...wrap(pa.desc, 38)] : [];
+  });
 }
 
 /** Alle uitleg op één plek. Getallen komen uit de data-bestanden, zodat het altijd klopt. */
@@ -74,7 +82,7 @@ function pages(): Page[] {
     {
       title: 'STAT STAGES',
       lines: [
-        'Some moves and passives raise stats,',
+        'Some moves and passives change stats,',
         'like Homing Attack (SPD +1).',
         '',
         `Each stage is +25%, up to +${MAX_STAGE} (x2.5).`,
@@ -86,9 +94,17 @@ function pages(): Page[] {
       ],
     },
     {
-      title: 'PASSIVES',
+      title: 'PASSIVES (1/2)',
+      lines: passiveLines(HEROES.slice(0, 3)),
+    },
+    {
+      title: 'PASSIVES (2/2)',
       lines: [
-        ...Object.values(PASSIVES).flatMap(pa => [pa.name.toUpperCase(), ...wrap(pa.desc, 38)]),
+        ...passiveLines(HEROES.slice(3)),
+        '',
+        'STUNNED fighters skip their turn.',
+        'Press C in character select to see',
+        'everything a character can do.',
       ],
     },
     {
@@ -131,7 +147,6 @@ function pages(): Page[] {
         'stat stages. KO = send in the next.',
         `Exp. Share: bench gets ${EXP_SHARE_STEPS[0][1] * 100}% EXP after`,
         `wave ${EXP_SHARE_STEPS[0][0]}, ${EXP_SHARE_STEPS[1][1] * 100}% after wave ${EXP_SHARE_STEPS[1][0]}.`,
-        `Behind the team? +${CATCH_UP_PER_LEVEL * 100}% EXP per level.`,
       ],
     },
     {

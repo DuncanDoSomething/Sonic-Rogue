@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, catchUpMultiplier, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, CHAO_CARE_HEAL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { EMERALDS, isBossWave, isEliteWave, canHaveRival, RIVAL_CHANCE, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -66,6 +66,8 @@ export class BattleScene extends Phaser.Scene {
   private saved?: RunSave;
   /** wie deze beurt geflinched is (Knuckles' Iron Fists) */
   private flinched = new Set<Fighter>();
+  /** moves met `stunOnce` die deze wave al verdoofd hebben (per kant: 'p:glovePunch' / 'e:glovePunch') */
+  private stunUsed = new Set<string>();
   private fieldEffect?: ZoneEffect;
   private fieldText!: Phaser.GameObjects.Text;
   private fieldLayer?: Phaser.GameObjects.Container;
@@ -602,7 +604,10 @@ export class BattleScene extends Phaser.Scene {
         this.cameras.main.shake(80, 0.002);
         return;
       }
-      this.lastMove = this.cursor; this.toggleMoveInfo(false); this.runTurn(MOVES[id]);
+      this.lastMove = this.cursor; this.toggleMoveInfo(false);
+      const move = MOVES[id];
+      if (move.ally && this.party.filter(f => !f.fainted).length > 1) this.pickHealTarget(move);
+      else this.runTurn(move);
     } else if (this.menu === 'bag') {
       const id = this.bagIds[this.cursor];
       if (id) this.useItem(id);
@@ -853,6 +858,8 @@ export class BattleScene extends Phaser.Scene {
   private async startWave() {
     this.autoSave();
     this.menu = 'busy';
+    this.party.forEach(f => { f.stun = 0; f.evade = 0; });
+    this.stunUsed.clear();
     this.pointer.setVisible(false);
     this.cmdLayer.setVisible(false);
     this.msg.setVisible(true).setText('');
@@ -908,7 +915,20 @@ export class BattleScene extends Phaser.Scene {
         if (i >= 0) await this.switchTo(this.party[i]);
       }
     }
+    await this.chaoCare();
     this.openCommand();
+  }
+
+  /** Chao Care (Cream): staat ze in het veld als de wave begint, dan geneest het hele team 10%. */
+  private async chaoCare() {
+    if (this.player.def.passive?.id !== 'chaoCare' || this.player.fainted) return;
+    const hurt = this.party.filter(f => !f.fainted && f.hp < f.maxHp);
+    if (!hurt.length) return;
+    for (const f of hurt) f.hp = Math.min(f.maxHp, f.hp + Math.ceil(f.maxHp * CHAO_CARE_HEAL));
+    audio.sfx('heal1');
+    this.sparkles(this.hero);
+    await this.setBox(this.pBox, this.player, true);
+    await this.say(`Chao Care! The team healed a little.`, 400);
   }
 
   private startHover() {
@@ -919,7 +939,26 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private async runTurn(playerMove: MoveDef) {
+  /** Naam zoals hij in berichten staat: "Tails", "Foe Buzz Beetle", "Rival Knuckles". */
+  private who(f: Fighter) { return `${f === this.player ? '' : this.rival ? 'Rival ' : 'Foe '}${f.name}`; }
+
+  /** Eén actie: eerst kijken of hij verdoofd is of flinchte, anders aanvallen. */
+  private async act(att: Fighter, tgt: Fighter, move: MoveDef, ally?: Fighter) {
+    if (att.stun > 0) {
+      att.stun--;
+      this.hitFlash(att === this.player ? this.hero : this.foe);
+      await this.say(`${this.who(att)} is stunned and can't move!`, 400);
+      return;
+    }
+    if (this.flinched.has(att)) {
+      await this.say(`${this.who(att)} flinched and couldn't move!`, 400);
+      return;
+    }
+    if (att === this.player) { this.player.spendBoost(move); this.setBox(this.pBox, this.player, false); }
+    await this.doAttack(att, tgt, move, ally);
+  }
+
+  private async runTurn(playerMove: MoveDef, ally?: Fighter) {
     this.toggleField(false);
     this.menu = 'busy';
     this.pointer.setVisible(false);
@@ -935,12 +974,7 @@ export class BattleScene extends Phaser.Scene {
     this.flinched.clear();
     for (const [att, tgt, move] of order) {
       if (att.fainted || tgt.fainted) continue;
-      if (this.flinched.has(att)) {
-        await this.say(`${att === this.player ? '' : this.rival ? 'Rival ' : 'Foe '}${att.name} flinched and couldn't move!`, 400);
-        continue;
-      }
-      if (att === this.player) { this.player.spendBoost(move); this.setBox(this.pBox, this.player, false); }
-      await this.doAttack(att, tgt, move);
+      await this.act(att, tgt, move, att === this.player ? ally : undefined);
     }
     this.flinched.clear();
 
@@ -951,11 +985,13 @@ export class BattleScene extends Phaser.Scene {
     this.openCommand();
   }
 
-  private async doAttack(att: Fighter, tgt: Fighter, move: MoveDef) {
+  private async doAttack(att: Fighter, tgt: Fighter, move: MoveDef, ally?: Fighter) {
     const isPlayer = att === this.player;
-    await this.say(`${isPlayer ? '' : this.rival ? 'Rival ' : 'Foe '}${att.name} used ${move.name}!`, 150);
-    if (move.heal) return this.doHeal(att, move);
-    const hit = calcHit(att, tgt, move);
+    await this.say(`${this.who(att)} used ${move.name}!`, 150);
+    if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
+    let hit = calcHit(att, tgt, move);
+    // Light Speed Attack: de volgende aanvallen op Sonic missen gegarandeerd
+    if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; }
     let struck = false;
     const strike = () => {
       if (hit.missed || struck) return;
@@ -988,6 +1024,11 @@ export class BattleScene extends Phaser.Scene {
       this.popMiss(spr.x + (isPlayer ? -30 : 34), spr.y - spr.displayHeight * 0.7);
       await this.say(`${tgt.name} avoided the attack!`, 400);
     }
+    // Light Speed Attack geeft Sonic zijn ontwijk-beurten, ook als hij zelf mist
+    if (move.evade && !att.fainted) {
+      att.evade = move.evade;
+      await this.say(`${att.name} is moving too fast to be hit!`, 400);
+    }
     else {
       if (hit.crit) await this.say('A critical hit!', 350);
       if (hit.effect > 1) await this.say("It's super effective!", 350);
@@ -999,16 +1040,19 @@ export class BattleScene extends Phaser.Scene {
       }
       // Iron Fists (Knuckles): kans dat het doelwit zijn beurt verliest
       if (att.def.passive?.id === 'flinch' && !tgt.fainted && Math.random() < FLINCH_CHANCE) this.flinched.add(tgt);
+      // verdoven (Glove Punch één keer per gevecht, Thunder Shoot altijd)
+      const stunKey = `${isPlayer ? 'p' : 'e'}:${move.id}`;
+      if (move.stun && !tgt.fainted && !(move.stunOnce && this.stunUsed.has(stunKey))) {
+        if (move.stunOnce) this.stunUsed.add(stunKey);
+        tgt.stun = Math.max(tgt.stun, Phaser.Math.Between(move.stun[0], move.stun[1]));
+        audio.sfx('enemyhit', { volume: 0.5 });
+        await this.say(`${this.who(tgt)} is stunned!`, 400);
+      }
     }
   }
 
-  /** Genees-move (Chao Cheer): juich-animatie, glinsters, HP erbij. */
-  private async doHeal(att: Fighter, move: MoveDef) {
-    const isPlayer = att === this.player;
-    const spr = isPlayer ? this.hero : this.foe;
-    this.setActionSpeed(spr);
-    const anim = this.playOnce(spr, att.anim('cheer'));
-    audio.sfx('heal1');
+  /** Glinsters rond een sprite (genezen). */
+  private sparkles(spr: Phaser.GameObjects.Sprite) {
     const c = this.center(spr);
     for (let i = 0; i < 6; i++) {
       this.time.delayedCall(i * 90, () => {
@@ -1017,15 +1061,48 @@ export class BattleScene extends Phaser.Scene {
         sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
       });
     }
+  }
+
+  /**
+   * Genees-moves: juich-animatie, glinsters, HP erbij.
+   * Chao Cheer geneest `target` (Cream zelf of een teamgenoot), Chao Blessing het hele team.
+   */
+  private async doHeal(att: Fighter, move: MoveDef, target: Fighter) {
+    const isPlayer = att === this.player;
+    const spr = isPlayer ? this.hero : this.foe;
+    this.setActionSpeed(spr);
+    const anim = this.playOnce(spr, att.anim('cheer'));
+    audio.sfx('heal1');
+    this.sparkles(spr);
     await anim;
     await this.wait(250);
     this.setActionSpeed(null);
-    const h = Math.min(att.maxHp - att.hp, Math.ceil(att.maxHp * (move.heal ?? 0)));
-    att.hp += h;
-    if (h > 0) this.popNumber(spr.x, spr.y - spr.displayHeight - 4, `+${h}`, '#7cf07c');
-    await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
     spr.play(att.anim('idle'));
-    await this.say(h > 0 ? `${att.name} healed ${h} HP!` : `${att.name}'s HP is already full!`, 400);
+
+    if (move.teamHeal) {
+      const team = isPlayer ? this.party.filter(f => !f.fainted) : [att];
+      let total = 0;
+      for (const f of team) {
+        const h = Math.min(f.maxHp - f.hp, Math.ceil(f.maxHp * move.teamHeal));
+        f.hp += h;
+        total += h;
+      }
+      if (total > 0) this.popNumber(spr.x, spr.y - spr.displayHeight - 4, `+${total}`, '#7cf07c');
+      await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
+      await this.say(isPlayer ? 'The whole team is back to full HP!' : `${this.who(att)} is back to full HP!`, 500);
+      if (move.clearField && isPlayer && this.fieldEffect) {
+        const name = this.fieldEffect.name;
+        this.applyZoneEffect(undefined);
+        await this.say(`The ${name.toLowerCase()} faded away!`, 400);
+      }
+      return;
+    }
+
+    const h = Math.min(target.maxHp - target.hp, Math.ceil(target.maxHp * (move.heal ?? 0)));
+    target.hp += h;
+    if (h > 0 && target === att) this.popNumber(spr.x, spr.y - spr.displayHeight - 4, `+${h}`, '#7cf07c');
+    if (target === att) await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
+    await this.say(h > 0 ? `${target.name} healed ${h} HP!` : `${target.name}'s HP is already full!`, 400);
   }
 
   /** Speelt een animatie en roept `onFrame` aan zodra een bepaald frame in beeld komt (bijv. de klap van de hamer). */
@@ -1261,17 +1338,14 @@ export class BattleScene extends Phaser.Scene {
     if (isBossWave(this.wave)) audio.playJingle('victory', zoneForWave(this.wave + 1).backdrop as MusicKey);
     this.spillRings(c.x, c.y, gained);
 
-    const baseExp = this.enemy.def.expYield + this.enemy.level * 3;
-    // loopt hij achter op de rest van het team? dan extra EXP om bij te trekken
-    const catchUp = catchUpMultiplier(this.player, this.party);
-    const exp = Math.round(baseExp * catchUp);
+    const exp = this.enemy.def.expYield + this.enemy.level * 3;
     const before = { level: this.player.level, exp: this.player.exp };
     const ups = this.player.gainExp(exp);
     this.pBox.expAnimating = true;
-    this.say(`${this.player.name} got ${exp} EXP${catchUp > 1 ? ' (catch-up)' : ''} and ${gained} rings!`, 0);
+    this.say(`${this.player.name} got ${exp} EXP and ${gained} rings!`, 0);
     await this.animateExp(before.level, before.exp);
     if (ups) await this.say(`${this.player.name} grew to Lv.${this.player.level}!`, 500);
-    await this.teamExp(baseExp);
+    await this.teamExp(exp);
     const ult = this.player.def.ultimate;
     if (ult && before.level < ULTIMATE_LEVEL && this.player.level >= ULTIMATE_LEVEL) {
       audio.sfx('confirm2');
@@ -1432,6 +1506,19 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Lijstje van je team. `allowActive` = ook wie er nu staat kiezen (bijv. bij inruilen). */
+  /** Chao Cheer: kies wie er geneest wordt (Cream zelf of iemand op de bank). */
+  private async pickHealTarget(move: MoveDef) {
+    const rows: ChoiceRow[] = this.party.map(f => ({
+      label: `${f.name} Lv.${f.level}`,
+      right: f.fainted ? 'KO' : `${f.hp}/${f.maxHp}`,
+      head: `head_${f.def.id}`,
+      disabled: f.fainted,
+    }));
+    const i = await this.choose(`Heal who?`, rows, true);
+    if (i < 0) { this.openFight(); return; }
+    this.runTurn(move, this.party[i]);
+  }
+
   private pickTeammate(title: string, cancel: boolean, allowActive = false, extra?: ChoiceRow): Promise<number> {
     const rows: ChoiceRow[] = this.party.map(f => ({
       label: `${f.name} Lv.${f.level}`,
@@ -1448,6 +1535,7 @@ export class BattleScene extends Phaser.Scene {
     const prev = this.player;
     if (prev === next) return;
     if (resetStages) prev.stages = emptyStages();
+    prev.stun = 0;
     if (!prev.fainted) {
       await this.say(`Come back, ${prev.name}!`, 150);
       await this.tween({ targets: this.hero, x: -60, alpha: 0, duration: 220, ease: 'Quad.easeIn' });
@@ -1472,7 +1560,7 @@ export class BattleScene extends Phaser.Scene {
     const i = await this.pickTeammate('Switch to who?\n(the foe gets a free turn)', true);
     if (i < 0) { this.openCommand(1); return; }
     await this.switchTo(this.party[i]);
-    await this.doAttack(this.enemy, this.player, this.pickEnemyMove());
+    await this.act(this.enemy, this.player, this.pickEnemyMove());
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(1); return; }
     await this.endOfTurn();
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(1); return; }
@@ -1492,16 +1580,16 @@ export class BattleScene extends Phaser.Scene {
     return true;
   }
 
-  /** EXP voor wie op de bank zit (Exp Share), met catch-up voor wie achterloopt. KO-teamleden krijgen niks. */
+  /** EXP voor wie op de bank zit (Exp Share). KO-teamleden krijgen niks. */
   private async teamExp(exp: number) {
     if (this.expShare <= 0) return;
     const bench = this.party.filter(f => f !== this.player && !f.fainted);
     if (!bench.length) return;
-    const gains = bench.map(f => Math.max(1, Math.round(exp * this.expShare * catchUpMultiplier(f, this.party))));
-    await this.say(`Exp. Share: ${bench.map((f, i) => `${f.name} +${gains[i]}`).join(', ')} EXP`, 300);
-    for (const [i, f] of bench.entries()) {
+    const share = Math.max(1, Math.floor(exp * this.expShare));
+    await this.say(`The team got ${share} EXP from the Exp. Share!`, 300);
+    for (const f of bench) {
       const before = f.level;
-      if (f.gainExp(gains[i])) await this.say(`${f.name} grew to Lv.${f.level}!`, 350);
+      if (f.gainExp(share)) await this.say(`${f.name} grew to Lv.${f.level}!`, 350);
       const ult = f.def.ultimate;
       if (ult && before < ULTIMATE_LEVEL && f.level >= ULTIMATE_LEVEL) {
         await this.say(`${f.name} learned the ultimate ${MOVES[ult].name}!`, 700);

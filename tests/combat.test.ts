@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower, REWARDS,
-  speedBonus, critChance, BASE_CRIT, catchUpMultiplier, CATCH_UP_MAX,
+  speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
 } from '../src/data/fighters';
 
 /** Vaste "random": geeft steeds dezelfde waarde terug, zodat de uitkomst voorspelbaar is. */
@@ -182,15 +182,56 @@ describe('moves en passives', () => {
   });
 });
 
-describe('catch-up EXP', () => {
-  it('wie even hoog is als de hoogste in het team krijgt gewoon 1x', () => {
-    expect(catchUpMultiplier({ level: 10 }, [{ level: 10 }, { level: 8 }])).toBe(1);
+describe('nieuwe moves en ultimates', () => {
+  it('Glide Attack: ATK +1, DEF -1; Piko Hammer: ATK +1', () => {
+    expect(MOVES.glideAttack.selfStages).toEqual({ atk: 1, def: -1 });
+    expect(MOVES.hammerSmash.selfStages).toEqual({ atk: 1 });
   });
-  it('+50% per level achterstand', () => {
-    expect(catchUpMultiplier({ level: 8 }, [{ level: 10 }, { level: 8 }])).toBe(2);
-    expect(catchUpMultiplier({ level: 9 }, [{ level: 10 }])).toBe(1.5);
+  it('Glove Punch kost 3 en verdooft 1-2 beurten, één keer per gevecht', () => {
+    expect(MOVES.glovePunch.cost).toBe(3);
+    expect(MOVES.glovePunch.stun).toEqual([1, 2]);
+    expect(MOVES.glovePunch.stunOnce).toBe(true);
+    expect(MOVES.thunderShoot.stun).toEqual([2, 3]);
   });
-  it('maximaal 3x', () => {
-    expect(catchUpMultiplier({ level: 5 }, [{ level: 20 }])).toBe(CATCH_UP_MAX);
+  it('Chao Cheer kan op een teamgenoot; Chao Blessing geneest iedereen en doet geen schade', () => {
+    expect(MOVES.chaoCheer.ally).toBe(true);
+    expect(MOVES.chaoAttack.teamHeal).toBe(1);
+    expect(MOVES.chaoAttack.clearField).toBe(true);
+    expect(MOVES.chaoAttack.power).toBe(0);
+  });
+  it('Maximum Heat: +25 power per stage, plus én min tellen allebei', () => {
+    const k = new Fighter('knuckles', 30);
+    expect(stagesPower(100, k)).toBe(100);
+    k.stages.atk = 2; k.stages.def = -2;
+    expect(stagesPower(100, k)).toBe(200);
+    k.stages = { atk: 6, def: -6, spd: 6, acc: 6 };
+    expect(stagesPower(100, k)).toBe(STAGES_POWER_MAX);
+  });
+  it('Tornado Hammer is altijd een crit, en dubbel zo sterk als de crit-kans al 100% is', () => {
+    const amy = new Fighter('amy', 30);
+    const foe = new Fighter('beetle', 30);
+    const normal = calcHit(amy, foe, MOVES.tornadoHammer, fixed(0.99));
+    expect(normal.crit).toBe(true);
+    amy.stages.atk = 4; // 6,25% + 4 x 25% = 100%
+    const maxed = calcHit(amy, foe, MOVES.tornadoHammer, fixed(0.99));
+    const noDouble = calcHit(amy, foe, { ...MOVES.tornadoHammer, alwaysCrit: false }, fixed(0));
+    expect(maxed.damage).toBeGreaterThan(noDouble.damage * 1.8);
+  });
+  it('Weak Spot: Tails doet 1.5x schade tegen een verdoofde vijand, anderen niet', () => {
+    const tails = new Fighter('tails', 20);
+    const amy = new Fighter('amy', 20);
+    const foe = new Fighter('beetle', 20);
+    const before = calcHit(tails, foe, MOVES.spinAttack, fixed(0.5)).damage;
+    const amyBefore = calcHit(amy, foe, MOVES.spinAttack, fixed(0.5)).damage;
+    foe.stun = 1;
+    expect(calcHit(tails, foe, MOVES.spinAttack, fixed(0.5)).damage).toBeCloseTo(before * WEAK_SPOT_BONUS, -1);
+    expect(calcHit(amy, foe, MOVES.spinAttack, fixed(0.5)).damage).toBe(amyBefore);
+  });
+  it('Light Speed Attack laat de vijand 2x missen', () => {
+    expect(MOVES.lightSpeed.evade).toBe(2);
+  });
+  it('alle vijf characters hebben een passive', () => {
+    expect(['sonic', 'tails', 'knuckles', 'amy', 'cream'].map(id => FIGHTERS[id].passive?.id))
+      .toEqual(['speedster', 'weakSpot', 'flinch', 'luckySwing', 'chaoCare']);
   });
 });

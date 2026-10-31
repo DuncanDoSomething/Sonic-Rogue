@@ -121,6 +121,43 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
+  test('Glove Punch stuns the foe, but only once per fight', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.player.boost = 6; s.enemy.hp = 9999; s.runTurn({ ...window.MOVES.glovePunch, priority: 9 });');
+    await waitForMenu(page, 'command');
+    const used = () => page.evaluate(() => (window as any).game.scene.getScene('Battle').stunUsed.has('p:glovePunch'));
+    expect(await used()).toBe(true);
+    await setup(page, 's.enemy.stun = 0; s.player.boost = 6; s.runTurn({ ...window.MOVES.glovePunch, priority: 9 });');
+    await waitForMenu(page, 'command');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.stun)).toBe(0);
+    expect(errors).toEqual([]);
+  });
+
+  test('Chao Cheer heals the teammate you pick', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.party[2].hp = 1; s.enemy.hp = 9999; s.player.boost = 6; s.runTurn(window.MOVES.chaoCheer, s.party[2]);');
+    await waitForMenu(page, 'command');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').party[2].hp)).toBeGreaterThan(1);
+  });
+
+  test('character select: C shows what a character can do', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page);
+    await toCharacterSelect(page);
+    const open = () => page.evaluate(() => !!(window as any).game.scene.getScene('CharSelect').detail);
+    await press(page, 'c');
+    expect(await open()).toBe(true);
+    await press(page, 'ArrowDown');
+    expect(await open()).toBe(true);
+    await press(page, 'x');
+    expect(await open()).toBe(false);
+    expect(await activeScenes(page)).toContain('CharSelect');
+    expect(errors).toEqual([]);
+  });
+
   test('a lost run deletes the save', async ({ page }) => {
     await openGame(page);
     await startRun(page);

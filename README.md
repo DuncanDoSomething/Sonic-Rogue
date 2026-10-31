@@ -18,13 +18,14 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 
 - **Team of three.** Sonic, Tails and Amy are available from the start. Knuckles and Cream show up as rivals; beat them to unlock them, and they can join your current run.
 - **Boost meter instead of PP.** Spin Attack is free and builds Boost. Stronger moves cost Boost and never miss. Every character learns an ultimate at level 30 that uses the full meter.
+- **Stuns and flinches.** Some moves stop the foe from acting for a turn or more.
 - **Types.** Speed, Fly and Power, based on the team types from Sonic Advance 3 and Heroes. Fly beats Power, Power beats Speed, Speed beats Fly.
-- **Passives.** Sonic gets faster after every KO and hits harder the faster he is than his foe. Knuckles can make foes flinch. Amy lands more critical hits as her ATK goes up.
+- **Passives and ultimates.** Every character has a passive and an ultimate with its own effect: Sonic gets faster with every KO and can make the foe miss, Tails stuns foes and punishes them for it, Knuckles grows stronger the more his stats change, Amy builds up to guaranteed critical hits, and Cream heals the team. Press **C** in character select to see everything a character can do.
 - **Stat stages.** Some moves and passives raise ATK, DEF or SPD by a stage (+25% each, up to +6). Stages reset after every zone boss.
 - **Nine zones** from Sonic Advance 2 and 3, each with its own music. Some zones affect your team, like the heat in Hot Crater or the cold in Twinkle Snow.
 - **Bosses and Chaos Emeralds.** Every tenth wave is a boss. Beat it to collect a Chaos Emerald.
 - **Rewards and a shop** after every wave. Prices go up as you progress.
-- **Exp. Share** after the first boss, and catch-up EXP for anyone who falls behind the rest of the team.
+- **Exp. Share** after the first boss (50%, later 80%). The character in the fight always levels fastest.
 - **Auto-save** after every wave. Use Save & Quit in the pause menu, or just close the tab, and continue later.
 
 Press **H** (or the **?** button) in game for the full rules.
@@ -36,7 +37,7 @@ Press **H** (or the **?** button) in game for the full rules.
 | Arrow keys / WASD | Move |
 | Z / Enter / Space | Confirm |
 | X / Esc | Back |
-| C | Your stats / move info |
+| C | Your stats / move info / character details |
 | V | Field: zone effect, stat stages, type matchup |
 | H | How to play |
 | M | Pause menu: settings, how to play, save & quit |
