@@ -24,6 +24,9 @@ import emeraldsAtlas from '../assets/bg/emeralds.json';
 import fxPng from '../assets/fx.png';
 import fxAtlas from '../assets/fx.json';
 import fxAnims from '../assets/fx_anims.json';
+import sonicIdlePng from '../assets/sonic_idle.png';
+import sonicIdleAtlas from '../assets/sonic_idle.json';
+import sonicIdleAnim from '../assets/sonic_idle_anim.json';
 import { EMERALDS } from '../data/zones';
 import { preloadSounds } from '../audio';
 
@@ -56,6 +59,7 @@ export class BootScene extends Phaser.Scene {
     this.load.atlas('emeralds', emeraldsPng, emeraldsAtlas as unknown as string);
     this.load.atlas('ui', uiPng, uiAtlas as unknown as string);
     this.load.atlas('fx', fxPng, fxAtlas as unknown as string);
+    this.load.atlas('sonicidle', sonicIdlePng, sonicIdleAtlas as unknown as string);
     for (const [path, url] of Object.entries(CUTINS)) this.load.image(`cutin_${path.split('/').pop()!.replace('.png', '')}`, url);
     preloadSounds(this);
     for (const [path, url] of Object.entries(BG_IMAGES)) {
@@ -76,6 +80,13 @@ export class BootScene extends Phaser.Scene {
         });
       }
     }
+    // Sonic's idle: eigen atlas met de originele uitlijning en timing (zie tools/build_sonic_idle.py)
+    this.anims.create({
+      key: sonicIdleAnim.key,
+      frames: sonicIdleAnim.frames.map(f => ({ key: 'sonicidle', frame: f.frame, duration: f.duration - 1 })),
+      frameRate: 1000,
+      repeat: -1,
+    });
     // Super Sonic en effecten: 'ss_dash', 'fx_burst', 'cheese_fly', ...
     for (const a of Object.values(fxAnims as Record<string, CharAnim>)) {
       this.anims.create({ key: a.key, frames: a.frames.map(f => ({ key: 'fx', frame: f as string })), frameRate: a.frameRate, repeat: a.repeat });

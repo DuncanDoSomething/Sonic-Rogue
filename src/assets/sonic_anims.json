@@ -1,21 +1,4 @@
 {
- "idle": {
-  "key": "sonic_idle",
-  "frames": [
-   "sonic_0_0",
-   "sonic_0_1",
-   "sonic_0_2",
-   "sonic_0_3",
-   "sonic_0_4",
-   "sonic_0_5",
-   "sonic_0_6",
-   "sonic_0_7",
-   "sonic_0_8",
-   "sonic_0_9"
-  ],
-  "frameRate": 10,
-  "repeat": -1
- },
  "sit": {
   "key": "sonic_sit",
   "frames": [

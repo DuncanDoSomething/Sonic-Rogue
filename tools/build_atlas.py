@@ -42,8 +42,8 @@ rows = [sorted(r['b'], key=lambda b: b[0]) for r in rows]
 # --- 3. welke frames horen bij welke animatie ("rij.kolom" op de sheet)
 CHARACTERS = {
     'sonic': {
-        # zijn gewone idle; als je lang niks doet gaat hij liggen met een "..."-wolkje (zoals in Advance 2/3)
-        'idle':    {'frames': [(0, c) for c in range(0, 10)], 'fps': 10, 'repeat': -1},
+        # 'idle' komt uit tools/build_sonic_idle.py (referentie-GIF met de echte uitlijning en timing).
+        # Als je lang niks doet gaat hij liggen met een "..."-wolkje (zoals in Advance 2/3).
         'sit':     {'frames': [(1, 6, 140), (1, 7, 140), (1, 8, 160), (1, 9, 160), (1, 10, 200), (1, 11, 200), (1, 12, 200), (1, 13, 300)], 'repeat': 0},
         'nap':     {'frames': [(1, 13, 900), (1, 14, 500), (1, 15, 1100)], 'repeat': -1},
         'spin':    {'frames': [(5, 3), (5, 4), (5, 5), (5, 6)], 'fps': 20, 'repeat': -1},
@@ -135,9 +135,6 @@ CHARACTERS = {
 }
 # handmatige anker-correctie (pixels, + = naar rechts) voor frames waar een hamer o.i.d. het lichaam scheef trekt
 OFFSETS = {
-    # Sonic's idle: in frame 2 en 8 trekt de tikkende voet het midden mee; uitlijnen op het hoofd
-    # zodat zijn lichaam stil blijft staan, net als in Advance 2
-    'sonic': {(0, 2): 2, (0, 8): 2},
     'knuckles': {(1, 14): -7, (1, 15): -7, (1, 16): -5, (9, 5): 3, (9, 10): 4},
     'amy': {(10, 0): 3, (10, 1): 8, (10, 2): 8, (10, 3): 8, (10, 4): 7, (10, 6): -7, (10, 7): -7, (10, 8): -7, (10, 9): -7,
             (17, 6): -12, (17, 8): 11, (17, 9): 10, (17, 11): -4},
