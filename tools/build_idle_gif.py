@@ -2,7 +2,7 @@
 originele uitlijning en timing).
 
 Gebruik: python3 tools/build_idle_gif.py <character> <gif> <out_dir> [--mirror]
-Bijv.:   python3 tools/build_idle_gif.py sonic tools/ref/sonic_idle.gif src/assets --mirror
+Bijv.:   python3 tools/build_idle_gif.py sonic tools/ref/sonic_idle.gif src/assets
          python3 tools/build_idle_gif.py amy tools/ref/amy_idle.gif src/assets
 
 --mirror: de GIF kijkt naar rechts; de sheets (en dus de game) gaan uit van links.
