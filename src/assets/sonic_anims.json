@@ -2,7 +2,14 @@
  "idle": {
   "key": "sonic_idle",
   "frames": [
-   "sonic_0_0",
+   "sonic_0_0"
+  ],
+  "frameRate": 1,
+  "repeat": -1
+ },
+ "wait": {
+  "key": "sonic_wait",
+  "frames": [
    "sonic_0_1",
    "sonic_0_2",
    "sonic_0_3",
@@ -13,7 +20,65 @@
    "sonic_0_8",
    "sonic_0_9"
   ],
-  "frameRate": 8,
+  "frameRate": 12,
+  "repeat": 2
+ },
+ "sit": {
+  "key": "sonic_sit",
+  "frames": [
+   {
+    "frame": "sonic_1_6",
+    "duration": 139
+   },
+   {
+    "frame": "sonic_1_7",
+    "duration": 139
+   },
+   {
+    "frame": "sonic_1_8",
+    "duration": 159
+   },
+   {
+    "frame": "sonic_1_9",
+    "duration": 159
+   },
+   {
+    "frame": "sonic_1_10",
+    "duration": 199
+   },
+   {
+    "frame": "sonic_1_11",
+    "duration": 199
+   },
+   {
+    "frame": "sonic_1_12",
+    "duration": 199
+   },
+   {
+    "frame": "sonic_1_13",
+    "duration": 299
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "nap": {
+  "key": "sonic_nap",
+  "frames": [
+   {
+    "frame": "sonic_1_13",
+    "duration": 899
+   },
+   {
+    "frame": "sonic_1_14",
+    "duration": 499
+   },
+   {
+    "frame": "sonic_1_15",
+    "duration": 1099
+   }
+  ],
+  "frameRate": 1000,
   "repeat": -1
  },
  "spin": {
@@ -111,21 +176,6 @@
    }
   ],
   "frameRate": 1000,
-  "repeat": 0
- },
- "fidget": {
-  "key": "sonic_fidget",
-  "frames": [
-   "sonic_0_10",
-   "sonic_0_11",
-   "sonic_0_12",
-   "sonic_0_13",
-   "sonic_0_14",
-   "sonic_0_15",
-   "sonic_0_16",
-   "sonic_0_17"
-  ],
-  "frameRate": 8,
   "repeat": 0
  },
  "dashfire": {

@@ -158,11 +158,47 @@ export class BattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- setup
   update(_t: number, dt: number) {
-    if (this.hero && this.foe) this.updateStatusFx(dt);
+    if (this.hero && this.foe) { this.updateStatusFx(dt); this.updateIdle(dt); }
+  }
+
+  /**
+   * Idle in lagen, zoals Advance 2/3: eerst gewoon staan, na een paar seconden ongeduldig (voet tikken,
+   * schaduwboksen...), en als je nog langer wacht gaan ze zitten of liggen. Zodra er iets gebeurt staan ze weer.
+   */
+  private idleState = new Map<Phaser.GameObjects.Sprite, { t: number; stage: number }>();
+  private updateIdle(dt: number) {
+    const waiting = this.menu === 'command' || this.menu === 'fight' || this.menu === 'bag';
+    const pairs: Array<[Phaser.GameObjects.Sprite, Fighter | undefined]> = [[this.hero, this.player]];
+    if (this.rival) pairs.push([this.foe, this.enemy]);
+    for (const [spr, f] of pairs) {
+      if (!f || f.fainted) continue;
+      const st = this.idleState.get(spr) ?? { t: 0, stage: 0 };
+      this.idleState.set(spr, st);
+      const key = spr.anims.currentAnim?.key;
+      const idle = f.anim('idle'), wait = f.anim('wait'), sit = f.anim('sit'), nap = f.anim('nap');
+      const inIdle = key === idle || key === wait || key === sit || key === nap;
+      if (!waiting || !inIdle) {
+        // actie begint terwijl hij zit/ligt: meteen weer opstaan
+        if (!waiting && (key === sit || key === nap)) spr.play(idle);
+        st.t = 0; st.stage = 0;
+        continue;
+      }
+      st.t += dt;
+      if (st.stage === 0 && st.t > 4500 && this.anims.exists(wait) && key === idle) {
+        st.stage = 1;
+        spr.play(wait);
+        spr.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => { if (spr.anims.currentAnim?.key === wait) spr.play(idle); });
+      } else if (st.stage === 1 && st.t > 14000 && this.anims.exists(sit) && key === idle) {
+        st.stage = 2;
+        spr.play(sit);
+        spr.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => { if (spr.anims.currentAnim?.key === sit) spr.play(this.anims.exists(nap) ? nap : idle); });
+      }
+    }
   }
 
   create() {
     this.statusFx = new Map();
+    this.idleState = new Map();
     this.wave = 1;
     this.rings = 0;
     this.emeralds = 0;
@@ -209,7 +245,7 @@ export class BattleScene extends Phaser.Scene {
     this.bindInput();
     this.testPanel = undefined;
     if (TEST_MODE) this.drawTestBadge();
-    this.time.addEvent({ delay: 1000, loop: true, callback: () => this.maybeFidget() });
+
     // verdiende Chaos Emeralds uit een save meteen tonen
     for (let i = 0; i < this.emeralds; i++) this.emeraldSlots[i].clearTint().setAlpha(1).play(`emerald_${EMERALDS[i]}`);
     this.startWave();
@@ -1133,7 +1169,10 @@ export class BattleScene extends Phaser.Scene {
       const spr = isPlayer ? this.foe : this.hero;
       const c = this.center(spr);
       this.burst(c.x, c.y, hit.crit ? 0xf2c230 : 0xffffff, hit.crit ? 16 : 10);
-      if (move.id !== att.def.ultimate) this.impactFx(att, c.x, c.y, hit.crit, isPlayer ? 1 : -1);
+      if (move.id !== att.def.ultimate) {
+        this.impactFx(att, c.x, c.y, hit.crit, isPlayer ? 1 : -1);
+        this.knockback(spr, isPlayer ? 1 : -1, hit.crit);
+      }
       this.hitStop(hit.crit ? 120 : 55);
       // CRITICAL! boven het doelwit (Tornado Hammer doet dat zelf al)
       if (hit.crit && !move.alwaysCrit) void bigText(this, c.x, c.y - 40, 'CRITICAL!', isPlayer ? '#ffd23a' : '#ff6a5a');
@@ -1189,6 +1228,16 @@ export class BattleScene extends Phaser.Scene {
       if (hit.effect > 1) await this.say("It's super effective!", 350);
       else if (hit.effect < 1) await this.say("It's not very effective...", 350);
       if (!hit.crit && hit.effect === 1) await this.wait(250);
+      // moves die de gebruiker genezen als ze raken (Hammer Twirl)
+      if (move.selfHeal && !att.fainted && att.hp < att.maxHp) {
+        const h = Math.min(att.maxHp - att.hp, Math.ceil(att.maxHp * move.selfHeal));
+        att.hp += h;
+        const spr = isPlayer ? this.hero : this.foe;
+        hearts(this, spr.x, spr.y - spr.displayHeight * 0.6, 6, 0x7cf07c);
+        this.popNumber(spr.x, spr.y - spr.displayHeight - 4, `+${h}`, '#7cf07c');
+        await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
+        await this.say(`${this.who(att)} recovered ${h} HP!`, 300);
+      }
       // moves die je eigen stats verhogen (Homing Attack: SPD +1)
       for (const [k, v] of Object.entries(move.selfStages ?? {})) {
         if (!att.fainted) await this.say(att.raise(k as StageKey, v), 300);
@@ -1311,6 +1360,10 @@ export class BattleScene extends Phaser.Scene {
     const ty = fc.y + s.displayHeight * 0.4;
 
     let finisher: (() => Promise<void>) | undefined;
+    const base = p.def.scale;
+    const run = this.anims.exists(p.anim('run')) ? p.anim('run') : p.anim('spin');
+    // aanloop: eerst even door de knieën (niet bij de ultimate en de Spin Dash, die hebben hun eigen opbouw)
+    if (move.anim !== 'ultimate' && move.anim !== 'dash') await this.anticipate(s, base);
     if (move.anim !== 'hammer' && move.anim !== 'ultimate') audio.sfx(move.anim === 'dash' ? 'spindash' : 'jump', { volume: move.anim === 'dash' ? 0.6 : 0.8 });
     if (move.anim === 'spin') {
       s.play(p.anim('spin'));
@@ -1358,9 +1411,11 @@ export class BattleScene extends Phaser.Scene {
       fxOnce(this, tx + dir * 10, ty - 20, 'fx_burst', 1.6, 17);
       shockwave(this, tx + dir * 10, ty - 20, 0xff8a1a, 60, 300);
     } else if (move.anim === 'punch') {
-      // Glove Punch: in één ruk naar het doelwit, stoot op het einde van de animatie
-      s.play(p.anim('spin'));
-      await this.tween({ targets: s, x: tx - dir * 30, y: ty, duration: 300, ease: 'Quad.easeInOut' });
+      // Glove Punch: naar het doelwit rennen, dan de stoot
+      s.play(run);
+      const dustRun = this.time.addEvent({ delay: 90, repeat: 3, callback: () => this.dust(s.x - dir * 8, s.y, 1) });
+      await this.tween({ targets: s, x: tx - dir * 30, y: ty, duration: 300, ease: 'Sine.easeIn' });
+      dustRun.remove();
       s.play(p.anim('punch'));
       await this.tween({ targets: s, x: tx - dir * 6, duration: 160, ease: 'Back.easeOut' });
       await this.wait(120);
@@ -1382,10 +1437,11 @@ export class BattleScene extends Phaser.Scene {
       await this.tween({ targets: s, x: tx - dir * 4, y: ty + 4, duration: 420, ease: 'Sine.easeIn' });
       trail.remove();
     } else if (move.anim === 'hammer') {
-      // Piko Hammer: aanrollen, dan de hamer omhoog en neer; raak op het moment dat hij de grond raakt
-      s.play(p.anim('spin'));
-      audio.sfx('jump', { volume: 0.6 });
-      await this.tween({ targets: s, x: tx - dir * 46, y: ty, duration: 300, ease: 'Quad.easeInOut' });
+      // Piko Hammer: naar het doelwit rennen, dan de hamer omhoog en neer; raak op het moment dat hij de grond raakt
+      s.play(run);
+      const dustRun = this.time.addEvent({ delay: 90, repeat: 3, callback: () => this.dust(s.x - dir * 8, s.y, 1) });
+      await this.tween({ targets: s, x: tx - dir * 46, y: ty, duration: 320, ease: 'Sine.easeIn' });
+      dustRun.remove();
       await this.playUntilFrame(s, p.anim('hammer'), '10_6');
       this.cameras.main.shake(160, 0.008);
       shockwave(this, tx, ty, 0xff8fc8, 70, 320);
@@ -1414,14 +1470,15 @@ export class BattleScene extends Phaser.Scene {
       await this.tween({ targets: s, x: tx + dir * 70, alpha: 0.5, duration: 160 });
       s.setAlpha(1).setPosition(home.x - dir * 40, home.y - 40);
       s.play(p.anim('spin'));
-      await this.tween({ targets: s, x: home.x, y: home.y, duration: 260, ease: 'Bounce.easeOut' });
+      await this.tween({ targets: s, x: home.x, y: home.y, duration: 260, ease: 'Quad.easeIn' });
     } else {
-      // terugstuiteren in een boog
+      // terug met een salto in een boog (zoals in Sonic Battle / Sonic RPG)
       s.play(p.anim('spin'));
       await this.tween({ targets: s, x: (home.x + tx) / 2, y: home.y - 60, duration: 260, ease: 'Quad.easeOut' });
       await this.tween({ targets: s, x: home.x, y: home.y, duration: 240, ease: 'Quad.easeIn' });
     }
     s.play(p.anim('idle'));
+    this.land(s, base);
   }
 
   /** Alles wat een ultimate-animatie van dit gevecht nodig heeft. */
@@ -1476,18 +1533,25 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  /** Af en toe een fidget in de idle (voet tikken, vuisten tegen elkaar...). */
-  private maybeFidget() {
-    const tryOne = (spr: Phaser.GameObjects.Sprite, f?: Fighter) => {
-      if (!f || f.fainted || !spr.visible) return;
-      const idle = f.anim('idle'), fid = f.anim('fidget');
-      if (!this.anims.exists(fid) || spr.anims.currentAnim?.key !== idle || Math.random() > 0.18) return;
-      spr.play(fid);
-      spr.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => { if (spr.anims.currentAnim?.key === fid) spr.play(idle); });
-    };
-    if (this.menu !== 'command' && this.menu !== 'fight') return;
-    tryOne(this.hero, this.player);
-    if (this.rival) tryOne(this.foe, this.enemy);
+  /** Doelwit schuift even weg door de klap en veert terug. */
+  private knockback(spr: Phaser.GameObjects.Sprite, dir: number, crit: boolean) {
+    const x0 = spr.x;
+    this.tweens.add({ targets: spr, x: x0 + dir * (crit ? 16 : 9), duration: 70, ease: 'Quad.easeOut', yoyo: true, hold: 40,
+      onComplete: () => spr.setX(x0) });
+  }
+
+  /** Aanloop: even door de knieën (squash) voor een sprong of sprint. */
+  private async anticipate(s: Phaser.GameObjects.Sprite, base: number) {
+    await this.tween({ targets: s, scaleX: base * 1.12, scaleY: base * 0.84, duration: 70, ease: 'Quad.easeOut' });
+    this.tweens.add({ targets: s, scaleX: base * 0.94, scaleY: base * 1.08, duration: 80, yoyo: true, ease: 'Quad.easeOut',
+      onComplete: () => s.setScale(base) });
+  }
+
+  /** Landen: stofje en een kleine squash. */
+  private land(s: Phaser.GameObjects.Sprite, base: number) {
+    this.dust(s.x, s.y, 4);
+    this.tweens.add({ targets: s, scaleX: base * 1.1, scaleY: base * 0.88, duration: 60, yoyo: true, ease: 'Quad.easeOut',
+      onComplete: () => s.setScale(base) });
   }
 
   /** Korte bevriezing bij een treffer, zodat klappen zwaarder voelen. */
@@ -1541,6 +1605,7 @@ export class BattleScene extends Phaser.Scene {
     this.foeHover?.stop();
     const heroC = this.center(this.hero);
     const attackAnim = e.anim('attack');
+    await this.anticipate(b, e.def.scale); // ook badniks nemen even aanloop
 
     if (move.anim === 'shoot') {
       const anim = this.playOnce(b, attackAnim);

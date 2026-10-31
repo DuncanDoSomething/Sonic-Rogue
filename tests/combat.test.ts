@@ -197,8 +197,12 @@ describe('nieuwe moves en ultimates', () => {
     expect(MOVES.drillPunch.priority).toBeGreaterThan(0);
     expect(MOVES.maximumHeat.spendStages).toBe(true);
   });
-  it('Tornado Hammer kost Amy 50% max-HP', () => {
+  it('Tornado Hammer kost Amy 50% max-HP; Hammer Twirl geneest haar 25%', () => {
     expect(MOVES.tornadoHammer.recoil).toBe(0.5);
+    expect(MOVES.hammerTwirl.selfHeal).toBe(0.25);
+  });
+  it('Tails is sterker: Glove Punch 70, Copter Dive 50, Thunder Shoot 80', () => {
+    expect([MOVES.glovePunch.power, MOVES.copterDive.power, MOVES.thunderShoot.power]).toEqual([70, 50, 80]);
   });
   it('Chao Cheer kan op een teamgenoot; Chao Blessing geneest iedereen en doet geen schade', () => {
     expect(MOVES.chaoCheer.ally).toBe(true);

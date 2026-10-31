@@ -121,19 +121,74 @@
   "frameRate": 1000,
   "repeat": 0
  },
- "fidget": {
-  "key": "knuckles_fidget",
+ "wait": {
+  "key": "knuckles_wait",
   "frames": [
-   "knuckles_0_10",
-   "knuckles_0_11",
-   "knuckles_0_12",
-   "knuckles_0_13",
-   "knuckles_0_14",
-   "knuckles_0_15",
-   "knuckles_0_16"
+   "knuckles_1_4",
+   "knuckles_1_5",
+   "knuckles_1_6",
+   "knuckles_1_7",
+   "knuckles_1_8",
+   "knuckles_1_9",
+   "knuckles_1_10",
+   "knuckles_1_11",
+   "knuckles_1_12"
   ],
-  "frameRate": 10,
+  "frameRate": 14,
+  "repeat": 1
+ },
+ "sit": {
+  "key": "knuckles_sit",
+  "frames": [
+   {
+    "frame": "knuckles_1_19",
+    "duration": 159
+   },
+   {
+    "frame": "knuckles_1_20",
+    "duration": 159
+   },
+   {
+    "frame": "knuckles_1_21",
+    "duration": 199
+   },
+   {
+    "frame": "knuckles_1_22",
+    "duration": 259
+   }
+  ],
+  "frameRate": 1000,
   "repeat": 0
+ },
+ "nap": {
+  "key": "knuckles_nap",
+  "frames": [
+   "knuckles_2_0",
+   "knuckles_2_1",
+   "knuckles_2_2",
+   "knuckles_2_3",
+   "knuckles_2_4",
+   "knuckles_2_5",
+   "knuckles_2_6",
+   "knuckles_2_7"
+  ],
+  "frameRate": 6,
+  "repeat": -1
+ },
+ "run": {
+  "key": "knuckles_run",
+  "frames": [
+   "knuckles_3_17",
+   "knuckles_3_18",
+   "knuckles_3_19",
+   "knuckles_3_20",
+   "knuckles_3_21",
+   "knuckles_3_22",
+   "knuckles_3_23",
+   "knuckles_3_24"
+  ],
+  "frameRate": 18,
+  "repeat": -1
  },
  "heavypunch": {
   "key": "knuckles_heavypunch",

@@ -740,7 +740,7 @@
     "h": 48
    }
   },
-  "amy_6_24": {
+  "amy_0_20": {
    "frame": {
     "x": 340,
     "y": 192,
@@ -760,7 +760,7 @@
     "h": 48
    }
   },
-  "amy_6_25": {
+  "amy_0_21": {
    "frame": {
     "x": 408,
     "y": 192,
@@ -780,7 +780,7 @@
     "h": 48
    }
   },
-  "amy_6_26": {
+  "amy_0_22": {
    "frame": {
     "x": 476,
     "y": 192,
@@ -800,7 +800,7 @@
     "h": 48
    }
   },
-  "amy_6_27": {
+  "amy_0_23": {
    "frame": {
     "x": 0,
     "y": 240,
@@ -820,7 +820,7 @@
     "h": 48
    }
   },
-  "amy_7_0": {
+  "amy_0_24": {
    "frame": {
     "x": 68,
     "y": 240,
@@ -840,10 +840,290 @@
     "h": 48
    }
   },
-  "amy_7_1": {
+  "amy_0_25": {
    "frame": {
     "x": 136,
     "y": 240,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_3_22": {
+   "frame": {
+    "x": 204,
+    "y": 240,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_3_23": {
+   "frame": {
+    "x": 272,
+    "y": 240,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_3_24": {
+   "frame": {
+    "x": 340,
+    "y": 240,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_3_25": {
+   "frame": {
+    "x": 408,
+    "y": 240,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_3_26": {
+   "frame": {
+    "x": 476,
+    "y": 240,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_3_27": {
+   "frame": {
+    "x": 0,
+    "y": 288,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_3_28": {
+   "frame": {
+    "x": 68,
+    "y": 288,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_3_29": {
+   "frame": {
+    "x": 136,
+    "y": 288,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_6_24": {
+   "frame": {
+    "x": 204,
+    "y": 288,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_6_25": {
+   "frame": {
+    "x": 272,
+    "y": 288,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_6_26": {
+   "frame": {
+    "x": 340,
+    "y": 288,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_6_27": {
+   "frame": {
+    "x": 408,
+    "y": 288,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_7_0": {
+   "frame": {
+    "x": 476,
+    "y": 288,
+    "w": 68,
+    "h": 48
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 68,
+    "h": 48
+   },
+   "sourceSize": {
+    "w": 68,
+    "h": 48
+   }
+  },
+  "amy_7_1": {
+   "frame": {
+    "x": 0,
+    "y": 336,
     "w": 68,
     "h": 48
    },
@@ -865,7 +1145,7 @@
   "image": "amy.png",
   "size": {
    "w": 544,
-   "h": 288
+   "h": 384
   },
   "scale": "1",
   "credits": "Sonic Advance 3 sprites by Sega/Sonic Team, ripped by Ren \"Foxx\" Ramos"

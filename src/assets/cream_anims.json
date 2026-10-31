@@ -141,19 +141,67 @@
   "frameRate": 1000,
   "repeat": 0
  },
- "fidget": {
-  "key": "cream_fidget",
+ "wait": {
+  "key": "cream_wait",
   "frames": [
-   "cream_0_13",
-   "cream_0_14",
-   "cream_0_15",
-   "cream_0_16",
-   "cream_0_17",
-   "cream_0_18",
-   "cream_0_19"
+   "cream_0_4",
+   "cream_0_5",
+   "cream_0_6",
+   "cream_0_7",
+   "cream_0_8",
+   "cream_0_9",
+   "cream_0_10",
+   "cream_0_11",
+   "cream_0_12"
   ],
   "frameRate": 8,
   "repeat": 0
+ },
+ "sit": {
+  "key": "cream_sit",
+  "frames": [
+   {
+    "frame": "cream_1_21",
+    "duration": 159
+   },
+   {
+    "frame": "cream_1_22",
+    "duration": 199
+   },
+   {
+    "frame": "cream_1_23",
+    "duration": 259
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "nap": {
+  "key": "cream_nap",
+  "frames": [
+   "cream_1_24",
+   "cream_1_25",
+   "cream_1_26",
+   "cream_1_27",
+   "cream_1_28"
+  ],
+  "frameRate": 4,
+  "repeat": -1
+ },
+ "run": {
+  "key": "cream_run",
+  "frames": [
+   "cream_3_16",
+   "cream_3_17",
+   "cream_3_18",
+   "cream_3_19",
+   "cream_3_20",
+   "cream_3_21",
+   "cream_3_22",
+   "cream_3_23"
+  ],
+  "frameRate": 18,
+  "repeat": -1
  },
  "spindisc": {
   "key": "cream_spindisc",

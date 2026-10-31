@@ -141,8 +141,8 @@
   "frameRate": 1000,
   "repeat": 0
  },
- "fidget": {
-  "key": "amy_fidget",
+ "wait": {
+  "key": "amy_wait",
   "frames": [
    "amy_0_13",
    "amy_0_14",
@@ -154,6 +154,63 @@
   ],
   "frameRate": 8,
   "repeat": 0
+ },
+ "sit": {
+  "key": "amy_sit",
+  "frames": [
+   {
+    "frame": "amy_0_20",
+    "duration": 159
+   },
+   {
+    "frame": "amy_0_21",
+    "duration": 179
+   },
+   {
+    "frame": "amy_0_22",
+    "duration": 239
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "nap": {
+  "key": "amy_nap",
+  "frames": [
+   {
+    "frame": "amy_0_23",
+    "duration": 599
+   },
+   {
+    "frame": "amy_0_24",
+    "duration": 499
+   },
+   {
+    "frame": "amy_0_25",
+    "duration": 799
+   },
+   {
+    "frame": "amy_0_24",
+    "duration": 499
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": -1
+ },
+ "run": {
+  "key": "amy_run",
+  "frames": [
+   "amy_3_22",
+   "amy_3_23",
+   "amy_3_24",
+   "amy_3_25",
+   "amy_3_26",
+   "amy_3_27",
+   "amy_3_28",
+   "amy_3_29"
+  ],
+  "frameRate": 18,
+  "repeat": -1
  },
  "spindisc": {
   "key": "amy_spindisc",

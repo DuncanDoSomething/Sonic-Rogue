@@ -580,7 +580,7 @@
     "h": 49
    }
   },
-  "cream_0_13": {
+  "cream_0_4": {
    "frame": {
     "x": 200,
     "y": 147,
@@ -600,7 +600,7 @@
     "h": 49
    }
   },
-  "cream_0_14": {
+  "cream_0_7": {
    "frame": {
     "x": 240,
     "y": 147,
@@ -620,7 +620,7 @@
     "h": 49
    }
   },
-  "cream_0_15": {
+  "cream_0_8": {
    "frame": {
     "x": 280,
     "y": 147,
@@ -640,7 +640,7 @@
     "h": 49
    }
   },
-  "cream_0_16": {
+  "cream_0_9": {
    "frame": {
     "x": 0,
     "y": 196,
@@ -660,7 +660,7 @@
     "h": 49
    }
   },
-  "cream_0_17": {
+  "cream_0_11": {
    "frame": {
     "x": 40,
     "y": 196,
@@ -680,7 +680,7 @@
     "h": 49
    }
   },
-  "cream_0_18": {
+  "cream_0_12": {
    "frame": {
     "x": 80,
     "y": 196,
@@ -700,7 +700,7 @@
     "h": 49
    }
   },
-  "cream_0_19": {
+  "cream_1_21": {
    "frame": {
     "x": 120,
     "y": 196,
@@ -720,7 +720,7 @@
     "h": 49
    }
   },
-  "cream_8_10": {
+  "cream_1_22": {
    "frame": {
     "x": 160,
     "y": 196,
@@ -740,7 +740,7 @@
     "h": 49
    }
   },
-  "cream_8_11": {
+  "cream_1_23": {
    "frame": {
     "x": 200,
     "y": 196,
@@ -760,7 +760,7 @@
     "h": 49
    }
   },
-  "cream_8_12": {
+  "cream_1_24": {
    "frame": {
     "x": 240,
     "y": 196,
@@ -780,7 +780,7 @@
     "h": 49
    }
   },
-  "cream_8_13": {
+  "cream_1_25": {
    "frame": {
     "x": 280,
     "y": 196,
@@ -800,7 +800,7 @@
     "h": 49
    }
   },
-  "cream_8_14": {
+  "cream_1_26": {
    "frame": {
     "x": 0,
     "y": 245,
@@ -820,10 +820,310 @@
     "h": 49
    }
   },
-  "cream_8_15": {
+  "cream_1_27": {
    "frame": {
     "x": 40,
     "y": 245,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_1_28": {
+   "frame": {
+    "x": 80,
+    "y": 245,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_3_16": {
+   "frame": {
+    "x": 120,
+    "y": 245,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_3_17": {
+   "frame": {
+    "x": 160,
+    "y": 245,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_3_18": {
+   "frame": {
+    "x": 200,
+    "y": 245,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_3_19": {
+   "frame": {
+    "x": 240,
+    "y": 245,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_3_20": {
+   "frame": {
+    "x": 280,
+    "y": 245,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_3_21": {
+   "frame": {
+    "x": 0,
+    "y": 294,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_3_22": {
+   "frame": {
+    "x": 40,
+    "y": 294,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_3_23": {
+   "frame": {
+    "x": 80,
+    "y": 294,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_8_10": {
+   "frame": {
+    "x": 120,
+    "y": 294,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_8_11": {
+   "frame": {
+    "x": 160,
+    "y": 294,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_8_12": {
+   "frame": {
+    "x": 200,
+    "y": 294,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_8_13": {
+   "frame": {
+    "x": 240,
+    "y": 294,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_8_14": {
+   "frame": {
+    "x": 280,
+    "y": 294,
+    "w": 40,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 40,
+    "h": 49
+   }
+  },
+  "cream_8_15": {
+   "frame": {
+    "x": 0,
+    "y": 343,
     "w": 40,
     "h": 49
    },
@@ -845,7 +1145,7 @@
   "image": "cream.png",
   "size": {
    "w": 320,
-   "h": 294
+   "h": 392
   },
   "scale": "1",
   "credits": "Sonic Advance 3 sprites by Sega/Sonic Team, ripped by Ren \"Foxx\" Ramos"

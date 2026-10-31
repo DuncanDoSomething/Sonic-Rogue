@@ -679,13 +679,433 @@
     "w": 56,
     "h": 59
    }
+  },
+  "tails_1_2": {
+   "frame": {
+    "x": 112,
+    "y": 236,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_3": {
+   "frame": {
+    "x": 168,
+    "y": 236,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_4": {
+   "frame": {
+    "x": 224,
+    "y": 236,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_5": {
+   "frame": {
+    "x": 280,
+    "y": 236,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_6": {
+   "frame": {
+    "x": 336,
+    "y": 236,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_7": {
+   "frame": {
+    "x": 392,
+    "y": 236,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_8": {
+   "frame": {
+    "x": 0,
+    "y": 295,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_9": {
+   "frame": {
+    "x": 56,
+    "y": 295,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_10": {
+   "frame": {
+    "x": 112,
+    "y": 295,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_11": {
+   "frame": {
+    "x": 168,
+    "y": 295,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_12": {
+   "frame": {
+    "x": 224,
+    "y": 295,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_13": {
+   "frame": {
+    "x": 280,
+    "y": 295,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_1_14": {
+   "frame": {
+    "x": 336,
+    "y": 295,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_2_11": {
+   "frame": {
+    "x": 392,
+    "y": 295,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_2_12": {
+   "frame": {
+    "x": 0,
+    "y": 354,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_2_13": {
+   "frame": {
+    "x": 56,
+    "y": 354,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_2_14": {
+   "frame": {
+    "x": 112,
+    "y": 354,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_2_15": {
+   "frame": {
+    "x": 168,
+    "y": 354,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_2_16": {
+   "frame": {
+    "x": 224,
+    "y": 354,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_2_17": {
+   "frame": {
+    "x": 280,
+    "y": 354,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
+  },
+  "tails_2_18": {
+   "frame": {
+    "x": 336,
+    "y": 354,
+    "w": 56,
+    "h": 59
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 59
+   },
+   "sourceSize": {
+    "w": 56,
+    "h": 59
+   }
   }
  },
  "meta": {
   "image": "tails.png",
   "size": {
    "w": 448,
-   "h": 295
+   "h": 413
   },
   "scale": "1",
   "credits": "Sonic Advance 3 sprites by Sega/Sonic Team, ripped by Ren \"Foxx\" Ramos"

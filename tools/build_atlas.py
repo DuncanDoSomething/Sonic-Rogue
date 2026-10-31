@@ -42,7 +42,12 @@ rows = [sorted(r['b'], key=lambda b: b[0]) for r in rows]
 # --- 3. welke frames horen bij welke animatie ("rij.kolom" op de sheet)
 CHARACTERS = {
     'sonic': {
-        'idle':    {'frames': [(0, c) for c in range(0, 10)], 'fps': 8, 'repeat': -1},
+        # Idle in lagen, zoals Advance 2/3: stilstaan, na een tijdje met zijn voet tikken,
+        # en als je nog langer wacht gaat hij liggen met een "..."-wolkje.
+        'idle':    {'frames': [(0, 0)], 'fps': 1, 'repeat': -1},
+        'wait':    {'frames': [(0, c) for c in range(1, 10)], 'fps': 12, 'repeat': 2},
+        'sit':     {'frames': [(1, 6, 140), (1, 7, 140), (1, 8, 160), (1, 9, 160), (1, 10, 200), (1, 11, 200), (1, 12, 200), (1, 13, 300)], 'repeat': 0},
+        'nap':     {'frames': [(1, 13, 900), (1, 14, 500), (1, 15, 1100)], 'repeat': -1},
         'spin':    {'frames': [(5, 3), (5, 4), (5, 5), (5, 6)], 'fps': 20, 'repeat': -1},
         'run':     {'frames': [(3, c) for c in range(12, 20)], 'fps': 20, 'repeat': -1},
         'hurt':    {'frames': [(9, 1), (9, 2)], 'fps': 8, 'repeat': 0},
@@ -51,8 +56,6 @@ CHARACTERS = {
         # vuist omhoog, dan wijzen met vingertje-wiebel; eindigt op de wijs-pose
         'victory': {'frames': [(14, 8, 110), (14, 9, 110), (14, 10, 110), (14, 11, 380),
                                (14, 12, 120), (14, 13, 120), (14, 12, 120), (14, 13, 120)], 'repeat': 0},
-        # af en toe in de idle: ongeduldig rondkijken en met zijn voet tikken
-        'fidget':  {'frames': [(0, c) for c in range(10, 18)], 'fps': 8, 'repeat': 0},
         # Spin Dash-lancering: bal met vuurstaart
         'dashfire': {'frames': [(7, 17), (7, 19)], 'fps': 16, 'repeat': -1},
         # gouden draaitrap (na de Homing Attack)
@@ -68,7 +71,11 @@ CHARACTERS = {
         'ko':      {'frames': [(25, 0), (26, 17), (26, 18), (27, 0), (27, 1)], 'fps': 6, 'repeat': 0},
         # duim omhoog, dan saluut met een grijns; eindigt op 1.1
         'victory': {'frames': [(0, 16, 120), (0, 17, 260), (0, 18, 140), (0, 19, 140), (1, 0, 140), (1, 1, 200)], 'repeat': 0},
-        'fidget':  {'frames': [(0, 16, 160), (0, 18, 200), (0, 19, 400), (1, 0, 200), (1, 1, 400), (0, 19, 160), (0, 16, 160)], 'repeat': 0},
+        'wait':    {'frames': [(0, 16, 160), (0, 18, 200), (0, 19, 400), (1, 0, 200), (1, 1, 400), (0, 19, 160), (0, 16, 160)], 'repeat': 0},
+        # gaat op zijn staarten liggen
+        'sit':     {'frames': [(1, 2, 160), (1, 3, 200), (1, 4, 260)], 'repeat': 0},
+        'nap':     {'frames': [(1, c) for c in range(5, 15)], 'fps': 7, 'repeat': -1},
+        'run':     {'frames': [(2, c) for c in range(11, 19)], 'fps': 18, 'repeat': -1},
     },
     'knuckles': {
         'idle':    {'frames': [(0, c) for c in range(2, 9)], 'fps': 8, 'repeat': -1},
@@ -80,8 +87,11 @@ CHARACTERS = {
         'ko':      {'frames': [(22, 0, 200), (31, 7, 120), (31, 8, 120), (31, 9, 140), (31, 12, 500)], 'repeat': 0},
         # vuist balanceren, dan duim omhoog met glimmer
         'victory': {'frames': [(26, 17, 120), (26, 18, 120), (26, 19, 160), (26, 20, 600)], 'repeat': 0},
-        # vuisten tegen elkaar slaan (met vonkje)
-        'fidget':  {'frames': [(0, c) for c in range(10, 17)], 'fps': 10, 'repeat': 0},
+        # schaduwboksen, en daarna even gaan zitten
+        'wait':    {'frames': [(1, c) for c in range(4, 13)], 'fps': 14, 'repeat': 1},
+        'sit':     {'frames': [(1, 19, 160), (1, 20, 160), (1, 21, 200), (1, 22, 260)], 'repeat': 0},
+        'nap':     {'frames': [(2, c) for c in range(0, 8)], 'fps': 6, 'repeat': -1},
+        'run':     {'frames': [(3, c) for c in range(17, 25)], 'fps': 18, 'repeat': -1},
         # Knuckle Punch: vuist vooruit met een vuurstoot
         'heavypunch': {'frames': [(9, c) for c in range(5, 13)], 'fps': 16, 'repeat': 0},
     },
@@ -96,7 +106,11 @@ CHARACTERS = {
         'ko':      {'frames': [(25, 3, 160), (25, 8, 160), (25, 9, 160), (25, 10, 160), (25, 11, 400)], 'repeat': 0},
         # V-teken met knipoog
         'victory': {'frames': [(15, 17, 160), (15, 18, 140), (15, 19, 140), (15, 20, 600)], 'repeat': 0},
-        'fidget':  {'frames': [(0, c) for c in range(13, 20)], 'fps': 8, 'repeat': 0},
+        'wait':    {'frames': [(0, c) for c in range(4, 13)], 'fps': 8, 'repeat': 0},
+        # gaat zitten en dommelt in (stipjes)
+        'sit':     {'frames': [(1, 21, 160), (1, 22, 200), (1, 23, 260)], 'repeat': 0},
+        'nap':     {'frames': [(1, c) for c in range(24, 29)], 'fps': 4, 'repeat': -1},
+        'run':     {'frames': [(3, c) for c in range(16, 24)], 'fps': 18, 'repeat': -1},
         # draaiende schijf (Flutter Dive)
         'spindisc': {'frames': [(8, c) for c in range(10, 16)], 'fps': 18, 'repeat': -1},
     },
@@ -109,7 +123,11 @@ CHARACTERS = {
         'hurt':    {'frames': [(28, 8)], 'fps': 8, 'repeat': 0},
         'ko':      {'frames': [(28, 8), (22, 0)], 'fps': 4, 'repeat': 0},
         'victory': {'frames': [(40, 0, 140), (40, 1, 140), (40, 2, 140), (40, 3, 140), (40, 4, 600)], 'repeat': 0},
-        'fidget':  {'frames': [(0, c) for c in range(13, 20)], 'fps': 8, 'repeat': 0},
+        'wait':    {'frames': [(0, c) for c in range(13, 20)], 'fps': 8, 'repeat': 0},
+        # hurkt neer en wacht
+        'sit':     {'frames': [(0, 20, 160), (0, 21, 180), (0, 22, 240)], 'repeat': 0},
+        'nap':     {'frames': [(0, 23, 600), (0, 24, 500), (0, 25, 800), (0, 24, 500)], 'repeat': -1},
+        'run':     {'frames': [(3, c) for c in range(22, 30)], 'fps': 18, 'repeat': -1},
         # roze/gouden draaischijf (Hammer Twirl)
         'spindisc': {'frames': [(6, 24), (6, 25), (6, 26), (6, 27), (7, 0), (7, 1)], 'fps': 18, 'repeat': -1},
     },
@@ -123,6 +141,7 @@ OFFSETS = {
 # frames die op de sheet aan een buur-sprite vastplakken: alleen de eerste N pixels (van links) houden
 CLIP = {
     'sonic': {(15, 18): 32},
+    'knuckles': {(1, 22): 32},
 }.get(char, {})
 ANIMS = CHARACTERS[char]
 

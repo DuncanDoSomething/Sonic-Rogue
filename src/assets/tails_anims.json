@@ -101,8 +101,8 @@
   "frameRate": 1000,
   "repeat": 0
  },
- "fidget": {
-  "key": "tails_fidget",
+ "wait": {
+  "key": "tails_wait",
   "frames": [
    {
     "frame": "tails_0_16",
@@ -135,5 +135,56 @@
   ],
   "frameRate": 1000,
   "repeat": 0
+ },
+ "sit": {
+  "key": "tails_sit",
+  "frames": [
+   {
+    "frame": "tails_1_2",
+    "duration": 159
+   },
+   {
+    "frame": "tails_1_3",
+    "duration": 199
+   },
+   {
+    "frame": "tails_1_4",
+    "duration": 259
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "nap": {
+  "key": "tails_nap",
+  "frames": [
+   "tails_1_5",
+   "tails_1_6",
+   "tails_1_7",
+   "tails_1_8",
+   "tails_1_9",
+   "tails_1_10",
+   "tails_1_11",
+   "tails_1_12",
+   "tails_1_13",
+   "tails_1_14"
+  ],
+  "frameRate": 7,
+  "repeat": -1
+ },
+ "run": {
+  "key": "tails_run",
+  "frames": [
+   "tails_2_11",
+   "tails_2_12",
+   "tails_2_13",
+   "tails_2_14",
+   "tails_2_15",
+   "tails_2_16",
+   "tails_2_17",
+   "tails_2_18"
+  ],
+  "frameRate": 18,
+  "repeat": -1
  }
 }
