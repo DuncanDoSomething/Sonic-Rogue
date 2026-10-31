@@ -1,5 +1,7 @@
 # Sonic Rogue
 
+[![Test & deploy](https://github.com/DuncanDoSomething/Sonic-Rogue/actions/workflows/deploy.yml/badge.svg)](https://github.com/DuncanDoSomething/Sonic-Rogue/actions/workflows/deploy.yml)
+
 A turn-based roguelite in the style of PokéRogue, set in the world of the Sonic Advance games.
 Pick a team of three, fight your way through nine zones and see how far you get.
 
