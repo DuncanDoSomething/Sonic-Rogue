@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ITEMS, priceAt, shopStock } from '../src/data/items';
+import { Fighter } from '../src/data/fighters';
 import { canHaveRival, isBossWave, zoneForWave, ZONES } from '../src/data/zones';
 import { isUnlocked } from '../src/data/unlocks';
 import { expShareAfter } from '../src/data/fighters';
@@ -14,6 +15,17 @@ describe('shop', () => {
   it('de shop gebruikt de prijs van de huidige zone', () => {
     const stock = shopStock(25);
     expect(stock.find(i => i.id === 'healthRing')?.price).toBe(priceAt(ITEMS.healthRing, 25));
+  });
+
+  it('Revive pas vanaf wave 20, duur, en geeft 50% HP terug', () => {
+    expect(shopStock(19).some(i => i.id === 'revive')).toBe(false);
+    expect(shopStock(20).some(i => i.id === 'revive')).toBe(true);
+    expect(shopStock(35).some(i => i.id === 'revive')).toBe(true);
+    expect(priceAt(ITEMS.revive, 21)).toBeGreaterThan(priceAt(ITEMS.chiliDog, 21));
+    const f = new Fighter('tails', 20);
+    f.hp = 0;
+    ITEMS.revive.use(f);
+    expect(f.hp).toBe(Math.ceil(f.maxHp / 2));
   });
 });
 

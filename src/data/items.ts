@@ -12,6 +12,8 @@ export interface ItemDef {
   minWave: number;
   /** aantal ring-icoontjes op de shop-knop (0 = chili dog-icoon via 1-up) */
   rings: number;
+  /** Revive: werkt alleen op een KO-teamgenoot, met dit deel van zijn max-HP */
+  revive?: number;
   use: (f: Fighter) => string;
 }
 
@@ -30,6 +32,9 @@ export const ITEMS: Record<string, ItemDef> = {
     use: f => `${f.name} recovered ${heal(f, 150)} HP!` },
   chiliDog:   { id: 'chiliDog', name: 'Chili Dog', desc: 'Fully heals HP', price: 160, minWave: 31, rings: 0,
     use: f => `Delicious! ${f.name} recovered ${heal(f, f.maxHp)} HP!` },
+  // duur, en pas vanaf wave 20: KO is normaal tot de volgende zone-boss
+  revive:     { id: 'revive', name: 'Revive', desc: 'Revives a KO teammate with 50% HP', price: 200, minWave: 20, rings: 0, revive: 0.5,
+    use: f => { f.hp = Math.max(1, Math.ceil(f.maxHp * 0.5)); return `${f.name} is back in the fight with ${f.hp} HP!`; } },
 };
 
 /** Prijzen stijgen per zone (net als in PokéRogue), anders kun je healing items oneindig stacken. */

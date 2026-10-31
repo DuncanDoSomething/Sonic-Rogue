@@ -144,7 +144,8 @@ function pages(): Page[] {
         'free (Battle Style "Switch").',
         'Party in battle: switch, but the foe',
         'gets a free turn. Switching resets',
-        'stat stages. KO = send in the next.',
+        'stat stages. KO = send in the next;',
+        'they stay down until the zone boss.',
         `Exp. Share: bench gets ${EXP_SHARE_STEPS[0][1] * 100}% EXP after`,
         `wave ${EXP_SHARE_STEPS[0][0]}, ${EXP_SHARE_STEPS[1][1] * 100}% after wave ${EXP_SHARE_STEPS[1][0]}.`,
       ],
@@ -161,6 +162,7 @@ function pages(): Page[] {
         '',
         'Use items in battle with Items.',
         'Using an item costs your turn.',
+        'From wave 20: Revive (50% HP).',
       ],
     },
   ];

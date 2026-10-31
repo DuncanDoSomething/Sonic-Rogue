@@ -177,6 +177,60 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
+  test('C mid-run opens the team overview; arrows switch teammates', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startRun(page);
+    await press(page, 'c');
+    await expect.poll(() => activeScenes(page)).toContain('Team');
+    const idx = () => page.evaluate(() => (window as any).game.scene.getScene('Team').index);
+    expect(await idx()).toBe(0);
+    await press(page, 'ArrowRight');
+    expect(await idx()).toBe(1);
+    await press(page, 'c');
+    await expect.poll(() => activeScenes(page)).not.toContain('Team');
+    await waitForMenu(page, 'command');
+    expect(errors).toEqual([]);
+  });
+
+  test('KO teammates stay down until the zone boss is beaten', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.party[1].hp = 0; s.wave = 10; s.enemy.hp = 1;');
+    await press(page, 'z', 'ArrowRight', 'z');  // Homing Attack wins the "boss" wave
+    await waitForMenu(page, 'reward');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').party[1].hp)).toBeGreaterThan(0);
+  });
+
+  test('a Revive from the bag brings a KO teammate back (costs the turn)', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.party[1].hp = 0; s.bag.revive = 1; s.enemy.hp = 9999;');
+    await press(page, 'ArrowDown', 'z');        // Items
+    await waitForMenu(page, 'bag');
+    await press(page, 'z');                     // Revive
+    await waitForMenu(page, 'choice');
+    await press(page, 'z');                     // the only KO teammate: Tails
+    await waitForMenu(page, 'command');
+    const s = await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { hp: b.party[1].hp, max: b.party[1].maxHp, left: b.bag.revive }; });
+    expect(s.hp).toBe(Math.ceil(s.max / 2));
+    expect(s.left).toBe(0);
+  });
+
+  test('test mode (?test): everyone unlocked, hotkeys work, nothing is saved', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page, '/?test');
+    await startRun(page);
+    await press(page, '2');
+    await waitForMenu(page, 'command');
+    await press(page, '1');
+    await expect.poll(async () => (await battle(page)).boost).toBe(6);
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').player.level)).toBe(30);
+    expect(await page.evaluate(() => localStorage.getItem('sonicrogue_run'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('sonicrogue_unlocked'))).toBeNull();
+    expect(errors).toEqual([]);
+  });
+
   test('a lost run deletes the save', async ({ page }) => {
     await openGame(page);
     await startRun(page);

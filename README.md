@@ -27,6 +27,7 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 - **Bosses and Chaos Emeralds.** Every tenth wave is a boss. Beat it to collect a Chaos Emerald.
 - **Rewards and a shop** after every wave. Prices go up as you progress.
 - **Exp. Share** after the first boss (50%, later 80%). The character in the fight always levels fastest.
+- **KOs last.** A teammate who goes down stays down until you beat the zone boss. From wave 20 the shop sells an expensive Revive.
 - **Auto-save** after every wave. Use Save & Quit in the pause menu, or just close the tab, and continue later.
 
 Press **H** (or the **?** button) in game for the full rules.
@@ -38,7 +39,7 @@ Press **H** (or the **?** button) in game for the full rules.
 | Arrow keys / WASD | Move |
 | Z / Enter / Space | Confirm |
 | X / Esc | Back |
-| C | Your stats / move info / character details |
+| C | Team overview / move info / character details |
 | V | Field: zone effect, stat stages, type matchup |
 | H | How to play |
 | M | Pause menu: settings, how to play, save & quit |
@@ -69,6 +70,8 @@ npm run e2e      # end-to-end tests (builds the game first)
 npm run sim      # boss balance simulation
 npm run build    # production build in dist/
 ```
+
+Add `?test` to the URL (locally or on the live site) for test mode: every character is unlocked, nothing is saved, and in battle the number keys give you full Boost, level 30, a skip to the zone boss and more (press **T** for the list).
 
 ## Project structure
 

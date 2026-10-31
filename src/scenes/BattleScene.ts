@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, CHAO_CARE_HEAL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { EMERALDS, isBossWave, isEliteWave, canHaveRival, RIVAL_CHANCE, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -13,6 +13,7 @@ import { battleTimeScale, charDelay, holdFactor, settings } from '../data/settin
 import { addHelpButton, addMenuButton } from './ui';
 import { audio, MusicKey } from '../audio';
 import { chaoBlessing, cutIn, playUltimate, type UltCtx } from './ultimates';
+import { TEST_KEYS, TEST_MODE } from '../data/testMode';
 
 const W = 480;
 const H = 270;
@@ -69,6 +70,9 @@ export class BattleScene extends Phaser.Scene {
   private flinched = new Set<Fighter>();
   /** moves met `stunOnce` die deze wave al verdoofd hebben (per kant: 'p:glovePunch' / 'e:glovePunch') */
   private stunUsed = new Set<string>();
+  /** testmodus: sneltoetsen-paneel en "volgende wave is een rival" */
+  private testPanel?: Phaser.GameObjects.Container;
+  private forceRival = false;
   private fieldEffect?: ZoneEffect;
   private fieldText!: Phaser.GameObjects.Text;
   private fieldLayer?: Phaser.GameObjects.Container;
@@ -128,8 +132,6 @@ export class BattleScene extends Phaser.Scene {
   private bagInfo!: Phaser.GameObjects.Text;
 
   /** stats-paneel (C in het hoofdmenu) */
-  private statsLayer!: Phaser.GameObjects.Container;
-  private statsRows: Phaser.GameObjects.Text[] = [];
 
   /** move-info (C) */
   private infoLayer!: Phaser.GameObjects.Container;
@@ -142,7 +144,6 @@ export class BattleScene extends Phaser.Scene {
     this.saved = data.save;
     this.partyIds = data.party?.length ? data.party : [data.starter ?? 'sonic'];
     this.cmdItems = [];
-    this.statsRows = [];
     this.fightItems = [];
     this.bagItems = [];
     this.rewardCards = [];
@@ -199,6 +200,8 @@ export class BattleScene extends Phaser.Scene {
     this.drawHud();
     this.drawPanel();
     this.bindInput();
+    this.testPanel = undefined;
+    if (TEST_MODE) this.drawTestBadge();
     // verdiende Chaos Emeralds uit een save meteen tonen
     for (let i = 0; i < this.emeralds; i++) this.emeraldSlots[i].clearTint().setAlpha(1).play(`emerald_${EMERALDS[i]}`);
     this.startWave();
@@ -379,21 +382,9 @@ export class BattleScene extends Phaser.Scene {
     this.infoBody = this.add.text(18, PANEL_Y - 50, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', lineSpacing: 5, wordWrap: { width: 302 } });
     this.infoLayer.add([ig, this.infoTitle, this.infoBody]);
 
-    // Stats-paneel (C in het hoofdmenu, of tik op je HP-box)
-    this.statsLayer = this.add.container(0, 0).setDepth(34).setVisible(false);
-    const sg = this.add.graphics();
-    sg.fillStyle(0x10131c, 0.96).fillRoundedRect(8, PANEL_Y - 126, 250, 122, 5);
-    sg.lineStyle(1, 0xf2c230).strokeRoundedRect(8.5, PANEL_Y - 125.5, 249, 121, 5);
-    this.statsLayer.add(sg);
-    for (let i = 0; i < 8; i++) {
-      const t = this.add.text(18, PANEL_Y - 118 + i * 14, '', { fontFamily: FONT, fontSize: '8px', color: i === 0 ? '#f2c230' : '#ffffff' });
-      const b = this.add.text(248, PANEL_Y - 118 + i * 14, '', { fontFamily: FONT, fontSize: '8px', color: '#4ade5a' }).setOrigin(1, 0);
-      this.statsRows.push(t, b);
-      this.statsLayer.add([t, b]);
-    }
-    this.cmdLayer.add(this.add.text(12, PANEL_Y + 37, 'C: stats  V: field', { fontFamily: FONT, fontSize: '8px', color: '#6b7493' }));
+    this.cmdLayer.add(this.add.text(12, PANEL_Y + 37, 'C: team  V: field', { fontFamily: FONT, fontSize: '8px', color: '#6b7493' }));
     const statsHit = this.add.zone(this.pBox.root.x, this.pBox.root.y, 178, 40).setOrigin(0).setDepth(21).setInteractive({ useHandCursor: true });
-    statsHit.on('pointerdown', () => { if (this.menu === 'command') this.toggleStats(); });
+    statsHit.on('pointerdown', () => { if (this.menu === 'command') this.openTeam(); });
 
     // Tas (Items)
     this.bagLayer = this.add.container(0, 0).setDepth(32).setVisible(false);
@@ -420,25 +411,11 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  /** C in het hoofdmenu: je stats, inclusief buffs uit rewards. */
-  private toggleStats(force?: boolean) {
-    const show = force ?? !this.statsLayer.visible;
-    this.statsLayer.setVisible(show && this.menu === 'command');
-    if (!this.statsLayer.visible) return;
-    const p = this.player;
-    // stage zoals in PokéRogue: +2, -1 (inclusief het zone-effect)
-    const st = (k: StageKey) => { const v = p.stage(k); return v === 0 ? '' : `${v > 0 ? '+' : ''}${v}`; };
-    const rows: Array<[string, string]> = [
-      [`${p.name}  Lv.${p.level}  ${p.type.toUpperCase()}`, ''],
-      [`HP   ${p.hp}/${p.maxHp}`, `BOOST ${p.boost}/${MAX_BOOST}`],
-      [`ATK  ${p.atk}`, st('atk')],
-      [`DEF  ${p.dfn}`, st('def')],
-      [`SPD  ${p.spd}`, st('spd') + (p.stage('acc') ? `  ACC ${st('acc')}` : '')],
-      [`EXP  ${p.exp}/${p.expToNext}`, ''],
-      [`Rings ${this.rings}   Emeralds ${this.emeralds}/7`, ''],
-      [p.def.passive ? `Passive: ${p.def.passive.name}` : 'Passive: -', ''],
-    ];
-    rows.forEach(([l, r], i) => { this.statsRows[i * 2].setText(l); this.statsRows[i * 2 + 1].setText(r); });
+  /** C in het hoofdmenu: overzicht van je team (stats, passive, moves, ultimate). */
+  private openTeam() {
+    audio.sfx('confirm');
+    this.scene.pause();
+    this.scene.launch('Team', { from: this.scene.key, party: this.party, index: this.party.indexOf(this.player) });
   }
 
   /** C in het Fight-menu: uitleg over de move waar je op staat. */
@@ -497,6 +474,7 @@ export class BattleScene extends Phaser.Scene {
     kb.removeAllListeners();
     kb.on('keydown', (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
+      if (TEST_MODE && this.testKey(k)) return;
       if (this.menu === 'choice') {
         if (['arrowup', 'w', 'arrowleft', 'a'].includes(k)) this.moveChoice(-1);
         else if (['arrowdown', 's', 'arrowright', 'd'].includes(k)) this.moveChoice(1);
@@ -519,7 +497,7 @@ export class BattleScene extends Phaser.Scene {
       else if (['z', 'enter', ' '].includes(k)) this.confirm();
       else if (['x', 'escape', 'backspace'].includes(k)) this.back();
       else if (k === 'c' && this.menu === 'fight') this.toggleMoveInfo();
-      else if (k === 'c' && this.menu === 'command') this.toggleStats();
+      else if (k === 'c' && this.menu === 'command') this.openTeam();
       else if (k === 'v' && (this.menu === 'command' || this.menu === 'fight')) this.toggleField();
       else if (k === 'h') this.openHelp();
       else if (k === 'm') this.openPause();
@@ -626,10 +604,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private back() {
-    if (['fight', 'bag'].includes(this.menu) || this.statsLayer.visible) audio.sfx('back');
+    if (['fight', 'bag'].includes(this.menu)) audio.sfx('back');
     if (this.fieldLayer) { this.toggleField(false); return; }
-    if (this.menu === 'command' && this.statsLayer.visible) this.toggleStats(false);
-    else if (this.menu === 'fight' && this.infoLayer.visible) this.toggleMoveInfo(false);
+    if (this.menu === 'fight' && this.infoLayer.visible) this.toggleMoveInfo(false);
     else if (this.menu === 'fight') this.openCommand(0);
     else if (this.menu === 'bag') this.openCommand(2);
   }
@@ -640,14 +617,12 @@ export class BattleScene extends Phaser.Scene {
     this.fightLayer.setVisible(false);
     this.bagLayer.setVisible(false);
     this.infoLayer.setVisible(false);
-    this.statsLayer.setVisible(false);
     this.cmdLayer.setVisible(true);
     this.msg.setVisible(true).setText(`What will\n${this.player.name} do?`);
     this.refreshCursor();
   }
 
   private openFight() {
-    this.statsLayer.setVisible(false);
     this.menu = 'fight';
     // cursor begint op de laatst gebruikte move (gereset na een boss)
     this.cursor = this.player.moves[this.lastMove] ? this.lastMove : 0;
@@ -658,7 +633,6 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private openBag() {
-    this.statsLayer.setVisible(false);
     this.menu = 'bag';
     this.cursor = 0;
     this.buildBagItems();
@@ -670,15 +644,32 @@ export class BattleScene extends Phaser.Scene {
 
   /** Item gebruiken kost je beurt: daarna valt de vijand aan. */
   private async useItem(id: string) {
+    const item = ITEMS[id];
+    let target = this.player;
+    if (item.revive) {
+      this.bagLayer.setVisible(false);
+      if (!this.party.some(f => f.fainted)) {
+        this.menu = 'busy';
+        this.pointer.setVisible(false);
+        await this.say('Nobody on your team is down right now!', 900);
+        this.openBag();
+        return;
+      }
+      const i = await this.pickReviveTarget('Revive who?', true);
+      if (i < 0) { this.openBag(); return; }
+      target = this.party[i];
+    }
     this.menu = 'busy';
     this.pointer.setVisible(false);
     this.bag[id]--;
-    const item = ITEMS[id];
     await this.say(`${this.player.name} used a ${item.name}!`, 150);
-    const sp = this.add.sprite(this.hero.x, this.hero.y - 40, 'ui', 'sparkle_0').setDepth(25).setScale(2).play('sparkle');
-    sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
-    const text = item.use(this.player);
+    if (target === this.player) {
+      const sp = this.add.sprite(this.hero.x, this.hero.y - 40, 'ui', 'sparkle_0').setDepth(25).setScale(2).play('sparkle');
+      sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
+    }
+    const text = item.use(target);
     audio.sfx('heal1');
+    this.refreshPartyHeads();
     await this.setBox(this.pBox, this.player, true);
     await this.say(text, 350);
     const enemyMove = this.pickEnemyMove();
@@ -728,7 +719,6 @@ export class BattleScene extends Phaser.Scene {
     this.fightLayer.setVisible(false);
     this.bagLayer.setVisible(false);
     this.infoLayer.setVisible(false);
-    this.statsLayer.setVisible(false);
     this.msg.setVisible(true).setText('');
     // tekstsnelheid staat los van de battle-snelheid: echte tijd, niet this.time
     const d = charDelay();
@@ -874,7 +864,8 @@ export class BattleScene extends Phaser.Scene {
     this.setBox(this.pBox, this.player, false);
     const zone = zoneForWave(this.wave);
     const boss = isBossWave(this.wave);
-    const rivalId = canHaveRival(this.wave) && Math.random() < RIVAL_CHANCE ? this.pickRival() : undefined;
+    const rivalId = this.forceRival || (canHaveRival(this.wave) && Math.random() < RIVAL_CHANCE) ? this.pickRival() : undefined;
+    this.forceRival = false;
     this.rival = !!rivalId;
     const elite = isEliteWave(this.wave) && !this.rival;
     const id = rivalId ?? (boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
@@ -974,6 +965,57 @@ export class BattleScene extends Phaser.Scene {
         this.ghost(spr, 0xffd23a);
       }
     }
+  }
+
+  // ---------------------------------------------------------------- testmodus (?test in de URL)
+  /** Label linksonder in beeld zodat je altijd ziet dat je in de testmodus zit. */
+  private drawTestBadge() {
+    this.add.text(W / 2, 4, 'TEST MODE  -  T: keys', { fontFamily: FONT, fontSize: '8px', color: '#ff6a5a', stroke: '#000000', strokeThickness: 3 })
+      .setOrigin(0.5, 0).setDepth(40);
+  }
+
+  /** Sneltoetsen. Geeft true terug als de toets door de testmodus is afgehandeld. */
+  private testKey(k: string): boolean {
+    if (k === 't') {
+      if (this.testPanel) { this.testPanel.destroy(); this.testPanel = undefined; return true; }
+      const c = this.add.container(8, 40).setDepth(45);
+      const g = this.add.graphics();
+      g.fillStyle(0x10131c, 0.95).fillRoundedRect(0, 0, 220, 14 + TEST_KEYS.length * 11, 4);
+      g.lineStyle(1, 0xff6a5a).strokeRoundedRect(0.5, 0.5, 219, 13 + TEST_KEYS.length * 11, 4);
+      c.add(g);
+      TEST_KEYS.forEach(([key, what], i) => c.add(this.add.text(8, 7 + i * 11, `${key}  ${what}`, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })));
+      this.testPanel = c;
+      return true;
+    }
+    if (!/^[1-9]$/.test(k)) return false;
+    if (this.menu !== 'command') return true; // alleen als je een actie kiest, anders loopt er iets door elkaar
+    const done = (text: string) => { this.setBox(this.pBox, this.player, false); this.refreshPartyHeads(); void this.flash(`TEST: ${text}`); };
+    const jump = (wave: number) => {
+      this.menu = 'busy';
+      this.foeHover?.stop();
+      this.wave = wave;
+      void this.startWave();
+    };
+    switch (k) {
+      case '1': this.party.forEach(f => { f.boost = MAX_BOOST; }); done('full Boost.'); break;
+      case '2':
+        this.party.forEach(f => { if (f.level < ULTIMATE_LEVEL) { f.level = ULTIMATE_LEVEL; f.exp = 0; } if (!f.fainted) f.hp = f.maxHp; });
+        done(`team is Lv.${ULTIMATE_LEVEL}, ultimates unlocked.`);
+        break;
+      case '3': this.menu = 'busy'; this.enemy.hp = 0; this.setBox(this.eBox, this.enemy, false); void this.winWave(); break;
+      case '4': this.party.forEach(f => { f.hp = f.maxHp; }); done('team healed and revived.'); break;
+      case '5': if (isBossWave(this.wave)) void this.flash('TEST: this is already the boss.'); else jump(Math.ceil(this.wave / 10) * 10); break;
+      case '6': this.forceRival = true; void this.flash('TEST: the next wave is a rival.'); break;
+      case '7':
+        this.menu = 'busy';
+        this.player.hp = 0;
+        this.setBox(this.pBox, this.player, false);
+        void this.handleFaint().then(ok => { if (ok) this.openCommand(); });
+        break;
+      case '8': this.rings += 1000; this.ringText.setText(`${this.rings}`); done('+1000 rings.'); break;
+      case '9': jump(Math.ceil(this.wave / 10) * 10 + 1); break;
+    }
+    return true;
   }
 
   /** Naam zoals hij in berichten staat: "Tails", "Foe Buzz Beetle", "Rival Knuckles". */
@@ -1438,6 +1480,15 @@ export class BattleScene extends Phaser.Scene {
         await this.say(this.party.length > 1 ? `The team's stat changes wore off.` : `${this.player.name}'s stat changes wore off.`, 400);
       }
     }
+    if (isBossWave(this.wave)) {
+      const down = this.party.filter(f => f.fainted);
+      for (const f of down) f.hp = Math.max(1, Math.ceil(f.maxHp * BOSS_REVIVE_HP));
+      if (down.length) {
+        this.refreshPartyHeads();
+        audio.sfx('heal1');
+        await this.say(`${down.map(f => f.name).join(' and ')} got back up with ${Math.round(BOSS_REVIVE_HP * 100)}% HP!`, 500);
+      }
+    }
     if (isBossWave(this.wave) && this.emeralds < EMERALDS.length) await this.awardEmerald(c.x, c.y);
     if (this.rival && unlock(this.enemy.def.id)) await this.unlockBanner(this.enemy.def.id, this.enemy.name);
     if (this.rival) await this.offerRivalJoin(this.enemy.def.id, this.enemy.level);
@@ -1583,6 +1634,39 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Lijstje van je team. `allowActive` = ook wie er nu staat kiezen (bijv. bij inruilen). */
+  /** Revive: kies een KO-teamgenoot (de anderen staan grijs). `extra` = bijv. "Keep in bag". */
+  private pickReviveTarget(title: string, cancel: boolean, extra?: ChoiceRow): Promise<number> {
+    const rows: ChoiceRow[] = this.party.map(f => ({
+      label: `${f.name} Lv.${f.level}`,
+      right: f.fainted ? 'KO' : `${f.hp}/${f.maxHp}`,
+      head: `head_${f.def.id}`,
+      disabled: !f.fainted,
+    }));
+    if (extra) rows.push(extra);
+    return this.choose(title, rows, cancel);
+  }
+
+  /** Revive gekocht in de shop: meteen iemand terughalen, of in de tas. */
+  private async reviveFromShop(it: ItemDef) {
+    if (!this.party.some(f => f.fainted)) {
+      this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;
+      this.msg.setText(`Nobody is down, so the Revive went\nto your bag. (${this.bag[it.id]} in bag)`);
+      return;
+    }
+    const i = await this.pickReviveTarget('Revive who?', false, { label: 'Keep in bag' });
+    this.menu = 'reward';
+    this.refreshCursor(); // eerst de cursor (die zet de reward-uitleg neer), dan ons bericht
+    if (i < this.party.length) {
+      const text = it.use(this.party[i]);
+      audio.sfx('heal1');
+      this.refreshPartyHeads();
+      this.msg.setText(text);
+    } else {
+      this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;
+      this.msg.setText(`The Revive went to your bag.\n(${this.bag[it.id]} in bag)`);
+    }
+  }
+
   /** Chao Cheer: kies wie er geneest wordt (Cream zelf of iemand op de bank). */
   private async pickHealTarget(move: MoveDef) {
     const rows: ChoiceRow[] = this.party.map(f => ({
@@ -1723,7 +1807,6 @@ export class BattleScene extends Phaser.Scene {
     this.fieldLayer?.destroy();
     this.fieldLayer = undefined;
     if (!show) return;
-    this.statsLayer.setVisible(false);
     this.infoLayer.setVisible(false);
     const c = this.add.container(0, 0).setDepth(34);
     const x = 8, y = PANEL_Y - 128, w = 300, h = 124;
@@ -1947,6 +2030,11 @@ export class BattleScene extends Phaser.Scene {
       this.add.sprite(9, -2, 'ui', 'ring_0').setScale(2).play('ring_spin')];
     if (id === 'hyperRing') return [this.add.sprite(0, 0, 'ui', 'bigring_0').play('bigring_spin')];
     if (id === 'chiliDog') return [this.add.image(0, 2, 'chilidog').setScale(2)];
+    if (id === 'revive') {
+      // hoofdje met een gouden ring erboven als halo
+      const halo = this.add.sprite(0, -14, 'ui', 'ring_0').setScale(1.4, 0.6).play('ring_spin');
+      return [this.add.image(0, 2, 'ui', `head_${this.player.def.id}`).setScale(1.5), halo];
+    }
     // reroll
     return [this.add.sprite(0, 0, 'ui', 'monitor_random').setScale(1)];
   }
@@ -2013,6 +2101,8 @@ export class BattleScene extends Phaser.Scene {
       this.rerolls++;
       this.buildRewardRow();
       this.msg.setText(`New rewards rolled in!\nNext reroll costs ${this.rerollCost()} rings.`);
+    } else if (it.revive) {
+      void this.reviveFromShop(it);
     } else if (this.player.hp >= this.player.maxHp) {
       // volle HP: niks te healen, dus meteen de tas in
       this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;

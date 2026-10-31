@@ -3,6 +3,7 @@
 // Bij Game Start kun je dan verder waar je was. Game over = save weg.
 // ---------------------------------------------------------------------------
 import { Fighter, type Stages } from './fighters';
+import { TEST_MODE } from './testMode';
 
 const KEY = 'sonicrogue_run';
 const VERSION = 1;
@@ -37,6 +38,7 @@ export function fighterFromSave(s: SavedFighter): Fighter {
 
 /** Leest de save; bij een kapotte of oude save komt er niks terug (dan begin je gewoon opnieuw). */
 export function loadRun(): RunSave | null {
+  if (TEST_MODE) return null; // testmodus raakt je echte run niet aan
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
@@ -49,9 +51,11 @@ export function loadRun(): RunSave | null {
 }
 
 export function saveRun(s: Omit<RunSave, 'v'>) {
+  if (TEST_MODE) return;
   try { localStorage.setItem(KEY, JSON.stringify({ v: VERSION, ...s })); } catch { /* geen opslag: dan maar niet */ }
 }
 
 export function clearRun() {
+  if (TEST_MODE) return;
   try { localStorage.removeItem(KEY); } catch { /* negeren */ }
 }

@@ -3,6 +3,8 @@
 // unlock je door ze als rival te verslaan. Wordt bewaard in localStorage.
 // ---------------------------------------------------------------------------
 
+import { TEST_MODE } from './testMode';
+
 const KEY = 'sonicrogue_unlocked';
 /** Speelbaar vanaf het begin; Knuckles en Cream unlock je als rival. */
 const START = ['sonic', 'tails', 'amy'];
@@ -19,10 +21,12 @@ function load(): Set<string> {
   return cache;
 }
 
-export function isUnlocked(id: string) { return load().has(id); }
+/** In de testmodus is iedereen vrij (zonder iets op te slaan). */
+export function isUnlocked(id: string) { return TEST_MODE || load().has(id); }
 
 /** Geeft true terug als het character nieuw is vrijgespeeld. */
 export function unlock(id: string): boolean {
+  if (TEST_MODE) return false;
   const s = load();
   if (s.has(id)) return false;
   s.add(id);

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { TEST_MODE } from '../data/testMode';
 import { Mode7 } from './Mode7';
 import { audio } from '../audio';
 import { clearRun, loadRun } from '../data/save';
@@ -66,6 +67,10 @@ export class TitleScene extends Phaser.Scene {
     this.buildLogo();
     this.press = this.add.image(W / 2, 214, 'label_press_start').setAlpha(0).setDepth(10);
     this.buildMenu();
+    if (TEST_MODE) {
+      this.add.text(W / 2, 4, 'TEST MODE: everyone unlocked, nothing is saved', { fontFamily: FONT, fontSize: '8px', color: '#ff6a5a', stroke: '#000000', strokeThickness: 3 })
+        .setOrigin(0.5, 0).setDepth(70);
+    }
 
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => this.onKey(e.key.toLowerCase()));
     this.input.on('pointerdown', () => { if (this.phase !== 'menu') this.advance(); });

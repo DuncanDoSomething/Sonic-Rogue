@@ -43,6 +43,8 @@ export const ULTIMATE_LEVEL = 30;
 
 // ---------------------------------------------------------------- party
 export const MAX_PARTY = 3;
+/** Wie KO gaat, blijft KO tot de zone-boss verslagen is; dan staat hij weer op met dit deel van zijn HP. */
+export const BOSS_REVIVE_HP = 0.5;
 /**
  * Exp Share: na wave 10 krijgt de bank 50% van de EXP, na wave 20 80%.
  * Bewust nooit 100%: wie vecht, levelt het snelst.
