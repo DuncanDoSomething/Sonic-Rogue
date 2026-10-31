@@ -139,7 +139,9 @@ test.describe('Sonic Rogue smoke tests', () => {
     await expect.poll(() => activeScenes(page)).toContain('Pause');
     await press(page, 'ArrowDown', 'z');
     await expect.poll(() => activeScenes(page)).toContain('Settings');
+    expect(await page.evaluate(() => window.game.scene.isVisible('Pause'))).toBe(false); // regression: pause menu drew over Settings
     await press(page, 'x');
+    await expect.poll(() => page.evaluate(() => window.game.scene.isVisible('Pause'))).toBe(true);
     await expect.poll(() => activeScenes(page)).not.toContain('Settings');
     await press(page, 'x');
     await expect.poll(() => activeScenes(page)).not.toContain('Pause');

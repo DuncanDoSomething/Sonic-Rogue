@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { audio } from '../audio';
-import { loadRun } from '../data/save';
 
 const W = 480;
 const H = 270;
@@ -23,7 +22,6 @@ export class PauseScene extends Phaser.Scene {
   private row = 0;
   private labels: Phaser.GameObjects.Text[] = [];
   private pointer!: Phaser.GameObjects.Triangle;
-  private hint!: Phaser.GameObjects.Text;
 
   constructor() { super('Pause'); }
 
@@ -36,7 +34,7 @@ export class PauseScene extends Phaser.Scene {
   create() {
     this.add.rectangle(0, 0, W, H, 0x05060c, 0.7).setOrigin(0).setInteractive();
     const g = this.add.graphics();
-    const bw = 200, bh = 150, bx = (W - bw) / 2, by = 50;
+    const bw = 200, bh = 122, bx = (W - bw) / 2, by = 50;
     g.fillStyle(0x10131c, 0.97).fillRoundedRect(bx, by, bw, bh, 6);
     g.lineStyle(2, 0xc0392b).strokeRoundedRect(bx + 1, by + 1, bw - 2, bh - 2, 6);
     this.add.text(W / 2, by + 14, 'Paused', { fontFamily: FONT, fontSize: '8px', color: '#f2c230' }).setOrigin(0.5);
@@ -48,7 +46,6 @@ export class PauseScene extends Phaser.Scene {
       t.on('pointerdown', () => { this.row = i; this.pick(); });
       this.labels.push(t);
     });
-    this.hint = this.add.text(W / 2, by + bh - 20, '', { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4', align: 'center' }).setOrigin(0.5);
     this.add.text(W / 2, by + bh + 12, 'Z to pick, X / M to close', { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4' })
       .setOrigin(0.5).setShadow(1, 1, '#000', 0);
     this.pointer = this.add.triangle(0, 0, 0, 0, 0, 8, 5, 4, 0xffffff).setOrigin(0, 0);
@@ -61,7 +58,7 @@ export class PauseScene extends Phaser.Scene {
       else if (['x', 'escape', 'm', 'backspace'].includes(k)) this.close();
     });
     // terug uit Settings/Help: toetsen resetten en instellingen doorgeven aan het gevecht
-    this.events.on('resume', () => this.input.keyboard!.resetKeys());
+    this.events.on('resume', () => { this.scene.setVisible(true); this.input.keyboard!.resetKeys(); });
     this.events.on('settings-changed', () => this.scene.get(this.from).events.emit('settings-changed'));
     this.refresh();
   }
@@ -69,10 +66,6 @@ export class PauseScene extends Phaser.Scene {
   private refresh() {
     const l = this.labels[this.row];
     this.pointer.setPosition(l.x - 11, l.y);
-    if (ROWS[this.row].act === 'quit') {
-      const sv = loadRun();
-      this.hint.setText(sv ? `You'll continue at wave ${sv.wave}.` : 'This run has no save.');
-    } else this.hint.setText('');
   }
 
   private pick() {
@@ -80,7 +73,9 @@ export class PauseScene extends Phaser.Scene {
     if (act === 'resume') { this.close(); return; }
     audio.sfx('confirm');
     if (act === 'settings' || act === 'help') {
+      // pauzemenu verbergen zolang Settings/Help open is (anders tekent het er doorheen)
       this.scene.pause();
+      this.scene.setVisible(false);
       this.scene.launch(act === 'settings' ? 'Settings' : 'Help', { from: this.scene.key });
       return;
     }
