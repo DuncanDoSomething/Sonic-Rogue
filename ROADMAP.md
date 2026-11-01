@@ -26,7 +26,7 @@
 - [ ] Shadow as a playable character
 - [ ] Bosses from Sonic Battle: Chaos, Chaos Gamma and Eggman
 - [ ] Enemies with more interaction: their own status moves, buffs and patterns
-- [ ] New rewards to replace the old stat boosts: moves and passives
+- [ ] Reward revamp (see below)
 - [ ] Team ultimates
 - [ ] More badniks from Sonic Advance 1, 2 and 3, with unique enemies per zone
 - [ ] Minibosses and a unique boss per zone
@@ -40,3 +40,14 @@
 - [ ] Chao Garden with eggs to work towards
 - [ ] Point cost for picking your team
 - [ ] Mobile testing and polish
+
+## Reward revamp (planned)
+- [ ] Remove the 100% heal reward (1-Up)
+- [ ] Make the 50% heal (Ring Bundle) very rare
+- [ ] Boost Charge gives +1 Boost instead of +3
+- [ ] Add ring (money) rewards
+- [ ] New reward types: moves and passives (still being designed)
+
+### Balance notes for after the revamp
+- [ ] Shop prices should rise faster per zone, so rings can't pile up
+- [ ] Enemies may need to hit a bit harder, so healing becomes a real decision
