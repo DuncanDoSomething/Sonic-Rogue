@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { audio } from '../audio';
 import { EXP_SHARE_STEPS, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MAX_STAGE, type PassiveDef, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
 import { EFFECTS, FIRST_RIVAL_WAVE, RIVAL_CHANCE } from '../data/zones';
-import { BAG_SIZE, PRICE_GROWTH_PER_ZONE } from '../data/items';
+import { BAG_SIZE } from '../data/items';
 
 const W = 480;
 const H = 270;
@@ -153,12 +153,12 @@ function pages(): Page[] {
     {
       title: 'REWARDS & SHOP',
       lines: [
-        'After every wave: pick 1 of 3 item',
-        'monitors, and spend rings in the shop.',
-        '',
-        'Better healing items unlock as you',
-        'get further. Prices go up',
-        `${Math.round(PRICE_GROWTH_PER_ZONE * 100)}% every zone.`,
+        'After every wave: pick 1 of 3 free',
+        'monitors. The border shows how rare',
+        'it is: grey common, green uncommon,',
+        'blue rare, purple super, gold ultra.',
+        'Healing mostly comes from the shop.',
+        'Rings and prices grow every wave.',
         `Your bag holds ${BAG_SIZE} items. Using one in`,
         'battle (Items) costs your turn.',
         'From wave 20: Revive (50% HP).',

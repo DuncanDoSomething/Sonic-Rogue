@@ -97,6 +97,11 @@ export async function startRun(page: Page) {
   await waitForMenu(page, 'command');
 }
 
+/** Zet de reward onder de cursor vast op een Ring Monitor, zodat Z geen keuzemenu (Chaos Drive) opent. */
+export function fixReward(page: Page) {
+  return setup(page, "s.rewardChoices[s.cursor] = window.REWARDS.find(r => r.id === 'rings');");
+}
+
 /** Test setup shortcut: puts the game into a specific state through the game object. */
 export function setup(page: Page, fn: string) {
   return page.evaluate(code => {

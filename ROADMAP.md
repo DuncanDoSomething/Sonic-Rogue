@@ -20,34 +20,24 @@
 - [x] Layered idles, smooth Sonic and Amy idles, attack flow (run-ups, knockback, landings) and upgraded move animations
 - [x] Shop rebalance: percentage heals, two-item bag
 - [x] Auto-save after every wave, Save & Quit in the pause menu and Continue on the title screen
+- [x] Reward revamp: five rarity tiers, buffs, level-ups, Move Chip, PokéRogue-style money curve (see [docs/design/rewards.md](docs/design/rewards.md))
 - [x] Unit tests, end-to-end tests and automatic deploys
 
 ## Next
 - [ ] Shadow as a playable character
-- [ ] Bosses from Sonic Battle: Chaos, Chaos Gamma and Eggman
+- [ ] Main bosses every 20 waves (Eggman, Chaos, Shadow) with boss charms, and a super boss at wave 90 after all seven Chaos Emeralds
 - [ ] Enemies with more interaction: their own status moves, buffs and patterns
-- [ ] Reward revamp (see below)
 - [ ] Team ultimates
 - [ ] More badniks from Sonic Advance 1, 2 and 3, with unique enemies per zone
 - [ ] Minibosses and a unique boss per zone
-- [ ] Eggman fight every 20 waves, with a relic as a reward
 - [ ] Status effects and moves that deal % HP damage
 - [ ] Choose who gets a healing item
 - [ ] Short dialogue before and after rival fights
+
+- [ ] Balance pass after the reward revamp: price growth and enemy damage
 
 ## Later
 - [ ] Run summary after a game over
 - [ ] Chao Garden with eggs to work towards
 - [ ] Point cost for picking your team
 - [ ] Mobile testing and polish
-
-## Reward revamp (planned)
-- [ ] Remove the 100% heal reward (1-Up)
-- [ ] Make the 50% heal (Ring Bundle) very rare
-- [ ] Boost Charge gives +1 Boost instead of +3
-- [ ] Add ring (money) rewards
-- [ ] New reward types: moves and passives (still being designed)
-
-### Balance notes for after the revamp
-- [ ] Shop prices should rise faster per zone, so rings can't pile up
-- [ ] Enemies may need to hit a bit harder, so healing becomes a real decision

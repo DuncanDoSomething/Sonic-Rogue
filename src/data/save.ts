@@ -4,11 +4,12 @@
 // ---------------------------------------------------------------------------
 import { Fighter, type Stages } from './fighters';
 import { TEST_MODE } from './testMode';
+import type { RunBuffs } from './rewards';
 
 const KEY = 'sonicrogue_run';
 const VERSION = 1;
 
-export interface SavedFighter { id: string; level: number; exp: number; hp: number; boost: number; stages: Stages; sash?: boolean; }
+export interface SavedFighter { id: string; level: number; exp: number; hp: number; boost: number; stages: Stages; sash?: boolean; chip?: boolean; }
 
 export interface RunSave {
   v: number;
@@ -20,13 +21,15 @@ export interface RunSave {
   rivalsMet: string[];
   /** Chao Blessing heeft het zone-effect weggehaald (tot de zone-boss) */
   fieldCleared?: boolean;
+  /** tijdelijke effecten van rewards (Shield, Magnet, ...) */
+  buffs?: Partial<RunBuffs>;
   /** index in `party` van wie er vecht */
   active: number;
   party: SavedFighter[];
 }
 
 export function fighterToSave(f: Fighter): SavedFighter {
-  return { id: f.def.id, level: f.level, exp: f.exp, hp: f.hp, boost: f.boost, stages: { ...f.stages }, sash: f.sashUsed };
+  return { id: f.def.id, level: f.level, exp: f.exp, hp: f.hp, boost: f.boost, stages: { ...f.stages }, sash: f.sashUsed, chip: f.spinChip };
 }
 
 export function fighterFromSave(s: SavedFighter): Fighter {
@@ -36,6 +39,7 @@ export function fighterFromSave(s: SavedFighter): Fighter {
   f.boost = s.boost;
   f.stages = { ...f.stages, ...s.stages };
   f.sashUsed = !!s.sash;
+  f.spinChip = !!s.chip;
   return f;
 }
 

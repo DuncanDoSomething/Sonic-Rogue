@@ -8,7 +8,10 @@ export interface ItemDef {
   id: string;
   name: string;
   desc: string;
-  price: number;
+  /** prijs als veelvoud van baseValue(wave) (zie hieronder) */
+  priceMult: number;
+  /** de prijs op deze wave; wordt ingevuld door shopStock() */
+  price?: number;
   minWave: number;
   /** aantal ring-icoontjes op de shop-knop (0 = chili dog-icoon via 1-up) */
   rings: number;
@@ -31,24 +34,46 @@ export function bagCount(bag: Record<string, number>) {
 }
 
 export const ITEMS: Record<string, ItemDef> = {
-  healthRing: { id: 'healthRing', name: 'Health Ring', desc: 'Heals 25% HP', price: 30, minWave: 1, rings: 1,
+  healthRing: { id: 'healthRing', name: 'Health Ring', desc: 'Heals 25% HP', priceMult: 0.8, minWave: 1, rings: 1,
     use: f => `${f.name} recovered ${heal(f, 0.25)} HP!` },
-  superRing:  { id: 'superRing', name: 'Super Ring', desc: 'Heals 50% HP', price: 70, minWave: 11, rings: 2,
+  superRing:  { id: 'superRing', name: 'Super Ring', desc: 'Heals 50% HP', priceMult: 1.8, minWave: 11, rings: 2,
     use: f => `${f.name} recovered ${heal(f, 0.5)} HP!` },
-  hyperRing:  { id: 'hyperRing', name: 'Hyper Ring', desc: 'Heals 75% HP', price: 130, minWave: 21, rings: 3,
+  hyperRing:  { id: 'hyperRing', name: 'Hyper Ring', desc: 'Heals 75% HP', priceMult: 3, minWave: 21, rings: 3,
     use: f => `${f.name} recovered ${heal(f, 0.75)} HP!` },
-  chiliDog:   { id: 'chiliDog', name: 'Chili Dog', desc: 'Fully heals HP', price: 220, minWave: 31, rings: 0,
+  chiliDog:   { id: 'chiliDog', name: 'Chili Dog', desc: 'Fully heals HP', priceMult: 5, minWave: 31, rings: 0,
     use: f => `Delicious! ${f.name} recovered ${heal(f, 1)} HP!` },
   // duur, en pas vanaf wave 20: KO is normaal tot de volgende zone-boss
-  revive:     { id: 'revive', name: 'Revive', desc: 'Revives a KO teammate with 50% HP', price: 250, minWave: 20, rings: 0, revive: 0.5,
+  revive:     { id: 'revive', name: 'Revive', desc: 'Revives a KO teammate with 50% HP', priceMult: 6, minWave: 20, rings: 0, revive: 0.5,
     use: f => { f.hp = Math.max(1, Math.ceil(f.maxHp * 0.5)); return `${f.name} is back in the fight with ${f.hp} HP!`; } },
 };
 
-/** Prijzen stijgen per zone (net als in PokéRogue), anders kun je healing items oneindig stacken. */
-export const PRICE_GROWTH_PER_ZONE = 1;
+// ---------------------------------------------------------------------------
+// Geld, zoals in PokéRogue: één basisbedrag per wave, en zowel wat je verdient als wat
+// dingen kosten is een veelvoud daarvan. Zo kunnen inkomen en prijzen nooit uit elkaar groeien.
+// PokéRogue: (10 * wave + 175) ^ (1 + 0.005 * waveSet). Hier op onze schaal (minder rings per wave).
+// ---------------------------------------------------------------------------
+export function baseValue(wave: number) {
+  const zone = Math.ceil(wave / 10) - 1;
+  return Math.pow(2 * wave + 35, 1 + 0.005 * zone);
+}
+/** naar beneden afronden op 5 */
+const round5 = (n: number) => Math.max(5, Math.floor(n / 5) * 5);
+
+/** Rings voor het winnen van een wave (bosses x2, elites x1.5). */
+export const WAVE_RINGS = 0.35;
+export function waveRings(wave: number, kind: 'normal' | 'elite' | 'boss' = 'normal') {
+  return round5(baseValue(wave) * WAVE_RINGS * (kind === 'boss' ? 2 : kind === 'elite' ? 1.5 : 1));
+}
+/** Rings uit een reward (Ring Monitor = 1, Eggman Monitor = 4). */
+export function rewardRings(wave: number, mult: number) {
+  return round5(baseValue(wave) * mult);
+}
 export function priceAt(item: ItemDef, wave: number) {
-  const zone = Math.floor((wave - 1) / 10);
-  return Math.round((item.price * (1 + PRICE_GROWTH_PER_ZONE * zone)) / 5) * 5;
+  return round5(baseValue(wave) * item.priceMult);
+}
+/** Reroll van de rewards: wordt elke keer dubbel zo duur. */
+export function rerollCost(wave: number, rerolls: number) {
+  return round5(baseValue(wave) * 0.5) * 2 ** rerolls;
 }
 
 /** Wat de shop verkoopt op deze wave (max 4, beste items rechts), met de prijs van deze zone. */

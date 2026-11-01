@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { activeScenes, battle, openGame, press, setup, startRun, toCharacterSelect, trackErrors, waitForMenu } from './helpers';
+import { activeScenes, battle, fixReward, openGame, press, setup, startRun, toCharacterSelect, trackErrors, waitForMenu } from './helpers';
 
 test.describe('Sonic Rogue smoke tests', () => {
   test('the game boots without errors', async ({ page }) => {
@@ -45,6 +45,7 @@ test.describe('Sonic Rogue smoke tests', () => {
     await setup(page, 's.enemy.hp = 1;');
     await press(page, 'z', 'ArrowRight', 'z');  // Fight > Homing Attack (never misses, goes first)
     await waitForMenu(page, 'reward');
+    await fixReward(page);
     await press(page, 'z');                     // take a reward
     await waitForMenu(page, 'choice');          // "Will you switch characters?"
     expect((await battle(page)).wave).toBe(2);
@@ -91,6 +92,7 @@ test.describe('Sonic Rogue smoke tests', () => {
     await setup(page, 's.enemy.hp = 1;');
     await press(page, 'z', 'ArrowRight', 'z');  // win wave 1
     await waitForMenu(page, 'reward');
+    await fixReward(page);
     await press(page, 'z');
     await waitForMenu(page, 'choice');          // wave 2 started (and was saved)
     await page.reload();
@@ -273,6 +275,40 @@ test.describe('Sonic Rogue smoke tests', () => {
     const amy = await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { hp: b.player.hp, max: b.player.maxHp }; });
     expect(amy.hp).toBe(10 + Math.ceil(amy.max * 0.25));
     expect(errors).toEqual([]);
+  });
+
+  test('rewards: tiered monitors, a Chaos Drive asks who gets the level', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.enemy.hp = 1;');
+    await press(page, 'z', 'ArrowRight', 'z');
+    await waitForMenu(page, 'reward');
+    const tiers = await page.evaluate(() => (window as any).game.scene.getScene('Battle').rewardChoices.map((r: { tier: string }) => r.tier));
+    expect(tiers).toHaveLength(3);
+    await setup(page, "s.rewardChoices[s.cursor] = window.REWARDS.find(r => r.id === 'chaosDrive');");
+    await press(page, 'z');
+    await waitForMenu(page, 'choice');            // "Chaos Drive: for who?"
+    await press(page, 'ArrowDown', 'z');          // Tails
+    await waitForMenu(page, 'choice');            // then the switch question of wave 2
+    const lv = await page.evaluate(() => (window as any).game.scene.getScene('Battle').party.map((f: { level: number }) => f.level));
+    expect(lv).toEqual([5, 6, 5]);
+    expect(errors).toEqual([]);
+  });
+
+  test('Shield halves the next hit, Invincibility makes the first attack miss', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    const hp = () => page.evaluate(() => (window as any).game.scene.getScene('Battle').player.hp);
+    // Invincibility: de vijand slaat eerst en mist
+    await setup(page, 's.dodgeFirst = true; s.enemy.hp = 9999; s.pickEnemyMove = () => ({ ...window.MOVES.bodyCheck, accuracy: 1000, priority: 9 }); s.runTurn({ ...window.MOVES.spinAttack, accuracy: 0 });');
+    const before = await hp();
+    await waitForMenu(page, 'command');
+    expect(await hp()).toBe(before);
+    // Shield: de volgende klap is half zo hard, daarna is het schild weg
+    await setup(page, 's.buffs.shieldHit = true; s.runTurn({ ...window.MOVES.spinAttack, accuracy: 0 });');
+    await waitForMenu(page, 'command');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').buffs.shieldHit)).toBe(false);
   });
 
   test('a lost run deletes the save', async ({ page }) => {

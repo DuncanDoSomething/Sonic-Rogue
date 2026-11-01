@@ -271,6 +271,8 @@ export class Fighter {
   evade = 0;
   /** Iron Fists (Knuckles): al een keer met 1 HP blijven staan deze zone. */
   sashUsed = false;
+  /** Move Chip (reward): Spin Attack heeft +MOVE_CHIP_POWER power. */
+  spinChip = false;
 
   constructor(id: string, level: number) {
     this.def = FIGHTERS[id];
@@ -339,20 +341,22 @@ export function stagesPower(base: number, user: Fighter) {
   return Math.min(STAGES_POWER_MAX, base + STAGES_POWER_STEP * total);
 }
 /** De echte power van een move tegen dit doelwit. */
+export const MOVE_CHIP_POWER = 30;
 export function movePower(m: MoveDef, user: Fighter, target?: Fighter) {
   if (m.scaling === 'speed' && target) return speedPower(user.spd, target.spd);
   if (m.scaling === 'stages') return stagesPower(m.power, user);
+  if (m.id === 'spinAttack' && user.spinChip) return m.power + MOVE_CHIP_POWER;
   return m.power;
 }
 
 export interface HitResult { damage: number; crit: boolean; missed: boolean; effect: number; }
 
 /** Pokémon-achtige damage-formule, versimpeld. */
-export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: () => number = Math.random): HitResult {
+export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: () => number = Math.random, bonusCrit = 0): HitResult {
   const effect = typeMultiplier(attacker.type, target.type);
   const accuracy = move.accuracy * stageMultiplier(attacker.stage('acc'));
   if (rng() * 100 >= accuracy) return { damage: 0, crit: false, missed: true, effect };
-  const chance = critChance(attacker);
+  const chance = Math.min(1, critChance(attacker) + bonusCrit);
   const crit = rng() < chance || !!move.alwaysCrit;
   // Tornado Hammer: crit-kans al op 100%? Dan dubbele power
   const power = movePower(move, attacker, target) * (move.alwaysCrit && chance >= 1 ? 2 : 1);
@@ -364,25 +368,4 @@ export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: 
   return { damage: Math.max(1, Math.floor(dmg)), crit, missed: false, effect };
 }
 
-export interface RewardDef {
-  id: string;
-  name: string;
-  desc: string;
-  /** frame in de ui-atlas; '{hero}' wordt vervangen door de id van je character */
-  icon: string;
-  apply: (f: Fighter) => string; // geeft het bericht terug
-  /** false = niet aanbieden (bijv. stat staat al op +6) */
-  available?: (f: Fighter) => boolean;
-  /** true = geeft een stat stage (niet aangeboden na een zone-boss, want die worden gereset) */
-  stage?: boolean;
-}
-
-/** Geen stat-rewards meer: met een team van 3 waren die te zwak. Stats komen nu uit moves en passives. */
-export const REWARDS: RewardDef[] = [
-  { id: 'rings', name: 'Ring Bundle', desc: 'Heal 50% HP', icon: 'monitor_ring10',
-    apply: f => { const h = Math.min(f.maxHp - f.hp, Math.ceil(f.maxHp / 2)); f.hp += h; return `${f.name} healed ${h} HP!`; } },
-  { id: 'thunder', name: 'Boost Charge', desc: 'Boost +3', icon: 'monitor_thunder',
-    apply: f => { f.gainBoost(3); return `${f.name}'s Boost was charged!`; } },
-  { id: 'oneup', name: '1-Up', desc: 'Heal 100% HP', icon: 'oneup_{hero}',
-    apply: f => { const h = f.maxHp - f.hp; f.hp = f.maxHp; return `1-Up! ${f.name} healed ${h} HP!`; } },
-];
+// Rewards staan in rewards.ts.

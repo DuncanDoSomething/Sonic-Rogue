@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
-  calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower, REWARDS,
+  calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
 } from '../src/data/fighters';
 
@@ -142,13 +142,6 @@ describe('Spin Dash schaalt met snelheid (Electro Ball)', () => {
 
   it('andere moves houden hun vaste power', () => {
     expect(movePower(MOVES.spinAttack, new Fighter('sonic', 5), new Fighter('frog', 5))).toBe(MOVES.spinAttack.power);
-  });
-});
-
-describe('rewards', () => {
-  it('geen stat-rewards meer (stats komen uit moves en passives)', () => {
-    expect(REWARDS.some(r => r.stage)).toBe(false);
-    expect(REWARDS.map(r => r.id).sort()).toEqual(['oneup', 'rings', 'thunder']);
   });
 });
 

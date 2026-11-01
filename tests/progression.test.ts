@@ -1,15 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { BAG_SIZE, ITEMS, bagCount, priceAt, shopStock } from '../src/data/items';
+import { BAG_SIZE, ITEMS, bagCount, baseValue, priceAt, rerollCost, shopStock, waveRings } from '../src/data/items';
 import { Fighter } from '../src/data/fighters';
 import { canHaveRival, isBossWave, zoneForWave, ZONES } from '../src/data/zones';
 import { isUnlocked } from '../src/data/unlocks';
 import { expShareAfter } from '../src/data/fighters';
 
 describe('shop', () => {
-  it('prijzen stijgen per zone', () => {
-    expect(priceAt(ITEMS.healthRing, 1)).toBe(30);
-    expect(priceAt(ITEMS.healthRing, 11)).toBeGreaterThan(20);
-    expect(priceAt(ITEMS.healthRing, 41)).toBeGreaterThan(priceAt(ITEMS.healthRing, 11));
+  it('prijzen en inkomen groeien samen mee met de wave (basisbedrag zoals PokéRogue)', () => {
+    expect(priceAt(ITEMS.healthRing, 1)).toBe(25);
+    expect(priceAt(ITEMS.healthRing, 50)).toBeGreaterThan(priceAt(ITEMS.healthRing, 20) * 1.5);
+    // een Health Ring kost altijd ongeveer 2-3 gewonnen waves
+    for (const w of [1, 20, 50, 90]) {
+      const ratio = priceAt(ITEMS.healthRing, w) / waveRings(w);
+      expect(ratio).toBeGreaterThan(1.8);
+      expect(ratio).toBeLessThan(3.2);
+    }
+    expect(waveRings(30, 'boss')).toBeGreaterThan(waveRings(30));
+    expect(baseValue(90)).toBeGreaterThan(baseValue(1) * 6);
+  });
+  it('reroll wordt elke keer dubbel zo duur', () => {
+    expect(rerollCost(10, 1)).toBe(rerollCost(10, 0) * 2);
   });
 
   it('de shop gebruikt de prijs van de huidige zone', () => {

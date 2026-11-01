@@ -27,7 +27,7 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 - **Stat stages.** Some moves and passives raise ATK, DEF or SPD by a stage (+25% each, up to +6). Stages reset after every zone boss.
 - **Nine zones** from Sonic Advance 2 and 3, each with its own music. Some zones affect your team, like the heat in Hot Crater or the cold in Twinkle Snow.
 - **Bosses and Chaos Emeralds.** Every tenth wave is a boss. Beat it to collect a Chaos Emerald.
-- **Rewards and a shop** after every wave. Prices go up every zone, and your bag only holds two items, so healing has to be planned.
+- **Rewards and a shop** after every wave. Rewards come in five rarities, from Speed Shoes and Shields to Chaos Drives, Eggman's trapped monitors and the ultra rare Move Chip. Healing mostly costs rings, your bag only holds two items, and income and prices follow one money curve, like PokéRogue. Design notes: [docs/design/rewards.md](docs/design/rewards.md).
 - **Exp. Share** after wave 10 (50%, then 80% after wave 20). The character in the fight always levels fastest.
 - **KOs last.** A teammate who goes down stays down until you beat the zone boss. From wave 20 the shop sells an expensive Revive.
 - **Auto-save** after every wave. Use Save & Quit in the pause menu, or just close the tab, and continue later.

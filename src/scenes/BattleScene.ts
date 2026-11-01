@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, REWARDS, RewardDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { EMERALDS, isBossWave, isEliteWave, canHaveRival, RIVAL_CHANCE, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -8,7 +8,8 @@ import type { ZoneEffect } from '../data/zones';
 /** true = bosses krijgen jouw type. Met een party van 3 kun je wisselen, dus nu uit. */
 const BOSS_TYPE_NEUTRAL = false;
 import { Backdrop } from './Backdrop';
-import { BAG_SIZE, ITEMS, ItemDef, bagCount, shopStock } from '../data/items';
+import { BAG_SIZE, ITEMS, ItemDef, bagCount, rerollCost, shopStock, waveRings } from '../data/items';
+import { HAMMER_CRIT, MAGNET_BONUS, SHIELD_FACTOR, TIER_COLOR, TIER_NAME, emptyBuffs, rollRewards, type RewardCtx, type RewardDef, type RunBuffs, type Tier } from '../data/rewards';
 import { battleTimeScale, charDelay, holdFactor, settings } from '../data/settings';
 import { addHelpButton, addMenuButton } from './ui';
 import { audio, MusicKey } from '../audio';
@@ -70,11 +71,27 @@ export class BattleScene extends Phaser.Scene {
   private flinched = new Set<Fighter>();
   /** moves met `stunOnce` die deze wave al verdoofd hebben (per kant: 'p:glovePunch' / 'e:glovePunch') */
   private stunUsed = new Set<string>();
+  /** extra crit-kans voor de aanval die nu loopt (Amy's Hammer) */
+  private critBonus = 0;
   /** testmodus: sneltoetsen-paneel en "volgende wave is een rival" */
   private testPanel?: Phaser.GameObjects.Container;
   private forceRival = false;
   /** Chao Blessing: het zone-effect blijft weg tot de zone-boss verslagen is */
   private fieldCleared = false;
+  /** tijdelijke effecten van rewards (Shield, Magnet, ...), worden mee opgeslagen */
+  private buffs: RunBuffs = emptyBuffs();
+  /** deze wave: alle schade op je team gehalveerd (Shield+) */
+  private waveShield = false;
+  /** deze wave: de eerste aanval op je team mist (Invincibility) */
+  private dodgeFirst = false;
+  /** deze wave: +50% rings (Magnet Shield) */
+  private waveMagnet = false;
+  /** deze wave is een Eggman Alarm-elite: daarna minstens uncommon rewards */
+  private alarmWave = false;
+  /** de vijand van deze wave is een elite (+2 levels, meer rings) */
+  private elite = false;
+  /** minimale tier voor de rewards van nu */
+  private minTier: Tier = 'common';
   private fieldEffect?: ZoneEffect;
   private fieldText!: Phaser.GameObjects.Text;
   private fieldLayer?: Phaser.GameObjects.Container;
@@ -219,6 +236,8 @@ export class BattleScene extends Phaser.Scene {
     this.player = this.party[0];
     this.expShare = 0;
     this.fieldCleared = false;
+    this.buffs = emptyBuffs();
+    this.alarmWave = false;
     this.statsRows = [];
     const sv = this.saved;
     if (sv) {
@@ -231,6 +250,7 @@ export class BattleScene extends Phaser.Scene {
       this.bag = { ...sv.bag };
       this.rivalsMet = [...sv.rivalsMet];
       this.fieldCleared = !!sv.fieldCleared;
+      this.buffs = { ...emptyBuffs(), ...(sv.buffs ?? {}) };
     }
     this.cameras.main.fadeIn(250, 0, 0, 0);
     this.backdrop = new Backdrop(this, PANEL_Y, 0);
@@ -306,9 +326,9 @@ export class BattleScene extends Phaser.Scene {
     this.decorTimer = this.time.addEvent({ delay: 2600, loop: true, callback: spawn });
   }
 
-  /** Groene shield-bubbel om je character zolang je een DEF-buff hebt. */
+  /** Groene shield-bubbel om je character zolang er een Shield (reward) actief is. */
   private updateShield() {
-    const on = this.player.stages.def > 0;
+    const on = !!this.player && !this.player.fainted && (this.waveShield || this.buffs.shieldHit);
     if (on && !this.shieldFx) {
       this.shieldFx = this.add.sprite(this.hero.x, this.hero.y, 'fx_shield_0').setScale(2).setAlpha(0.7).setBlendMode(Phaser.BlendModes.ADD).setDepth(6).play('shield');
     } else if (!on && this.shieldFx) {
@@ -658,7 +678,7 @@ export class BattleScene extends Phaser.Scene {
       });
       if (this.rewardRow === 0) {
         const r = this.rewardChoices[this.cursor];
-        this.msg.setText(`${r.name}: ${r.desc}\nFree! Pick one to continue.`);
+        this.msg.setText(`${TIER_NAME[r.tier]}  ${r.name}${r.plus ? '+' : ''}: ${r.desc(this.rewardCtx()).replace('\n', ' ')}\nFree! Pick one to continue.`);
       } else if (this.cursor < this.shopItems.length) {
         const it = this.shopItems[this.cursor];
         this.msg.setText(`${it.name}: ${it.desc}\nCost ${it.price} rings. In bag: ${this.bag[it.id] ?? 0}`);
@@ -946,7 +966,7 @@ export class BattleScene extends Phaser.Scene {
   private autoSave(wave = this.wave) {
     saveRun({
       wave, rings: this.rings, emeralds: this.emeralds, expShare: this.expShare,
-      bag: { ...this.bag }, rivalsMet: [...this.rivalsMet], fieldCleared: this.fieldCleared,
+      bag: { ...this.bag }, rivalsMet: [...this.rivalsMet], fieldCleared: this.fieldCleared, buffs: { ...this.buffs },
       active: Math.max(0, this.party.indexOf(this.player)), party: this.party.map(fighterToSave),
     });
   }
@@ -956,6 +976,16 @@ export class BattleScene extends Phaser.Scene {
     this.menu = 'busy';
     this.party.forEach(f => { f.stun = 0; f.evade = 0; });
     this.stunUsed.clear();
+    this.waveShield = this.buffs.shieldWaves > 0;
+    if (this.waveShield) this.buffs.shieldWaves--;
+    this.dodgeFirst = this.buffs.dodgeNext || this.buffs.dodgeWaves > 0;
+    this.buffs.dodgeNext = false;
+    if (this.buffs.dodgeWaves > 0) this.buffs.dodgeWaves--;
+    this.waveMagnet = this.buffs.magnetWaves > 0;
+    if (this.waveMagnet) this.buffs.magnetWaves--;
+    this.alarmWave = this.buffs.eliteNext && !isBossWave(this.wave);
+    this.buffs.eliteNext = false;
+    this.updateShield();
     this.pointer.setVisible(false);
     this.cmdLayer.setVisible(false);
     this.msg.setVisible(true).setText('');
@@ -967,7 +997,8 @@ export class BattleScene extends Phaser.Scene {
     const rivalId = this.forceRival || (canHaveRival(this.wave) && Math.random() < RIVAL_CHANCE) ? this.pickRival() : undefined;
     this.forceRival = false;
     this.rival = !!rivalId;
-    const elite = isEliteWave(this.wave) && !this.rival;
+    const elite = (isEliteWave(this.wave) || this.alarmWave) && !this.rival && !boss;
+    this.elite = elite;
     const id = rivalId ?? (boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
     // vijanden stijgen ~0,65 level per wave; jij blijft dan net iets voor (bosses/elites +2, rivals op gelijk niveau)
     this.enemy = new Fighter(id, 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || elite ? 2 : 0));
@@ -1134,6 +1165,9 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     if (att === this.player) { this.player.spendBoost(move); this.setBox(this.pBox, this.player, false); }
+    const hammer = att === this.player && this.buffs.critTurns > 0;
+    if (hammer) this.buffs.critTurns--;
+    this.critBonus = hammer ? HAMMER_CRIT : 0;
     await this.doAttack(att, tgt, move, ally);
   }
 
@@ -1168,8 +1202,21 @@ export class BattleScene extends Phaser.Scene {
     const isPlayer = att === this.player;
     await this.say(`${this.who(att)} used ${move.name}!`, 150);
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
-    let hit = calcHit(att, tgt, move);
+    let hit = calcHit(att, tgt, move, Math.random, isPlayer ? this.critBonus : 0);
     let hungOn = false;
+    // rewards: Invincibility (eerste aanval mist) en Shield (halve schade) beschermen je team
+    let guard = '';
+    if (!isPlayer && !hit.missed && this.party.includes(tgt)) {
+      if (this.dodgeFirst) {
+        this.dodgeFirst = false;
+        hit = { ...hit, missed: true, damage: 0, crit: false };
+        guard = 'Invincibility!';
+      } else if (this.waveShield || this.buffs.shieldHit) {
+        hit = { ...hit, damage: Math.max(1, Math.ceil(hit.damage * SHIELD_FACTOR)) };
+        guard = this.waveShield ? 'The shield took half the damage!' : 'The shield took half the damage and broke!';
+        if (!this.waveShield) this.buffs.shieldHit = false;
+      }
+    }
     // Light Speed Attack: de volgende aanvallen op Sonic missen gegarandeerd
     if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; }
     let struck = false;
@@ -1196,6 +1243,7 @@ export class BattleScene extends Phaser.Scene {
       if (!isPlayer) this.hero.play(this.player.anim('hurt'));
       else if (this.rival) this.foe.play(this.enemy.anim('hurt'));
       this.setBox(isPlayer ? this.eBox : this.pBox, tgt, true);
+      if (guard) { this.burst(c.x, c.y, 0x7cf07c, 12); this.updateShield(); }
     };
 
     this.setActionSpeed(isPlayer ? this.hero : this.foe);
@@ -1211,7 +1259,7 @@ export class BattleScene extends Phaser.Scene {
       // MISS naast het doelwit, in plaats van een geluid
       const spr = isPlayer ? this.foe : this.hero;
       this.popMiss(spr.x + (isPlayer ? -30 : 34), spr.y - spr.displayHeight * 0.7);
-      await this.say(`${tgt.name} avoided the attack!`, 400);
+      await this.say(guard ? `${guard} ${tgt.name} avoided the attack!` : `${tgt.name} avoided the attack!`, 400);
     }
     if (move.spendStages && Object.values(att.stages).some(v => v !== 0)) {
       att.stages = { atk: 0, def: 0, spd: 0, acc: 0 };
@@ -1254,6 +1302,7 @@ export class BattleScene extends Phaser.Scene {
       for (const [k, v] of Object.entries(move.selfStages ?? {})) {
         if (!att.fainted) await this.say(att.raise(k as StageKey, v), 300);
       }
+      if (guard) await this.say(guard, 350);
       if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (Iron Fists)`, 500);
       // Lucky Swing (Amy): elke crit kost haar 10% max-HP, maar ze gaat er zelf nooit van KO
       if (hit.crit && att.def.passive?.id === 'luckySwing' && !move.recoil && !move.selfHeal && !att.fainted) {
@@ -1729,7 +1778,10 @@ export class BattleScene extends Phaser.Scene {
     if (this.player.def.passive?.id === 'speedster' && !this.player.fainted) {
       await this.say(`Sonic Speed! ${this.player.raise('spd')}`, 300);
     }
-    const gained = 10 + this.wave * 3;
+    const kind = isBossWave(this.wave) ? 'boss' : this.elite ? 'elite' : 'normal';
+    // Eggman Alarm gehaald: de rewards hierna zijn minstens uncommon
+    this.minTier = this.alarmWave && !this.rival ? 'uncommon' : 'common';
+    const gained = Math.round(waveRings(this.wave, kind) * (this.waveMagnet ? 1 + MAGNET_BONUS : 1));
     if (!this.player.fainted) this.hero.play(this.player.anim('victory'));
     this.victoryVoice();
     if (isBossWave(this.wave)) audio.playJingle('victory', zoneForWave(this.wave + 1).backdrop as MusicKey);
@@ -2099,7 +2151,7 @@ export class BattleScene extends Phaser.Scene {
     this.statsLayer.setVisible(false);
     this.infoLayer.setVisible(false);
     const c = this.add.container(0, 0).setDepth(34);
-    const x = 8, y = PANEL_Y - 128, w = 300, h = 124;
+    const x = 8, y = PANEL_Y - 142, w = 300, h = 138;
     const g = this.add.graphics();
     g.fillStyle(0x10131c, 0.96).fillRoundedRect(x, y, w, h, 5);
     g.lineStyle(1, 0x4aa8ff).strokeRoundedRect(x + 0.5, y + 0.5, w - 1, h - 1, 5);
@@ -2130,6 +2182,7 @@ export class BattleScene extends Phaser.Scene {
     const vs = `${this.player.type.toUpperCase()} vs ${this.enemy.type.toUpperCase()}: `;
     txt(x + 10, y + 106, vs + (m > 1 ? 'type advantage!' : m < 1 ? 'type disadvantage!' : 'neutral'),
       m > 1 ? '#3cff6a' : m < 1 ? '#ff9a2a' : '#9aa4c4');
+    txt(x + 10, y + 120, `BUFFS: ${this.buffSummary() || 'none'}`, '#c06aff');
     this.fieldLayer = c;
   }
 
@@ -2284,27 +2337,62 @@ export class BattleScene extends Phaser.Scene {
     return a;
   }
 
-  private buildRewardRow() {
+  /** Korte lijst van actieve reward-effecten (voor het field-paneel). */
+  private buffSummary() {
+    const b = this.buffs, out: string[] = [];
+    if (this.waveShield) out.push('Shield+');
+    if (b.shieldWaves) out.push(`Shield+ next`);
+    if (b.shieldHit) out.push('Shield');
+    if (this.dodgeFirst) out.push('Invincible');
+    if (b.dodgeWaves || b.dodgeNext) out.push(`Invincible x${b.dodgeWaves || 1}`);
+    if (this.waveMagnet || b.magnetWaves) out.push(`Magnet x${b.magnetWaves + (this.waveMagnet ? 1 : 0)}`);
+    if (b.critTurns) out.push(`Crit x${b.critTurns}`);
+    if (this.alarmWave || b.eliteNext) out.push('Alarm');
+    return out.join(', ');
+  }
+
+  /** Wat een reward van het gevecht nodig heeft. */
+  private rewardCtx(): RewardCtx {
+    return {
+      player: this.player, party: this.party, wave: this.wave, buffs: this.buffs,
+      nextIsBoss: isBossWave(this.wave + 1),
+      gainRings: n => { this.rings += n; this.ringText.setText(`${this.rings}`); },
+    };
+  }
+
+  /** Icoon van een reward: een frame uit de ui-atlas, een losse monitor (mon_*) of een gemaakt plaatje. */
+  private rewardIcon(r: RewardDef, y: number): Phaser.GameObjects.Image {
+    const key = r.icon.replace('{hero}', this.player.def.id);
+    if (key === 'shard') return this.add.image(0, y + 2, 'emeralds', 'emerald_green_0').setScale(1.6);
+    if (this.textures.exists(key)) return this.add.image(0, y, key);
+    return this.add.image(0, y, 'ui', key);
+  }
+
+  /** `forced` = vaste rewards (voor tests en screenshots), anders 3 willekeurige. */
+  private buildRewardRow(forced?: RewardDef[]) {
     this.rewardCards.forEach(c => c.destroy());
-    const afterBoss = isBossWave(this.wave);
-    this.rewardChoices = Phaser.Utils.Array.Shuffle(REWARDS.filter(r =>
-      (r.available?.(this.player) ?? true) && !(afterBoss && r.stage))).slice(0, 3);
-    // is er iemand KO? dan zit de 1-Up er altijd tussen
-    if (this.party.some(f => f.fainted) && !this.rewardChoices.some(r => r.id === 'oneup')) {
-      this.rewardChoices[2] = REWARDS.find(r => r.id === 'oneup')!;
-    }
+    this.rewardChoices = forced ?? rollRewards(this.rewardCtx(), 3, Math.random, this.minTier);
     this.rewardCards = this.rewardChoices.map((r, i) => {
       const c = this.add.container(W / 2 + (i - 1) * 132, 162);
+      const col = TIER_COLOR[r.tier];
       const g = this.add.graphics();
-      g.fillStyle(0x181b26).fillRoundedRect(-58, -40, 116, 80, 6);
-      g.lineStyle(1, 0x5a6690).strokeRoundedRect(-57.5, -39.5, 115, 79, 6);
-      const sel = this.add.graphics().lineStyle(2, 0xf2c230).strokeRoundedRect(-60, -42, 120, 84, 7).setVisible(false);
-      const name = this.add.text(0, 10, r.name, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setOrigin(0.5, 0);
-      const desc = this.add.text(0, 24, r.desc, { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4' }).setOrigin(0.5, 0);
-      const mon = this.add.image(0, -16, 'ui', r.icon.replace('{hero}', this.player.def.id));
-      this.tweens.add({ targets: mon, y: -19, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: i * 180 });
-      c.add([g, sel, name, desc, mon]);
-      c.setSize(116, 80).setInteractive({ useHandCursor: true });
+      g.fillStyle(0x181b26).fillRoundedRect(-58, -44, 116, 88, 6);
+      g.lineStyle(r.tier === 'common' ? 1 : 2, col).strokeRoundedRect(-57.5, -43.5, 115, 87, 6);
+      const sel = this.add.graphics().lineStyle(2, 0xffffff).strokeRoundedRect(-61, -47, 122, 94, 7).setVisible(false);
+      const name = this.add.text(0, 6, r.name + (r.plus ? '+' : ''), { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setOrigin(0.5, 0);
+      const desc = this.add.text(0, 18, r.desc(this.rewardCtx()), { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4', align: 'center', wordWrap: { width: 108 }, lineSpacing: 2 }).setOrigin(0.5, 0);
+      const mon = this.rewardIcon(r, -16);
+      const tier = this.add.text(0, -41, TIER_NAME[r.tier], { fontFamily: FONT, fontSize: '8px', color: '#' + col.toString(16).padStart(6, '0') }).setOrigin(0.5, 0).setScale(0.75);
+      this.tweens.add({ targets: mon, y: mon.y - 3, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: i * 180 });
+      c.add([g, sel, name, desc, mon, tier]);
+      if (r.plus) c.add(this.add.text(12, -28, '+', { fontFamily: FONT, fontSize: '8px', color: '#ffd23a', stroke: '#000000', strokeThickness: 3 }));
+      // zeldzaam: zachte glans in de kleur van de tier
+      if (r.tier !== 'common') {
+        const glow = this.add.rectangle(0, 0, 112, 84, col, 0.08);
+        c.addAt(glow, 1);
+        this.tweens.add({ targets: glow, alpha: 0.4, duration: 900, yoyo: true, repeat: -1 });
+      }
+      c.setSize(116, 88).setInteractive({ useHandCursor: true });
       c.on('pointerover', () => { if (this.menu === 'reward') { this.rewardRow = 0; this.cursor = i; this.refreshCursor(); } });
       c.on('pointerdown', () => { if (this.menu === 'reward') this.pickReward(i); });
       this.rewardLayer!.add(c);
@@ -2353,12 +2441,12 @@ export class BattleScene extends Phaser.Scene {
     this.updatePrices();
   }
 
-  private rerollCost() { return (10 + this.wave) * 2 ** this.rerolls; }
+  private rerollCost() { return rerollCost(this.wave, this.rerolls); }
 
   /** prijzen bijwerken: rood als je het niet kunt betalen; ring-icoontje links van het getal */
   private updatePrices() {
     this.shopButtons.forEach((b, i) => {
-      const cost = i < this.shopItems.length ? this.shopItems[i].price : this.rerollCost();
+      const cost = i < this.shopItems.length ? this.shopItems[i].price ?? 0 : this.rerollCost();
       const price = b.getByName('price') as Phaser.GameObjects.Text;
       const coin = b.getByName('coin') as Phaser.GameObjects.Sprite;
       price.setText(`${cost}`).setColor(this.rings >= cost ? '#f2c230' : '#e8443a');
@@ -2498,11 +2586,23 @@ export class BattleScene extends Phaser.Scene {
   private async pickReward(i: number) {
     this.menu = 'busy';
     const r = this.rewardChoices[i];
-    const text = r.apply(this.player);
-    // shield-bubbel staat los van DEF-buffs; updateShield() is klaar voor een latere shield-mechaniek
+    let target: Fighter | undefined;
+    if (r.target === 'pick') {
+      const rows: ChoiceRow[] = this.party.map(f => ({
+        label: `${f.name} Lv.${f.level}`, right: f.fainted ? 'KO' : `${f.hp}/${f.maxHp}`,
+        head: `head_${f.def.id}`, disabled: !(r.canTarget?.(f) ?? true),
+      }));
+      const pick = await this.choose(`${r.name}${r.plus ? '+' : ''}: for who?`, rows, true);
+      if (pick < 0) { this.menu = 'reward'; this.refreshCursor(); return; }
+      this.menu = 'busy';
+      target = this.party[pick];
+    }
+    const text = r.apply(this.rewardCtx(), target);
+    this.minTier = 'common';
+    this.refreshPartyHeads();
     // monitor kapot: rookwolk + glinsters, net als in de game
     const card = this.rewardCards[i];
-    const mon = card.getAt(4) as Phaser.GameObjects.Image;
+    const mon = card.getAt(r.tier === 'common' ? 4 : 5) as Phaser.GameObjects.Image;
     const wx = card.x + mon.x, wy = card.y + mon.y;
     mon.setVisible(false);
     const smoke = this.add.sprite(wx, wy, 'ui', 'smoke_0').setDepth(41).play('smoke');

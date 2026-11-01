@@ -178,6 +178,24 @@ export class BootScene extends Phaser.Scene {
       { x: 3.5, y: 5.6 }, { x: 1.2, y: 7 }, { x: 2, y: 4.4 }, { x: 0, y: 2.7 }, { x: 2.5, y: 2.5 },
     ], true);
     g.generateTexture('star', 7, 7);
+    g.clear();
+    // Chaos Drive (Sonic Adventure 2): glazen capsule met groene energie, 14x24
+    g.fillStyle(0x10131c).fillRoundedRect(1, 0, 12, 24, 5);
+    g.fillStyle(0xd8f0ff).fillRoundedRect(2, 1, 10, 22, 4);
+    g.fillStyle(0x2ed85a).fillRoundedRect(3, 7, 8, 15, 3);
+    g.fillStyle(0x9affb0).fillRect(4, 8, 2, 10);
+    g.fillStyle(0x7a8090).fillRect(2, 2, 10, 4);
+    g.fillStyle(0xffffff).fillRect(3, 2, 2, 2);
+    g.generateTexture('chaosdrive', 14, 24);
+    g.clear();
+    // Move Chip: printplaatje met pootjes, 22x22
+    g.fillStyle(0xb0b8c8);
+    for (let i = 0; i < 4; i++) { g.fillRect(5 + i * 4, 0, 2, 3); g.fillRect(5 + i * 4, 19, 2, 3); g.fillRect(0, 5 + i * 4, 3, 2); g.fillRect(19, 5 + i * 4, 3, 2); }
+    g.fillStyle(0x10131c).fillRect(3, 3, 16, 16);
+    g.fillStyle(0x1f7a3a).fillRect(4, 4, 14, 14);
+    g.fillStyle(0xf2c230).fillRect(7, 7, 8, 8);
+    g.fillStyle(0xfff3a0).fillRect(8, 8, 3, 3);
+    g.generateTexture('movechip', 22, 22);
     g.destroy();
   }
 }

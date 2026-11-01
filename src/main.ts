@@ -10,6 +10,7 @@ import { CreditsScene } from './scenes/CreditsScene';
 import { HelpScene } from './scenes/HelpScene';
 import { audio } from './audio';
 import { MOVES } from './data/fighters';
+import { REWARDS } from './data/rewards';
 import { resetUnlocks, unlock } from './data/unlocks';
 
 async function start() {
@@ -29,7 +30,7 @@ async function start() {
   });
   audio.init(game);
   // handig voor debuggen in de console: game.scene.getScene('Battle')
-  Object.assign(window, { game, MOVES, resetUnlocks, unlock });
+  Object.assign(window, { game, MOVES, REWARDS, resetUnlocks, unlock });
 }
 
 start();
