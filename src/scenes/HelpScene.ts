@@ -215,11 +215,13 @@ export class HelpScene extends Phaser.Scene {
     this.layer.removeAll(true);
     this.layer.add(this.add.text(bx + 18, by + 14, p.title, { fontFamily: FONT, fontSize: '8px', color: '#f2c230' }));
     this.layer.add(this.add.text(bx + 362, by + 14, `${this.page + 1}/${all.length}`, { fontFamily: FONT, fontSize: '8px', color: '#6b7493' }).setOrigin(1, 0));
+    // lange pagina's: regels iets dichter op elkaar, zodat alles boven de knoppen onderaan past
+    const step = Math.min(15, Math.floor(160 / Math.max(1, p.lines.length)));
     p.lines.forEach((line, i) => {
-      this.layer.add(this.add.text(bx + 18, by + 34 + i * 15, line, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }));
+      this.layer.add(this.add.text(bx + 18, by + 34 + i * step, line, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }));
     });
     for (const [row, key] of p.icons ?? []) {
-      this.layer.add(this.add.image(bx + 26, by + 38 + row * 15, key).setOrigin(0.5));
+      this.layer.add(this.add.image(bx + 26, by + 38 + row * step, key).setOrigin(0.5));
     }
   }
 

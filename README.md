@@ -13,6 +13,8 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 |---|---|
 | ![Title screen](docs/title.png) | ![Character select](docs/character-select.png) |
 | ![Battle in Music Plant](docs/battle.png) | ![Switching characters](docs/team.png) |
+| ![Ultimate cut-in](docs/cut-in.png) | ![Super Sonic's Light Speed Attack](docs/super-sonic.png) |
+| ![Knuckles' Maximum Heat](docs/maximum-heat.png) | ![Character kits (I)](docs/kits.png) |
 
 ## Gameplay
 
@@ -21,12 +23,12 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 - **Stuns and flinches.** Some moves stop the foe from acting for a turn or more.
 - **Ultimate cut-ins.** Every ultimate opens with a Persona-style cut-in and has its own animation: Sonic turns Super Sonic, Tails calls down lightning, Knuckles hits like a meteor, Amy whips up a tornado and Cream calls in the Chao.
 - **Types.** Speed, Fly and Power, based on the team types from Sonic Advance 3 and Heroes. Fly beats Power, Power beats Speed, Speed beats Fly.
-- **Passives and ultimates.** Every character has a passive and an ultimate with its own effect: Sonic gets faster with every KO and can make the foe miss, Tails stuns foes and punishes them for it, Knuckles is a glass cannon who can survive one KO per zone, Amy builds up to huge critical hits that cost her own HP, and Cream heals the team. Press **C** in character select to see everything a character can do.
+- **Passives and ultimates.** Every character has a passive and an ultimate with its own effect: Sonic gets faster with every KO and can make the foe miss, Tails stuns foes and punishes them for it, Knuckles is a glass cannon who can survive one KO per zone, Amy builds up to huge critical hits that cost her own HP, and Cream heals the team. Press **I** in battle or character select to see everything a character can do.
 - **Stat stages.** Some moves and passives raise ATK, DEF or SPD by a stage (+25% each, up to +6). Stages reset after every zone boss.
 - **Nine zones** from Sonic Advance 2 and 3, each with its own music. Some zones affect your team, like the heat in Hot Crater or the cold in Twinkle Snow.
 - **Bosses and Chaos Emeralds.** Every tenth wave is a boss. Beat it to collect a Chaos Emerald.
 - **Rewards and a shop** after every wave. Prices go up every zone, and your bag only holds two items, so healing has to be planned.
-- **Exp. Share** after the first boss (50%, later 80%). The character in the fight always levels fastest.
+- **Exp. Share** after wave 10 (50%, then 80% after wave 20). The character in the fight always levels fastest.
 - **KOs last.** A teammate who goes down stays down until you beat the zone boss. From wave 20 the shop sells an expensive Revive.
 - **Auto-save** after every wave. Use Save & Quit in the pause menu, or just close the tab, and continue later.
 
@@ -54,7 +56,7 @@ Mouse and touch work too.
 - **Playwright** end-to-end tests that start the real build in Chromium and play it with the keyboard: picking a team, taking turns, winning a wave, switching, KOs, saving and continuing, menus, plus regression tests for bugs found during development. The game is drawn on a canvas, so the tests check the game state instead of pixels; that keeps them stable while the UI changes.
 - **GitHub Actions** runs both test suites on every push to `main`, then builds the game and deploys it to GitHub Pages. A failing test blocks the deploy, and the Playwright report (screenshots and traces) is uploaded when something breaks.
 - A **balance simulation** (`npm run sim`) plays 2000 boss fights per character to check difficulty after a change.
-- An **asset pipeline in Python** (Pillow, NumPy, SciPy) that cuts sprites out of ripped sprite sheets, aligns animation frames on the character's body and builds Phaser texture atlases.
+- An **asset pipeline in Python** (Pillow, NumPy, SciPy) that cuts sprites out of ripped sprite sheets, aligns animation frames on the character's body and builds Phaser texture atlases. Idles that need pixel-perfect alignment are rebuilt from upscaled reference GIFs by sampling the pixel grid back to sprite resolution.
 - Layered idles like the Advance games (stand, get impatient, then sit or nap), run-ups, anticipation, knockback and landing dust on attacks, upgraded move animations (lock-on Homing Attack, flaming Spin Dash, fire-blast Knuckle Punch, spinning discs), ultimates and hit effects are built from sprite animations plus code-drawn effects (lightning, flames, shockwaves, masked cut-in bands), with a short hit-stop on every hit.
 - The intro recreates the Mode 7 ocean from Sonic Advance 2 by drawing the water line by line on a canvas, with perspective and distance blending.
 - Game data (characters, moves, zones, items) is kept apart from the scenes, so balance changes don't touch battle code.

@@ -13,21 +13,24 @@
 - [x] Sonic Advance 2-style intro, music and sound effects
 - [x] Passives for every character, plus unique ultimate effects
 - [x] Stuns, team heals and moves that change your own stats
-- [x] Character details screen (C) in character select
+- [x] Character kit screen (I) in battle and character select
 - [x] Ultimate cut-ins and animations, impact effects and hit-stop
-- [x] Team overview mid-run, KOs that last until the zone boss, Revive item
+- [x] Pause menu, KOs that last until the zone boss, Revive item
 - [x] Test mode (?test) with battle hotkeys
-- [x] Layered idles, attack flow (run-ups, knockback, landings) and upgraded move animations
+- [x] Layered idles, smooth Sonic and Amy idles, attack flow (run-ups, knockback, landings) and upgraded move animations
 - [x] Shop rebalance: percentage heals, two-item bag
 - [x] Auto-save after every wave, Save & Quit in the pause menu and Continue on the title screen
 - [x] Unit tests, end-to-end tests and automatic deploys
 
 ## Next
+- [ ] Shadow as a playable character
+- [ ] Bosses from Sonic Battle: Chaos, Chaos Gamma and Eggman
+- [ ] Enemies with more interaction: their own status moves, buffs and patterns
 - [ ] New rewards to replace the old stat boosts: moves and passives
 - [ ] Team ultimates
 - [ ] More badniks from Sonic Advance 1, 2 and 3, with unique enemies per zone
 - [ ] Minibosses and a unique boss per zone
-- [ ] Eggman boss fight every 20 waves, with a relic as a reward
+- [ ] Eggman fight every 20 waves, with a relic as a reward
 - [ ] Status effects and moves that deal % HP damage
 - [ ] Choose who gets a healing item
 - [ ] Short dialogue before and after rival fights

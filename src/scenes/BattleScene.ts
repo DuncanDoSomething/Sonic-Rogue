@@ -139,6 +139,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** move-info (C) */
   private infoLayer!: Phaser.GameObjects.Container;
+  private infoBg!: Phaser.GameObjects.Graphics;
   private infoTitle!: Phaser.GameObjects.Text;
   private infoBody!: Phaser.GameObjects.Text;
 
@@ -421,12 +422,11 @@ export class BattleScene extends Phaser.Scene {
 
     // Move-info paneel boven het menu
     this.infoLayer = this.add.container(0, 0).setDepth(34).setVisible(false);
-    const ig = this.add.graphics();
-    ig.fillStyle(0x10131c, 0.96).fillRoundedRect(8, PANEL_Y - 74, 322, 70, 5);
-    ig.lineStyle(1, 0xf2c230).strokeRoundedRect(8.5, PANEL_Y - 73.5, 321, 69, 5);
+    // het vak groeit mee met de tekst (zie updateMoveInfo)
+    this.infoBg = this.add.graphics();
     this.infoTitle = this.add.text(18, PANEL_Y - 66, '', { fontFamily: FONT, fontSize: '8px', color: '#f2c230' });
-    this.infoBody = this.add.text(18, PANEL_Y - 50, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', lineSpacing: 5, wordWrap: { width: 302 } });
-    this.infoLayer.add([ig, this.infoTitle, this.infoBody]);
+    this.infoBody = this.add.text(18, PANEL_Y - 50, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', lineSpacing: 5, wordWrap: { width: 322 } });
+    this.infoLayer.add([this.infoBg, this.infoTitle, this.infoBody]);
 
     // Stats-paneel (C in het hoofdmenu, of tik op je HP-box)
     this.statsLayer = this.add.container(0, 0).setDepth(34).setVisible(false);
@@ -514,7 +514,17 @@ export class BattleScene extends Phaser.Scene {
     if (!m) return;
     this.infoTitle.setText(m.name);
     const cost = m.cost ? `   Boost ${m.cost}` : m.boostGain ? `   Boost +${m.boostGain}` : '';
-    this.infoBody.setText(m.heal ? `Heals ${Math.round(m.heal * 100)}% HP${cost}\n${m.desc}` : `Power ${movePower(m, this.player, this.enemy)}   Acc ${m.accuracy}%${m.priority > 0 ? '   First' : ''}${cost}\n${m.desc}`);
+    const stats = m.teamHeal ? `Heals the team ${Math.round(m.teamHeal * 100)}% HP${cost}`
+      : m.heal ? `Heals ${Math.round(m.heal * 100)}% HP${cost}`
+      : `Power ${movePower(m, this.player, this.enemy)}   Acc ${m.accuracy}%${m.priority > 0 ? '   First' : ''}${cost}`;
+    this.infoBody.setText(`${stats}\n${m.desc}`);
+    // vak net zo hoog als de tekst nodig heeft; de onderkant blijft boven het menu staan
+    const w = 342, h = 30 + this.infoBody.height, x = 8, y = PANEL_Y - 4 - h;
+    this.infoBg.clear();
+    this.infoBg.fillStyle(0x10131c, 0.96).fillRoundedRect(x, y, w, h, 5);
+    this.infoBg.lineStyle(1, 0xf2c230).strokeRoundedRect(x + 0.5, y + 0.5, w - 1, h - 1, 5);
+    this.infoTitle.setPosition(x + 10, y + 8);
+    this.infoBody.setPosition(x + 10, y + 24);
   }
 
   private buildFightItems() {
