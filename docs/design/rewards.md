@@ -14,7 +14,7 @@ After every wave you pick 1 of 3 free monitors. Each monitor rolls a tier first,
 | Super rare | 2.5% | purple |
 | Ultra rare | 0.5% | gold |
 
-PokéRogue uses 75 / 19 / 4.7 / 1.2 / 0.1%. Our runs are shorter (90 waves), so rares show up a bit more often.
+PokéRogue uses 75 / 19 / 4.7 / 1.2 / 0.1%. Our runs are shorter (90 waves), so rares show up a bit more often. After a boss the odds shift up: 57 / 26 / 12 / 4 / 1%.
 
 ## Rewards
 
@@ -25,14 +25,14 @@ None of the buffs stack: while one is active, it isn't offered.
 | Common | Speed Shoes | Boost +1 |
 | Common | Ring Monitor | Rings (1x base value) |
 | Common | Shield | The next hit on your team does half damage |
-| Common | Magnet Shield | +50% rings from the next 3 waves |
-| Uncommon | Ring Bundle | Heal 20% HP (active character) |
+| Common | Magnet Shield | Double rings from the next 3 waves |
+| Uncommon | Ring Bundle | Heal 25 HP or 25%, whichever is more (pick a teammate) |
 | Uncommon | Super Boost | Boost +2 |
 | Uncommon | Invincibility | The first attack next wave misses |
 | Uncommon | Amy's Hammer | +20% crit chance for your next 3 turns |
-| Uncommon | Eggman Monitor | Lots of rings (4x base value), whole team -50% max HP (nobody goes down from it) |
+| Uncommon | Eggman Monitor | Lots of rings (4x base value), whole team -25% max HP (nobody goes down from it) |
 | Uncommon | Chaos Drive | +1 level for a teammate you pick |
-| Rare | 1-Up | Heal 50% HP |
+| Rare | 1-Up | Heal 60 HP or 50%, whichever is more (pick a teammate) |
 | Rare | Eggman Alarm | The next foe is an elite; beat it for uncommon-or-better rewards |
 | Rare | Emerald Shard | Whole team +1 level (a shard of the Master Emerald) |
 | Super rare | Shield+ | Half damage for the whole next wave |
@@ -56,14 +56,14 @@ Everything is a multiple of B, rounded down to 5, so income and prices can't dri
 | Rings for winning a wave | 0.35 (elite x1.5, boss x2) | 10 | 25 | 50 | 90 |
 | Ring Monitor | 1 | 35 | 75 | 145 | 265 |
 | Eggman Monitor | 4 | 145 | 305 | 595 | 1065 |
-| Health Ring (25%) | 0.8 | 25 | 60 | 115 | 210 |
-| Super Ring (50%) | 1.8 | — | 135 | 265 | 475 |
-| Hyper Ring (75%) | 3 | — | 225 | 445 | 795 |
+| Health Ring (25 HP or 25%) | 0.8 | 25 | 60 | 115 | 210 |
+| Super Ring (60 HP or 50%) | 1.8 | — | 135 | 265 | 475 |
+| Hyper Ring (120 HP or 75%) | 3 | — | 225 | 445 | 795 |
 | Chili Dog (100%) | 5 | — | — | 740 | 1330 |
 | Revive (50%) | 6 | — | 455 | 890 | 1595 |
 | Reroll | 0.5, doubles every reroll | 15 | 35 | 70 | 130 |
 
-A Health Ring always costs about 2-3 won waves. Balancing an item is now one number.
+A Health Ring always costs about 2-3 won waves. Balancing an item is now one number. Heals bought in the shop or taken as a reward can go to any teammate, and in battle you can use one item per fight without losing your turn.
 
 ## Boss schedule (next update)
 

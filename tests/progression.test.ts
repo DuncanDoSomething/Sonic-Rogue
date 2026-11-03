@@ -31,7 +31,7 @@ describe('shop', () => {
     const f = new Fighter('sonic', 30);
     f.hp = 1;
     ITEMS.healthRing.use(f);
-    expect(f.hp).toBe(1 + Math.ceil(f.maxHp * 0.25));
+    expect(f.hp).toBe(1 + Math.max(25, Math.ceil(f.maxHp * 0.25)));
     expect(BAG_SIZE).toBe(2);
     expect(bagCount({ healthRing: 1, revive: 1 })).toBe(2);
   });
@@ -73,5 +73,14 @@ describe('unlocks', () => {
 describe('Exp Share', () => {
   it('0% tot wave 10, dan 50%, na wave 20 100%', () => {
     expect([1, 9, 10, 15, 19, 20, 55].map(expShareAfter)).toEqual([0, 0, 0.5, 0.5, 0.5, 0.8, 0.8]);
+  });
+});
+
+describe('heals: flat of procent, wat hoger is', () => {
+  it('vroeg in de run geeft het vaste getal de doorslag', () => {
+    const f = new Fighter('sonic', 5);
+    f.hp = 1;
+    ITEMS.healthRing.use(f);
+    expect(f.hp).toBe(Math.min(f.maxHp, 26));
   });
 });

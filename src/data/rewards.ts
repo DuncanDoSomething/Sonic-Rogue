@@ -3,12 +3,14 @@
 // Healen zit vooral in de shop (en kost rings); rewards zijn voor kracht, geld en tijdelijke buffs.
 // ---------------------------------------------------------------------------
 import { Fighter, MAX_BOOST, MOVE_CHIP_POWER } from './fighters';
-import { rewardRings } from './items';
+import { heal, rewardRings } from './items';
 
 export type Tier = 'common' | 'uncommon' | 'rare' | 'superRare' | 'ultraRare';
 export const TIERS: Tier[] = ['common', 'uncommon', 'rare', 'superRare', 'ultraRare'];
 /** Kans per monitor. PokéRogue: 75 / 19 / 4.7 / 1.2 / 0.1; onze runs zijn korter, dus iets royaler. */
 export const TIER_ODDS: Record<Tier, number> = { common: 0.65, uncommon: 0.23, rare: 0.09, superRare: 0.025, ultraRare: 0.005 };
+/** Na een zone-boss (en straks Eggman): iets meer kans op de zeldzame tiers. */
+export const BOSS_TIER_ODDS: Record<Tier, number> = { common: 0.57, uncommon: 0.26, rare: 0.12, superRare: 0.04, ultraRare: 0.01 };
 export const TIER_NAME: Record<Tier, string> = { common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', superRare: 'SUPER RARE', ultraRare: 'ULTRA RARE' };
 export const TIER_COLOR: Record<Tier, number> = { common: 0x9aa4c4, uncommon: 0x4ade5a, rare: 0x4aa8ff, superRare: 0xc06aff, ultraRare: 0xf2c230 };
 
@@ -22,7 +24,7 @@ export interface RunBuffs {
   dodgeNext: boolean;
   /** Invincibility+: in zoveel waves mist de eerste aanval */
   dodgeWaves: number;
-  /** Magnet Shield: +50% rings uit zoveel waves */
+  /** Magnet Shield: dubbele rings uit zoveel waves */
   magnetWaves: number;
   /** Amy's Hammer: +20% crit-kans voor zoveel beurten */
   critTurns: number;
@@ -33,7 +35,8 @@ export const emptyBuffs = (): RunBuffs => ({
   shieldHit: false, shieldWaves: 0, dodgeNext: false, dodgeWaves: 0, magnetWaves: 0, critTurns: 0, eliteNext: false,
 });
 export const HAMMER_CRIT = 0.2;
-export const MAGNET_BONUS = 0.5;
+export const MAGNET_BONUS = 1;
+export const EGGMAN_DAMAGE = 0.25;
 export const SHIELD_FACTOR = 0.5;
 
 export interface RewardCtx {
@@ -64,11 +67,9 @@ export interface RewardDef {
   apply: (c: RewardCtx, target?: Fighter) => string;
 }
 
-function heal(f: Fighter, part: number) {
-  const h = Math.min(f.maxHp - f.hp, Math.ceil(f.maxHp * part));
-  f.hp += h;
-  return h;
-}
+/** Kan genezen worden: niet KO en niet vol. */
+const hurt = (f: Fighter) => !f.fainted && f.hp < f.maxHp;
+
 /** Precies één level erbij (de nieuwe max-HP komt er ook als HP bij). */
 export function levelUp(f: Fighter) {
   const before = f.maxHp;
@@ -86,13 +87,13 @@ export const REWARDS: RewardDef[] = [
   { id: 'shield', name: 'Shield', tier: 'common', icon: 'monitor_shield', desc: () => 'Next hit:\nhalf damage',
     available: c => !c.buffs.shieldHit,
     apply: c => { c.buffs.shieldHit = true; return 'A shield surrounds the team! The next hit does half damage.'; } },
-  { id: 'magnet', name: 'Magnet Shield', tier: 'common', icon: 'monitor_thunder', desc: () => '+50% rings\nfor 3 waves',
+  { id: 'magnet', name: 'Magnet Shield', tier: 'common', icon: 'monitor_thunder', desc: () => '2x rings\nfor 3 waves',
     available: c => c.buffs.magnetWaves === 0,
-    apply: c => { c.buffs.magnetWaves = 3; return 'Magnet Shield! +50% rings from the next 3 waves.'; } },
+    apply: c => { c.buffs.magnetWaves = 3; return 'Magnet Shield! Double rings from the next 3 waves.'; } },
   // ---- uncommon
-  { id: 'heal20', name: 'Ring Bundle', tier: 'uncommon', icon: 'monitor_ring5', desc: () => 'Heal 20% HP',
-    available: c => c.player.hp < c.player.maxHp,
-    apply: c => `${c.player.name} healed ${heal(c.player, 0.2)} HP!` },
+  { id: 'heal20', name: 'Ring Bundle', tier: 'uncommon', icon: 'monitor_ring5', desc: () => 'Heal 25 HP\nor 25%', target: 'pick',
+    available: c => c.party.some(hurt), canTarget: hurt,
+    apply: (_c, t) => `${t!.name} healed ${heal(t!, 25, 0.25)} HP!` },
   { id: 'boost2', name: 'Super Boost', tier: 'uncommon', icon: 'mon_sparkle', desc: () => 'Boost +2',
     available: c => c.player.boost < MAX_BOOST,
     apply: c => { c.player.gainBoost(2); return `${c.player.name}'s Boost shot up!`; } },
@@ -103,21 +104,21 @@ export const REWARDS: RewardDef[] = [
     available: c => c.buffs.critTurns === 0,
     apply: c => { c.buffs.critTurns = 3; return '+20% crit chance for your next 3 turns!'; } },
   { id: 'eggman', name: 'Eggman Monitor', tier: 'uncommon', icon: 'mon_eggman',
-    desc: c => `+${rewardRings(c.wave, 4)} rings\nteam -50% HP`,
+    desc: c => `+${rewardRings(c.wave, 4)} rings\nteam -25% HP`,
     available: c => c.party.some(f => !f.fainted && f.hp > 1),
     apply: c => {
       const n = rewardRings(c.wave, 4);
       c.gainRings(n);
       // niemand gaat er KO van: minimaal 1 HP
-      c.party.filter(f => !f.fainted).forEach(f => { f.hp = Math.max(1, f.hp - Math.ceil(f.maxHp / 2)); });
-      return `Eggman's trap! The team lost half their HP, but you grabbed ${n} rings.`;
+      c.party.filter(f => !f.fainted).forEach(f => { f.hp = Math.max(1, f.hp - Math.ceil(f.maxHp * EGGMAN_DAMAGE)); });
+      return `Eggman's trap! The team lost a quarter of their HP, but you grabbed ${n} rings.`;
     } },
   { id: 'chaosDrive', name: 'Chaos Drive', tier: 'uncommon', icon: 'chaosdrive', desc: () => '+1 level for\na teammate', target: 'pick',
     apply: (_c, t) => { levelUp(t!); return `${t!.name} grew to Lv.${t!.level}!`; } },
   // ---- rare
-  { id: 'heal50', name: '1-Up', tier: 'rare', icon: 'oneup_{hero}', desc: () => 'Heal 50% HP',
-    available: c => c.player.hp < c.player.maxHp,
-    apply: c => `1-Up! ${c.player.name} healed ${heal(c.player, 0.5)} HP!` },
+  { id: 'heal50', name: '1-Up', tier: 'rare', icon: 'oneup_{hero}', desc: () => 'Heal 60 HP\nor 50%', target: 'pick',
+    available: c => c.party.some(hurt), canTarget: hurt,
+    apply: (_c, t) => `1-Up! ${t!.name} healed ${heal(t!, 60, 0.5)} HP!` },
   { id: 'alarm', name: 'Eggman Alarm', tier: 'rare', icon: 'mon_alert', desc: () => 'Elite foe,\nbetter loot',
     available: c => !c.buffs.eliteNext && !c.nextIsBoss,
     apply: c => { c.buffs.eliteNext = true; return 'An elite badnik is coming! Beat it for uncommon or better rewards.'; } },
@@ -137,11 +138,11 @@ export const REWARDS: RewardDef[] = [
 ];
 
 /** Tier trekken; `min` = minimaal deze tier (na een Eggman Alarm). */
-export function rollTier(rng: () => number = Math.random, min: Tier = 'common'): Tier {
+export function rollTier(rng: () => number = Math.random, min: Tier = 'common', odds: Record<Tier, number> = TIER_ODDS): Tier {
   const allowed = TIERS.slice(TIERS.indexOf(min));
-  const total = allowed.reduce((n, t) => n + TIER_ODDS[t], 0);
+  const total = allowed.reduce((n, t) => n + odds[t], 0);
   let r = rng() * total;
-  for (const t of allowed) { r -= TIER_ODDS[t]; if (r < 0) return t; }
+  for (const t of allowed) { r -= odds[t]; if (r < 0) return t; }
   return allowed[allowed.length - 1];
 }
 
@@ -149,11 +150,11 @@ export function rollTier(rng: () => number = Math.random, min: Tier = 'common'):
  * 3 verschillende rewards. Per kaart een tier; is er in die tier niks beschikbaar, dan een tier lager
  * (en anders hoger), zodat je nooit een lege kaart krijgt.
  */
-export function rollRewards(c: RewardCtx, n = 3, rng: () => number = Math.random, min: Tier = 'common'): RewardDef[] {
+export function rollRewards(c: RewardCtx, n = 3, rng: () => number = Math.random, min: Tier = 'common', odds: Record<Tier, number> = TIER_ODDS): RewardDef[] {
   const out: RewardDef[] = [];
   const free = (t: Tier) => REWARDS.filter(r => r.tier === t && !out.includes(r) && (r.available?.(c) ?? true));
   for (let i = 0; i < n; i++) {
-    const t = rollTier(rng, min);
+    const t = rollTier(rng, min, odds);
     const idx = TIERS.indexOf(t);
     const order = [...TIERS.slice(0, idx + 1).reverse(), ...TIERS.slice(idx + 1)].filter(x => TIERS.indexOf(x) >= TIERS.indexOf(min));
     const fallback = [...order, ...TIERS.filter(x => !order.includes(x))];

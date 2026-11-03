@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Fighter, MAX_BOOST, MOVES, MOVE_CHIP_POWER, movePower } from '../src/data/fighters';
-import { REWARDS, TIERS, TIER_ODDS, emptyBuffs, levelUp, rollRewards, rollTier, type RewardCtx } from '../src/data/rewards';
+import { BOSS_TIER_ODDS, REWARDS, TIERS, TIER_ODDS, emptyBuffs, levelUp, rollRewards, rollTier, type RewardCtx } from '../src/data/rewards';
 import { rewardRings } from '../src/data/items';
 
 function ctx(over: Partial<RewardCtx> = {}): RewardCtx {
@@ -44,8 +44,19 @@ describe('rewards', () => {
     c.player.boost = MAX_BOOST;
     expect(R('boost').available!(c)).toBe(false);
   });
-  it('heals verschijnen niet als je volle HP hebt', () => {
-    expect(R('heal20').available!(ctx())).toBe(false);
+  it('heals: niet als iedereen vol zit; je kiest wie; flat of %, wat hoger is', () => {
+    const c = ctx();
+    expect(R('heal20').available!(c)).toBe(false);
+    c.party[1].hp = 1;
+    expect(R('heal20').available!(c)).toBe(true);
+    expect(R('heal20').canTarget!(c.party[0])).toBe(false);
+    R('heal20').apply(c, c.party[1]);
+    expect(c.party[1].hp).toBe(1 + Math.max(25, Math.ceil(c.party[1].maxHp * 0.25)));
+  });
+  it('na een boss is de kans op zeldzame rewards hoger', () => {
+    expect(BOSS_TIER_ODDS.ultraRare).toBeGreaterThan(TIER_ODDS.ultraRare);
+    expect(BOSS_TIER_ODDS.superRare).toBeGreaterThan(TIER_ODDS.superRare);
+    expect(TIERS.reduce((n, t) => n + BOSS_TIER_ODDS[t], 0)).toBeCloseTo(1, 5);
   });
   it('buffs stapelen niet', () => {
     const c = ctx();
@@ -53,13 +64,13 @@ describe('rewards', () => {
     R('magnet').apply(c); expect(c.buffs.magnetWaves).toBe(3); expect(R('magnet').available!(c)).toBe(false);
     R('invincible2').apply(c); expect(R('invincible').available!(c)).toBe(false);
   });
-  it('Eggman Monitor: veel rings, team -50% HP maar niemand gaat KO', () => {
+  it('Eggman Monitor: veel rings, team -25% HP maar niemand gaat KO', () => {
     let got = 0;
     const c = ctx({ gainRings: n => { got += n; } });
     c.party[1].hp = 3;
     R('eggman').apply(c);
     expect(got).toBe(rewardRings(10, 4));
-    expect(c.party[0].hp).toBe(c.party[0].maxHp - Math.ceil(c.party[0].maxHp / 2));
+    expect(c.party[0].hp).toBe(c.party[0].maxHp - Math.ceil(c.party[0].maxHp * 0.25));
     expect(c.party[1].hp).toBe(1);
   });
   it('Eggman Alarm komt niet voor een boss-wave', () => {

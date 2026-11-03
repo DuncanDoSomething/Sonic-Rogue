@@ -214,7 +214,7 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').party[1].hp)).toBeGreaterThan(0);
   });
 
-  test('a Revive from the bag brings a KO teammate back (costs the turn)', async ({ page }) => {
+  test('a Revive from the bag brings a KO teammate back', async ({ page }) => {
     await openGame(page);
     await startRun(page);
     await setup(page, 's.party[1].hp = 0; s.bag.revive = 1; s.enemy.hp = 9999;');
@@ -309,6 +309,42 @@ test.describe('Sonic Rogue smoke tests', () => {
     await setup(page, 's.buffs.shieldHit = true; s.runTurn({ ...window.MOVES.spinAttack, accuracy: 0 });');
     await waitForMenu(page, 'command');
     expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').buffs.shieldHit)).toBe(false);
+  });
+
+  test('items are free but only 1 per fight; heals ask who', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.party[0].hp = 5; s.party[1].hp = 5; s.bag.healthRing = 2; s.enemy.hp = 9999;');
+    const st = () => page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { hp: b.party.map((f: { hp: number }) => f.hp), bag: b.bag.healthRing, used: b.itemsUsed }; });
+    await press(page, 'ArrowDown', 'z');        // Items
+    await waitForMenu(page, 'bag');
+    await press(page, 'z');                     // Health Ring
+    await waitForMenu(page, 'choice');          // heal who? (two hurt teammates)
+    await press(page, 'ArrowDown', 'z');        // Tails
+    await waitForMenu(page, 'command');         // no enemy turn in between
+    let s = await st();
+    expect(s.hp[0]).toBe(5);
+    expect(s.hp[1]).toBeGreaterThan(5);
+    expect([s.bag, s.used]).toEqual([1, 1]);
+    await press(page, 'ArrowDown', 'z');        // a second item: not allowed
+    await waitForMenu(page, 'bag');
+    await press(page, 'z');
+    await waitForMenu(page, 'bag');
+    s = await st();
+    expect([s.bag, s.used]).toEqual([1, 1]);
+  });
+
+  test('Eggman Alarm: the next foe is an elite and shows the ELITE label', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.enemy.hp = 1;');
+    await press(page, 'z', 'ArrowRight', 'z');
+    await waitForMenu(page, 'reward');
+    await setup(page, "s.rewardChoices[s.cursor] = window.REWARDS.find(r => r.id === 'alarm');");
+    await press(page, 'z');
+    await waitForMenu(page, 'choice');          // switch question of wave 2
+    const b = await page.evaluate(() => { const s = (window as any).game.scene.getScene('Battle'); return { elite: s.elite, rank: s.enemyRank(), lv: s.enemy.level }; });
+    expect(b).toEqual({ elite: true, rank: 'ELITE', lv: 6 });
   });
 
   test('a lost run deletes the save', async ({ page }) => {

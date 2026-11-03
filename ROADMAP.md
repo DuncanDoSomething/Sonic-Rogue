@@ -21,6 +21,7 @@
 - [x] Shop rebalance: percentage heals, two-item bag
 - [x] Auto-save after every wave, Save & Quit in the pause menu and Continue on the title screen
 - [x] Reward revamp: five rarity tiers, buffs, level-ups, Move Chip, PokéRogue-style money curve (see [docs/design/rewards.md](docs/design/rewards.md))
+- [x] Balance pass: faster Sonic, stronger Knuckles (Fired Up), free items (1 per fight), heals for any teammate, flat-or-percent heals, better boss rewards
 - [x] Unit tests, end-to-end tests and automatic deploys
 
 ## Next

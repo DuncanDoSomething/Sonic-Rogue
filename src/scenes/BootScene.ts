@@ -196,6 +196,35 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xf2c230).fillRect(7, 7, 8, 8);
     g.fillStyle(0xfff3a0).fillRect(8, 8, 3, 3);
     g.generateTexture('movechip', 22, 22);
+    g.clear();
+    // shop-heals: een hartje dat van onderen voor 25/50/75/100% gevuld is (hoeveel het geneest)
+    const HEART = [
+      '..XXX...XXX..',
+      '.XXXXX.XXXXX.',
+      'XXXXXXXXXXXXX',
+      'XXXXXXXXXXXXX',
+      'XXXXXXXXXXXXX',
+      '.XXXXXXXXXXX.',
+      '..XXXXXXXXX..',
+      '...XXXXXXX...',
+      '....XXXXX....',
+      '.....XXX.....',
+      '......X......',
+    ];
+    const at = (x: number, y: number) => HEART[y]?.[x] === 'X';
+    for (const level of [25, 50, 75, 100]) {
+      g.clear();
+      const fillFrom = HEART.length - Math.round((HEART.length - 1) * level / 100) - 1; // rij waar de vulling begint
+      HEART.forEach((row, y) => [...row].forEach((c, x) => {
+        if (c !== 'X') return;
+        const edge = !at(x - 1, y) || !at(x + 1, y) || !at(x, y - 1) || !at(x, y + 1);
+        const filled = y >= fillFrom;
+        const color = edge ? 0x10131c : filled ? (y === fillFrom && level < 100 ? 0xff8a9a : 0xe8243a) : 0x3a2836;
+        g.fillStyle(color).fillRect(x + 1, y + 1, 1, 1);
+      }));
+      g.fillStyle(0xffffff).fillRect(3, 3, 2, 1).fillRect(3, 4, 1, 1); // glimlichtje
+      g.generateTexture(`heart_${level}`, 15, 13);
+    }
     g.destroy();
   }
 }

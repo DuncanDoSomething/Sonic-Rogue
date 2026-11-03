@@ -102,9 +102,9 @@ describe('boost', () => {
 
   it('sterke moves kosten Boost en kunnen niet zonder', () => {
     const f = new Fighter('sonic', 5);
-    f.boost = 2;
+    f.boost = 1;
     expect(f.canUse(MOVES.spinDash)).toBe(false);
-    f.boost = 3;
+    f.boost = 2;
     f.spendBoost(MOVES.spinDash);
     expect(f.boost).toBe(0);
   });
@@ -150,12 +150,12 @@ describe('moves en passives', () => {
     expect(MOVES.homingAttack.selfStages).toEqual({ spd: 1 });
   });
 
-  it('Sonic Speed: meer schade als Sonic sneller is, max +50%', () => {
+  it('Sonic Speed: meer schade als Sonic sneller is, max +75%', () => {
     const sonic = new Fighter('sonic', 20), slow = new Fighter('turtle', 20);
     expect(speedBonus(sonic, sonic)).toBe(1);
     expect(speedBonus(sonic, slow)).toBeGreaterThan(1);
     for (let i = 0; i < 6; i++) sonic.raise('spd');
-    expect(speedBonus(sonic, slow)).toBe(1.5);
+    expect(speedBonus(sonic, slow)).toBe(1.75);
     expect(speedBonus(new Fighter('tails', 20), slow)).toBe(1);   // alleen Sonic
   });
 
@@ -238,5 +238,34 @@ describe('nieuwe moves en ultimates', () => {
   it('alle vijf characters hebben een passive', () => {
     expect(['sonic', 'tails', 'knuckles', 'amy', 'cream'].map(id => FIGHTERS[id].passive?.id))
       .toEqual(['speedster', 'weakSpot', 'flinch', 'luckySwing', 'chaoCare']);
+  });
+});
+
+describe('balans-update', () => {
+  it('Sonic is het snelst van de cast, Knuckles het traagst', () => {
+    const lv = (id: string) => new Fighter(id, 30);
+    const others = ['tails', 'knuckles', 'amy', 'cream'].map(id => lv(id).spd);
+    expect(lv('sonic').spd).toBeGreaterThan(Math.max(...others));
+    expect(lv('knuckles').spd).toBe(Math.min(...others, lv('sonic').spd));
+  });
+  it('Light Speed Attack: 150 power en SPD +3; Spin Dash kost 2; Glide Attack kost 1', () => {
+    expect(MOVES.lightSpeed.power).toBe(150);
+    expect(MOVES.lightSpeed.selfStages).toEqual({ spd: 3 });
+    expect(MOVES.spinDash.cost).toBe(2);
+    expect(MOVES.glideAttack.cost).toBe(1);
+  });
+  it('Fired Up: Knuckles krijgt stat-verhogingen dubbel, verlagingen niet', () => {
+    const k = new Fighter('knuckles', 10);
+    k.raise('atk', 1); k.raise('def', -1);
+    expect([k.stages.atk, k.stages.def]).toEqual([2, -1]);
+    const a = new Fighter('amy', 10);
+    a.raise('atk', 1);
+    expect(a.stages.atk).toBe(1);
+  });
+  it('ultimates raken altijd, ook met ACC -6; andere moves kunnen dan missen', () => {
+    const sonic = new Fighter('sonic', 30), foe = new Fighter('beetle', 30);
+    sonic.stages.acc = -6;
+    expect(calcHit(sonic, foe, MOVES.lightSpeed, fixed(0.99)).missed).toBe(false);
+    expect(calcHit(sonic, foe, MOVES.homingAttack, fixed(0.99)).missed).toBe(true);
   });
 });

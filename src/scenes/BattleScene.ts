@@ -8,8 +8,8 @@ import type { ZoneEffect } from '../data/zones';
 /** true = bosses krijgen jouw type. Met een party van 3 kun je wisselen, dus nu uit. */
 const BOSS_TYPE_NEUTRAL = false;
 import { Backdrop } from './Backdrop';
-import { BAG_SIZE, ITEMS, ItemDef, bagCount, rerollCost, shopStock, waveRings } from '../data/items';
-import { HAMMER_CRIT, MAGNET_BONUS, SHIELD_FACTOR, TIER_COLOR, TIER_NAME, emptyBuffs, rollRewards, type RewardCtx, type RewardDef, type RunBuffs, type Tier } from '../data/rewards';
+import { BAG_SIZE, ITEMS, ITEMS_PER_FIGHT, ItemDef, bagCount, rerollCost, shopStock, waveRings } from '../data/items';
+import { BOSS_TIER_ODDS, HAMMER_CRIT, MAGNET_BONUS, SHIELD_FACTOR, TIER_COLOR, TIER_ODDS, TIER_NAME, emptyBuffs, rollRewards, type RewardCtx, type RewardDef, type RunBuffs, type Tier } from '../data/rewards';
 import { battleTimeScale, charDelay, holdFactor, settings } from '../data/settings';
 import { addHelpButton, addMenuButton } from './ui';
 import { audio, MusicKey } from '../audio';
@@ -22,9 +22,13 @@ const FONT = '"Press Start 2P", monospace';
 const PANEL_Y = 222;
 
 const PLAYER_POS = { x: 118, y: 208 };
+/** textures van de speelbare characters (zie bodyHeight) */
+const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'sonicidle', 'amyidle']);
+/** lichaamshoogte van een character in sprite-pixels */
+const CHARACTER_BODY = 38;
 const ENEMY_POS = { x: 352, y: 132 };
 
-type MenuState = 'busy' | 'command' | 'fight' | 'bag' | 'reward' | 'buyprompt' | 'gameover' | 'choice';
+type MenuState = 'busy' | 'command' | 'fight' | 'bag' | 'reward' | 'gameover' | 'choice';
 
 /** Een regel in een keuze-lijstje (ja/nee, wie wissel je in, ...). */
 interface ChoiceRow { label: string; right?: string; head?: string; disabled?: boolean; }
@@ -88,6 +92,8 @@ export class BattleScene extends Phaser.Scene {
   private waveMagnet = false;
   /** deze wave is een Eggman Alarm-elite: daarna minstens uncommon rewards */
   private alarmWave = false;
+  /** items uit de tas gebruikt in dit gevecht */
+  private itemsUsed = 0;
   /** de vijand van deze wave is een elite (+2 levels, meer rings) */
   private elite = false;
   /** minimale tier voor de rewards van nu */
@@ -139,9 +145,6 @@ export class BattleScene extends Phaser.Scene {
   /** HP-status rechtsonder tijdens het reward/shop-scherm */
   private statusPanel?: Phaser.GameObjects.Container;
   /** "Use now / Keep in bag" na het kopen van een heal-item */
-  private prompt?: Phaser.GameObjects.Container;
-  private promptItem?: ItemDef;
-  private promptChoice = 0;
   private shopButtons: Phaser.GameObjects.Container[] = [];
   private shopItems: ItemDef[] = [];
 
@@ -230,7 +233,7 @@ export class BattleScene extends Phaser.Scene {
     this.rivalsMet = [];
     this.events.on('update', () => {
       // de bubbel volgt je character, ook tijdens aanvallen
-      if (this.shieldFx) this.shieldFx.setPosition(this.hero.x, this.hero.y - this.hero.displayHeight * 0.42).setVisible(this.hero.visible);
+      if (this.shieldFx) this.shieldFx.setPosition(this.hero.x, this.center(this.hero).y).setVisible(this.hero.visible);
     });
     this.party = this.partyIds.map(id => new Fighter(id, 5));
     this.player = this.party[0];
@@ -596,14 +599,6 @@ export class BattleScene extends Phaser.Scene {
         else if (['x', 'escape', 'backspace'].includes(k) && this.choiceCancel) this.endChoice(-1);
         return;
       }
-      if (this.menu === 'buyprompt') {
-        if (['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'a', 'd', 'w', 's'].includes(k)) {
-          this.promptChoice = 1 - this.promptChoice;
-          this.refreshPrompt();
-        } else if (['z', 'enter', ' '].includes(k)) this.resolvePrompt(this.promptChoice === 0);
-        else if (['x', 'escape', 'backspace'].includes(k)) this.resolvePrompt(false);
-        return;
-      }
       if (['arrowleft', 'a'].includes(k)) this.moveCursor(-1, 0);
       else if (['arrowright', 'd'].includes(k)) this.moveCursor(1, 0);
       else if (['arrowup', 'w'].includes(k)) this.moveCursor(0, -1);
@@ -761,10 +756,37 @@ export class BattleScene extends Phaser.Scene {
     this.refreshCursor();
   }
 
-  /** Item gebruiken kost je beurt: daarna valt de vijand aan. */
+  /**
+   * Item uit je tas: kost geen beurt (zoals potions in Slay the Spire), maar je mag er maar
+   * ITEMS_PER_FIGHT per gevecht gebruiken. Heals kies je zelf voor wie.
+   */
   private async useItem(id: string) {
     const item = ITEMS[id];
     let target = this.player;
+    if (this.itemsUsed >= ITEMS_PER_FIGHT) {
+      this.bagLayer.setVisible(false);
+      this.menu = 'busy';
+      this.pointer.setVisible(false);
+      await this.say(`You already used an item this fight!`, 900);
+      this.openBag();
+      return;
+    }
+    if (!item.revive) {
+      const can = (f: Fighter) => !f.fainted && f.hp < f.maxHp;
+      this.bagLayer.setVisible(false);
+      if (!this.party.some(can)) {
+        this.menu = 'busy';
+        this.pointer.setVisible(false);
+        await this.say('Everyone is at full HP!', 900);
+        this.openBag();
+        return;
+      }
+      if (this.party.filter(can).length > 1 || !can(this.player)) {
+        const i = await this.pickHealTarget2(`${item.name}: heal who?`, true);
+        if (i < 0) { this.openBag(); return; }
+        target = this.party[i];
+      }
+    }
     if (item.revive) {
       this.bagLayer.setVisible(false);
       if (!this.party.some(f => f.fainted)) {
@@ -787,16 +809,24 @@ export class BattleScene extends Phaser.Scene {
       sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
     }
     const text = item.use(target);
+    this.itemsUsed++;
     audio.sfx('heal1');
     this.refreshPartyHeads();
     await this.setBox(this.pBox, this.player, true);
     await this.say(text, 350);
-    const enemyMove = this.pickEnemyMove();
-    await this.doAttack(this.enemy, this.player, enemyMove);
-    if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(2); return; }
-    await this.endOfTurn();
-    if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(2); return; }
     this.openCommand(2);
+  }
+
+  /** Teamgenoot kiezen om te genezen (KO of al vol = grijs). `extra` = bijv. "Keep in bag". */
+  private pickHealTarget2(title: string, cancel: boolean, extra?: ChoiceRow): Promise<number> {
+    const rows: ChoiceRow[] = this.party.map(f => ({
+      label: `${f.name} Lv.${f.level}`,
+      right: f.fainted ? 'KO' : `${f.hp}/${f.maxHp}`,
+      head: `head_${f.def.id}`,
+      disabled: f.fainted || f.hp >= f.maxHp,
+    }));
+    if (extra) rows.push(extra);
+    return this.choose(title, rows, cancel);
   }
 
   private async flash(text: string) {
@@ -959,7 +989,16 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Midden van een sprite (origin zit onderaan). */
-  private center(s: Phaser.GameObjects.Sprite) { return { x: s.x, y: s.y - s.displayHeight * 0.4 }; }
+  /**
+   * Hoe hoog iemand er echt uitziet. Character-atlassen hebben vaste cellen zo hoog als het grootste frame
+   * (Knuckles' vuurpunch), dus displayHeight is daar te veel: dan rekenen we met een vaste lichaamshoogte.
+   */
+  private bodyHeight(s: Phaser.GameObjects.Sprite) {
+    return CHARACTER_TEXTURES.has(s.texture.key) ? CHARACTER_BODY * s.scaleY : s.displayHeight;
+  }
+  private center(s: Phaser.GameObjects.Sprite) {
+    return { x: s.x, y: s.y - (CHARACTER_TEXTURES.has(s.texture.key) ? this.bodyHeight(s) * 0.45 : s.displayHeight * 0.4) };
+  }
 
   // ---------------------------------------------------------------- flow
   /** Auto-save: de run zoals hij nu is, zodat je na het sluiten verder kunt bij deze wave. */
@@ -976,6 +1015,7 @@ export class BattleScene extends Phaser.Scene {
     this.menu = 'busy';
     this.party.forEach(f => { f.stun = 0; f.evade = 0; });
     this.stunUsed.clear();
+    this.itemsUsed = 0;
     this.waveShield = this.buffs.shieldWaves > 0;
     if (this.waveShield) this.buffs.shieldWaves--;
     this.dodgeFirst = this.buffs.dodgeNext || this.buffs.dodgeWaves > 0;
@@ -1086,7 +1126,7 @@ export class BattleScene extends Phaser.Scene {
         stars = undefined;
       }
       if (stars) {
-        const top = spr.y - spr.displayHeight - 4;
+        const top = spr.y - this.bodyHeight(spr) - 4;
         stars.forEach((st, i) => {
           const a = this.statusClock / 260 + (i / 3) * Math.PI * 2;
           st.setPosition(spr.x + Math.cos(a) * 14, top + Math.sin(a) * 4).setDepth(Math.sin(a) > 0 ? 19 : spr.depth - 1);
@@ -1235,7 +1275,7 @@ export class BattleScene extends Phaser.Scene {
       this.hitStop(hit.crit ? 120 : 55);
       // CRITICAL! boven het doelwit (Tornado Hammer doet dat zelf al)
       if (hit.crit && !move.alwaysCrit) void bigText(this, c.x, c.y - 40, 'CRITICAL!', isPlayer ? '#ffd23a' : '#ff6a5a');
-      this.popNumber(spr.x, spr.y - spr.displayHeight - 4, `-${hit.damage}`, hit.crit ? '#f2c230' : '#ffffff');
+      this.popNumber(spr.x, spr.y - this.bodyHeight(spr) - 4, `-${hit.damage}`, hit.crit ? '#f2c230' : '#ffffff');
       this.cameras.main.shake(hit.crit ? 220 : 120, hit.crit ? 0.008 : 0.004);
       if (isPlayer) audio.sfx(isBossWave(this.wave) ? 'bosshit' : 'enemyhit', { volume: 0.8 });
       else { audio.sfx('hurtrings', { volume: 0.7 }); this.player.gainBoost(BOOST_ON_HIT); }
@@ -1258,7 +1298,7 @@ export class BattleScene extends Phaser.Scene {
     if (hit.missed) {
       // MISS naast het doelwit, in plaats van een geluid
       const spr = isPlayer ? this.foe : this.hero;
-      this.popMiss(spr.x + (isPlayer ? -30 : 34), spr.y - spr.displayHeight * 0.7);
+      this.popMiss(spr.x + (isPlayer ? -30 : 34), spr.y - this.bodyHeight(spr) * 0.7);
       await this.say(guard ? `${guard} ${tgt.name} avoided the attack!` : `${tgt.name} avoided the attack!`, 400);
     }
     if (move.spendStages && Object.values(att.stages).some(v => v !== 0)) {
@@ -1293,8 +1333,8 @@ export class BattleScene extends Phaser.Scene {
         const h = Math.min(att.maxHp - att.hp, Math.ceil(att.maxHp * move.selfHeal));
         att.hp += h;
         const spr = isPlayer ? this.hero : this.foe;
-        hearts(this, spr.x, spr.y - spr.displayHeight * 0.6, 6, 0x7cf07c);
-        this.popNumber(spr.x, spr.y - spr.displayHeight - 4, `+${h}`, '#7cf07c');
+        hearts(this, spr.x, spr.y - this.bodyHeight(spr) * 0.6, 6, 0x7cf07c);
+        this.popNumber(spr.x, spr.y - this.bodyHeight(spr) - 4, `+${h}`, '#7cf07c');
         await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
         await this.say(`${this.who(att)} recovered ${h} HP!`, 300);
       }
@@ -1317,9 +1357,11 @@ export class BattleScene extends Phaser.Scene {
       // Iron Fists (Knuckles): kans dat het doelwit zijn beurt verliest
       if (att.def.passive?.id === 'flinch' && !tgt.fainted && Math.random() < FLINCH_CHANCE) this.flinched.add(tgt);
       // verdoven (Glove Punch één keer per gevecht, Thunder Shoot altijd)
-      const stunKey = `${isPlayer ? 'p' : 'e'}:${move.id}`;
-      if (move.stun && !tgt.fainted && !(move.stunOnce && this.stunUsed.has(stunKey))) {
-        if (move.stunOnce) this.stunUsed.add(stunKey);
+      // een vijand (rival-Tails) verdooft je maar één keer per gevecht, anders kom je er nooit meer tussen
+      const stunKey = isPlayer ? `p:${move.id}` : 'e:any';
+      const once = move.stunOnce || !isPlayer;
+      if (move.stun && !tgt.fainted && !(once && this.stunUsed.has(stunKey))) {
+        if (once) this.stunUsed.add(stunKey);
         tgt.stun = Math.max(tgt.stun, Phaser.Math.Between(move.stun[0], move.stun[1]));
         audio.sfx('enemyhit', { volume: 0.5 });
         await this.say(`${this.who(tgt)} is stunned!`, 400);
@@ -1357,7 +1399,7 @@ export class BattleScene extends Phaser.Scene {
       // Cheese vliegt naar wie er geneest wordt (op de bank: naar zijn hoofdje in de HUD)
       const cheese = this.add.sprite(spr.x + 18, spr.y - 46, 'fx').setDepth(26).setScale(1.6).play('cheese_fly');
       const icon = isPlayer && target !== att ? this.partyHeads[this.party.indexOf(target)] : undefined;
-      const to = icon ? { x: icon.x + 8, y: icon.y + 8 } : { x: spr.x, y: spr.y - spr.displayHeight - 10 };
+      const to = icon ? { x: icon.x + 8, y: icon.y + 8 } : { x: spr.x, y: spr.y - this.bodyHeight(spr) - 10 };
       cheese.setFlipX(to.x < cheese.x);
       await this.tween({ targets: cheese, x: to.x, y: to.y, duration: 380, ease: 'Sine.easeInOut' });
       hearts(this, to.x, to.y, 6, 0x7cf07c);
@@ -1378,7 +1420,7 @@ export class BattleScene extends Phaser.Scene {
         f.hp += h;
         total += h;
       }
-      if (total > 0) this.popNumber(spr.x, spr.y - spr.displayHeight - 4, `+${total}`, '#7cf07c');
+      if (total > 0) this.popNumber(spr.x, spr.y - this.bodyHeight(spr) - 4, `+${total}`, '#7cf07c');
       await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
       await this.say(isPlayer ? 'The whole team is back to full HP!' : `${this.who(att)} is back to full HP!`, 500);
       if (move.clearField && isPlayer && this.fieldEffect) {
@@ -1392,7 +1434,7 @@ export class BattleScene extends Phaser.Scene {
 
     const h = Math.min(target.maxHp - target.hp, Math.ceil(target.maxHp * (move.heal ?? 0)));
     target.hp += h;
-    if (h > 0 && target === att) this.popNumber(spr.x, spr.y - spr.displayHeight - 4, `+${h}`, '#7cf07c');
+    if (h > 0 && target === att) this.popNumber(spr.x, spr.y - this.bodyHeight(spr) - 4, `+${h}`, '#7cf07c');
     if (target === att) await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
     await this.say(h > 0 ? `${target.name} healed ${h} HP!` : `${target.name}'s HP is already full!`, 400);
   }
@@ -1418,7 +1460,7 @@ export class BattleScene extends Phaser.Scene {
     // mik op het midden van het doelwit (vliegers hangen hoger dan grond-badniks)
     const fc = this.center(target);
     const tx = fc.x - dir * target.displayWidth * 0.3 + dir * (missed ? 14 : 0);
-    const ty = fc.y + s.displayHeight * 0.4;
+    const ty = fc.y + this.bodyHeight(s) * 0.45;
 
     let finisher: (() => Promise<void>) | undefined;
     const base = p.def.scale;
@@ -1986,6 +2028,29 @@ export class BattleScene extends Phaser.Scene {
     return this.choose(title, rows, cancel);
   }
 
+  /** Heal gekocht in de shop: meteen op een teamgenoot naar keuze, of in de tas. */
+  private async healFromShop(it: ItemDef) {
+    if (!this.party.some(f => !f.fainted && f.hp < f.maxHp)) {
+      this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;
+      this.msg.setText(`Everyone is at full HP, so the ${it.name}\nwent to your bag. (${bagCount(this.bag)}/${BAG_SIZE})`);
+      return;
+    }
+    const full = bagCount(this.bag) >= BAG_SIZE;
+    const i = await this.pickHealTarget2(`${it.name}: heal who?`, false, { label: full ? 'Bag is full' : 'Keep in bag', disabled: full });
+    this.menu = 'reward';
+    this.refreshCursor();
+    if (i < this.party.length) {
+      const text = it.use(this.party[i]);
+      audio.sfx('heal1');
+      this.showStatusPanel();
+      this.refreshPartyHeads();
+      this.msg.setText(text);
+    } else {
+      this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;
+      this.msg.setText(`The ${it.name} went to your bag.\n(${bagCount(this.bag)}/${BAG_SIZE} in bag)`);
+    }
+  }
+
   /** Revive gekocht in de shop: meteen iemand terughalen, of in de tas. */
   private async reviveFromShop(it: ItemDef) {
     if (!this.party.some(f => f.fainted)) {
@@ -2132,7 +2197,7 @@ export class BattleScene extends Phaser.Scene {
   private enemyRank(): '' | 'BOSS' | 'ELITE' | 'RIVAL' {
     if (this.rival) return 'RIVAL';
     if (isBossWave(this.wave)) return 'BOSS';
-    if (isEliteWave(this.wave)) return 'ELITE';
+    if (this.elite) return 'ELITE';
     return '';
   }
 
@@ -2204,7 +2269,7 @@ export class BattleScene extends Phaser.Scene {
     this.player.hp = Math.max(0, this.player.hp - dmg);
     this.hitFlash(this.hero);
     this.burst(this.hero.x, this.hero.y - 20, 0xff8a3a, 6);
-    this.popNumber(this.hero.x, this.hero.y - this.hero.displayHeight - 4, `-${dmg}`, '#ff8a3a');
+    this.popNumber(this.hero.x, this.hero.y - this.bodyHeight(this.hero) - 4, `-${dmg}`, '#ff8a3a');
     await this.setBox(this.pBox, this.player, true);
     await this.say(`${this.player.name} is hurt by the heat!`, 300);
   }
@@ -2371,7 +2436,7 @@ export class BattleScene extends Phaser.Scene {
   /** `forced` = vaste rewards (voor tests en screenshots), anders 3 willekeurige. */
   private buildRewardRow(forced?: RewardDef[]) {
     this.rewardCards.forEach(c => c.destroy());
-    this.rewardChoices = forced ?? rollRewards(this.rewardCtx(), 3, Math.random, this.minTier);
+    this.rewardChoices = forced ?? rollRewards(this.rewardCtx(), 3, Math.random, this.minTier, isBossWave(this.wave) ? BOSS_TIER_ODDS : TIER_ODDS);
     this.rewardCards = this.rewardChoices.map((r, i) => {
       const c = this.add.container(W / 2 + (i - 1) * 132, 162);
       const col = TIER_COLOR[r.tier];
@@ -2402,12 +2467,13 @@ export class BattleScene extends Phaser.Scene {
 
   /** Icoon voor een shop-item, getekend met sprites uit de ui-atlas. */
   private shopIcon(id: string): Phaser.GameObjects.GameObject[] {
-    if (id === 'healthRing') return [this.add.sprite(0, 0, 'ui', 'ring_0').setScale(2).play('ring_spin')];
-    if (id === 'superRing') return [
-      this.add.sprite(-9, 2, 'ui', 'ring_0').setScale(2).play({ key: 'ring_spin', startFrame: 2 }),
-      this.add.sprite(9, -2, 'ui', 'ring_0').setScale(2).play('ring_spin')];
-    if (id === 'hyperRing') return [this.add.sprite(0, 0, 'ui', 'bigring_0').play('bigring_spin')];
-    if (id === 'chiliDog') return [this.add.image(0, 2, 'chilidog').setScale(2)];
+    // heals: hoe voller het hartje, hoe meer het geneest
+    const heart: Record<string, number> = { healthRing: 25, superRing: 50, hyperRing: 75, chiliDog: 100 };
+    if (heart[id]) {
+      const h = this.add.image(0, 0, `heart_${heart[id]}`).setScale(2);
+      this.tweens.add({ targets: h, scale: 2.15, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: heart[id] * 4 });
+      return [h];
+    }
     if (id === 'revive') {
       // hoofdje van wie er KO is (of van je actieve character)
       const who = this.party.find(f => f.fainted) ?? this.player;
@@ -2466,7 +2532,7 @@ export class BattleScene extends Phaser.Scene {
     const btn = this.shopButtons[i];
     // niks om nu op te gebruiken en de tas is vol: dan niet kopen
     if (!isReroll && bagCount(this.bag) >= BAG_SIZE) {
-      const nowUseless = it.revive ? !this.party.some(f => f.fainted) : this.player.hp >= this.player.maxHp;
+      const nowUseless = it.revive ? !this.party.some(f => f.fainted) : !this.party.some(f => !f.fainted && f.hp < f.maxHp);
       if (nowUseless) {
         this.msg.setText(`Your bag is full (${BAG_SIZE}/${BAG_SIZE}) and nobody\nneeds a ${it.name} right now.`);
         audio.sfx('errorclick');
@@ -2491,12 +2557,8 @@ export class BattleScene extends Phaser.Scene {
       this.msg.setText(`New rewards rolled in!\nNext reroll costs ${this.rerollCost()} rings.`);
     } else if (it.revive) {
       void this.reviveFromShop(it);
-    } else if (this.player.hp >= this.player.maxHp) {
-      // volle HP: niks te healen, dus meteen de tas in
-      this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;
-      this.msg.setText(`HP is full, so the ${it.name} went\nto your bag. (${bagCount(this.bag)}/${BAG_SIZE})`);
     } else {
-      this.openPrompt(it, btn);
+      void this.healFromShop(it);
     }
     this.updatePrices();
     if (isReroll) this.refreshCursor();
@@ -2523,64 +2585,6 @@ export class BattleScene extends Phaser.Scene {
       this.add.text(168, 29, `${p.hp}/${p.maxHp}`, { fontFamily: FONT, fontSize: '8px', color: '#cfd6ee' }).setOrigin(1, 0),
     ]);
     this.statusPanel = c;
-  }
-
-  /** Na het kopen van een heal-item: meteen gebruiken of bewaren. (Straks met party: aan wie?) */
-  private openPrompt(it: ItemDef, btn: Phaser.GameObjects.Container) {
-    this.menu = 'buyprompt';
-    this.promptItem = it;
-    this.promptChoice = 0;
-    const c = this.add.container(Phaser.Math.Clamp(btn.x, 70, W - 70), btn.y + 52).setDepth(45);
-    const g = this.add.graphics();
-    g.fillStyle(0x10131c, 0.98).fillRoundedRect(-62, -4, 124, 44, 5);
-    g.lineStyle(1, 0xf2c230).strokeRoundedRect(-61.5, -3.5, 123, 43, 5);
-    const use = this.add.text(-44, 6, 'Use now', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setInteractive({ useHandCursor: true });
-    const keep = this.add.text(-44, 22, 'Keep in bag', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setInteractive({ useHandCursor: true });
-    const arrow = this.add.triangle(-56, 6, 0, 0, 0, 8, 5, 4, 0xffffff).setOrigin(0);
-    use.on('pointerover', () => { this.promptChoice = 0; this.refreshPrompt(); });
-    keep.on('pointerover', () => { this.promptChoice = 1; this.refreshPrompt(); });
-    use.on('pointerdown', () => this.resolvePrompt(true));
-    keep.on('pointerdown', () => this.resolvePrompt(false));
-    c.add([g, use, keep, arrow]);
-    this.prompt = c;
-    this.shopButtons.forEach(b => (b.getByName('arrow') as Phaser.GameObjects.Triangle).setVisible(false));
-    this.refreshPrompt();
-  }
-
-  private refreshPrompt() {
-    if (!this.prompt || !this.promptItem) return;
-    (this.prompt.getAt(3) as Phaser.GameObjects.Triangle).y = this.promptChoice === 0 ? 6 : 22;
-    const p = this.player;
-    this.msg.setText(this.promptChoice === 0
-      ? `Use the ${this.promptItem.name} now?\n${p.name}: ${p.hp}/${p.maxHp} HP`
-      : `Put the ${this.promptItem.name} in your bag\nto use it during a battle.`);
-  }
-
-  private resolvePrompt(useNow: boolean) {
-    const it = this.promptItem;
-    if (!it) return;
-    if (!useNow && bagCount(this.bag) >= BAG_SIZE) {
-      this.msg.setText(`Your bag is full! (${BAG_SIZE}/${BAG_SIZE})\nUse it now instead.`);
-      audio.sfx('errorclick');
-      return;
-    }
-    this.prompt?.destroy();
-    this.prompt = undefined;
-    this.promptItem = undefined;
-    this.menu = 'reward';
-    if (useNow) {
-      const text = it.use(this.player);
-      audio.sfx('heal1');
-      this.showStatusPanel();
-      const sp = this.add.sprite(this.statusPanel!.x + 16, this.statusPanel!.y + 14, 'ui', 'sparkle_0').setDepth(46).setScale(2).play('sparkle');
-      sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
-      this.refreshCursor();
-      this.msg.setText(text);
-    } else {
-      this.bag[it.id] = (this.bag[it.id] ?? 0) + 1;
-      this.refreshCursor();
-      this.msg.setText(`The ${it.name} went to your bag.\n(${bagCount(this.bag)}/${BAG_SIZE} in bag)`);
-    }
   }
 
   private async pickReward(i: number) {
