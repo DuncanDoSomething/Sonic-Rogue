@@ -67,8 +67,8 @@ A Health Ring always costs about 2-3 won waves. Balancing an item is now one num
 
 ## Boss schedule (next update)
 
-- Waves 10 / 30 / 50 / 70: zone bosses (as now). KO'd teammates get back up with 50% HP.
-- Waves 20 / 40 / 60 / 80: main bosses. Eggman is the common one, with a chance of Chaos, Shadow or other bosses. Afterwards the whole team is fully healed (stat stages reset as usual).
+- Waves 10 / 30 / 50 / 70: zone bosses (as now). Afterwards KO'd teammates get back up with 50% HP, and anyone below 50% is patched up to 50%. **Built.**
+- Waves 20 / 40 / 60 / 80: main bosses. Eggman is the common one, with a chance of Chaos, Shadow or other bosses. Afterwards the whole team is fully healed, KO'd teammates included, and everyone has at least 3 Boost (stat stages reset as usual). **The heal is built** and already happens after the current boss on these waves.
 - Wave 90: super boss, only after collecting all seven Chaos Emeralds.
 
 ## Boss charms (next update)

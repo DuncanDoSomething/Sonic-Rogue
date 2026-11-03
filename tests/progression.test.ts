@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BAG_SIZE, ITEMS, bagCount, baseValue, priceAt, rerollCost, shopStock, waveRings } from '../src/data/items';
 import { Fighter } from '../src/data/fighters';
-import { canHaveRival, isBossWave, zoneForWave, ZONES } from '../src/data/zones';
+import { ZONE_POOLS, canHaveRival, isBossWave, isMainBossWave, rollZoneOrder, zoneForWave, ZONES } from '../src/data/zones';
 import { isUnlocked } from '../src/data/unlocks';
 import { expShareAfter } from '../src/data/fighters';
 
@@ -56,6 +56,28 @@ describe('zones en rivals', () => {
 
   it('na de laatste zone begint de rij opnieuw', () => {
     expect(zoneForWave(ZONES.length * 10 + 1).id).toBe(ZONES[0].id);
+  });
+
+  it('random zones: Route 99 en Leaf Forest eerst, daarna geschud per poule', () => {
+    for (let seed = 0; seed < 50; seed++) {
+      let x = seed + 1;
+      const rng = () => { x = (x * 16807) % 2147483647; return x / 2147483647; };
+      const order = rollZoneOrder(rng);
+      expect(order.slice(0, 2)).toEqual(['route99', 'leafforest']);
+      expect([...order].sort()).toEqual(ZONES.map(z => z.id).sort());
+      // elke poule blijft bij elkaar: Sky Canyon nooit als tweede (of derde) zone
+      let at = 2;
+      for (const pool of ZONE_POOLS) {
+        expect([...order.slice(at, at + pool.length)].sort()).toEqual([...pool].sort());
+        at += pool.length;
+      }
+      expect(zoneForWave(21, order).id).toBe(order[2]);
+    }
+  });
+
+  it('main bosses op 20, 40, 60, 80; zone-bosses op 10, 30, 50, 70', () => {
+    expect([10, 20, 30, 40, 50, 60, 70, 80].map(isMainBossWave)).toEqual([false, true, false, true, false, true, false, true]);
+    expect(isMainBossWave(25)).toBe(false);
   });
 
   it('rivals alleen op 15, 25, 35, ...', () => {

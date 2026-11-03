@@ -61,7 +61,7 @@ export interface PassiveDef { id: PassiveId; name: string; desc: string; }
 export const PASSIVES: Record<PassiveId, PassiveDef> = {
   speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. Hits harder the faster he is than the foe (up to +75%).' },
   weakSpot:   { id: 'weakSpot', name: 'Weak Spot', desc: 'Stunned foes take 2x damage from Tails.' },
-  flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'Fired Up: his stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP.' },
+  flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP.' },
   luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance per ATK stage. Crits cost her 10% max HP (not with Hammer Twirl).' },
   chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'If Cream is on the field when a wave starts, the whole team heals 10% HP.' },
 };

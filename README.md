@@ -12,7 +12,8 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 | | |
 |---|---|
 | ![Title screen](docs/title.png) | ![Character select](docs/character-select.png) |
-| ![Battle in Music Plant](docs/battle.png) | ![Switching characters](docs/team.png) |
+| ![Battle in Music Plant](docs/battle.png) | ![Switching characters: HP and Boost per teammate](docs/team.png) |
+| ![Buff icons with hover info](docs/hud-tooltip.png) | ![Rewards and shop, with your whole team](docs/rewards.png) |
 | ![Ultimate cut-in](docs/cut-in.png) | ![Super Sonic's Light Speed Attack](docs/super-sonic.png) |
 | ![Knuckles' Maximum Heat](docs/maximum-heat.png) | ![Character kits (I)](docs/kits.png) |
 
@@ -25,8 +26,9 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 - **Types.** Speed, Fly and Power, based on the team types from Sonic Advance 3 and Heroes. Fly beats Power, Power beats Speed, Speed beats Fly.
 - **Passives and ultimates.** Every character has a passive and an ultimate with its own effect: Sonic gets faster with every KO and can make the foe miss, Tails stuns foes and punishes them for it, Knuckles is a glass cannon who can survive one KO per zone, Amy builds up to huge critical hits that cost her own HP, and Cream heals the team. Press **I** in battle or character select to see everything a character can do.
 - **Stat stages.** Some moves and passives raise ATK, DEF or SPD by a stage (+25% each, up to +6). Stages reset after every zone boss.
-- **Nine zones** from Sonic Advance 2 and 3, each with its own music. Some zones affect your team, like the heat in Hot Crater or the cold in Twinkle Snow.
-- **Bosses and Chaos Emeralds.** Every tenth wave is a boss. Beat it to collect a Chaos Emerald.
+- **Nine zones** from Sonic Advance 2 and 3, each with its own music. Every run starts in Route 99 and Leaf Forest; after that the zones are shuffled within an early, mid and late group, so every run feels different but the hardest zones stay at the end. Some zones affect your team, like the heat in Hot Crater or the cold in Twinkle Snow.
+- **Bosses and Chaos Emeralds.** Every tenth wave is a boss. Beat it to collect a Chaos Emerald. After a zone boss everyone gets back up to at least 50% HP; after waves 20, 40, 60 and 80 the whole team is fully healed with at least 3 Boost.
+- **Sonic-style battle HUD** based on the Tiny Chao Garden UI: a RINGS counter, your bag and active buffs always on screen (hover for details), and every teammate's HP and Boost in the party menu and during rewards.
 - **Rewards and a shop** after every wave. Rewards come in five rarities, from Speed Shoes and Shields to Chaos Drives, Eggman's trapped monitors and the ultra rare Move Chip. Healing mostly costs rings, your bag only holds two items, and income and prices follow one money curve, like PokéRogue. Design notes: [docs/design/rewards.md](docs/design/rewards.md).
 - **Exp. Share** after wave 10 (50%, then 80% after wave 20). The character in the fight always levels fastest.
 - **KOs last.** A teammate who goes down stays down until you beat the zone boss. From wave 20 the shop sells an expensive Revive.
@@ -42,7 +44,7 @@ Press **H** (or the **?** button) in game for the full rules.
 | Z / Enter / Space | Confirm |
 | X / Esc | Back |
 | C | Your stats / move info |
-| I | Character kits: passive, moves and ultimate (arrows switch teammates) |
+| I | Character kits: passive, moves and ultimate (arrows switch teammates), also while picking a reward |
 | V | Field: zone effect, stat stages, type matchup |
 | H | How to play |
 | M | Pause menu: settings, how to play, save & quit |

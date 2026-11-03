@@ -22,6 +22,9 @@
 - [x] Auto-save after every wave, Save & Quit in the pause menu and Continue on the title screen
 - [x] Reward revamp: five rarity tiers, buffs, level-ups, Move Chip, PokéRogue-style money curve (see [docs/design/rewards.md](docs/design/rewards.md))
 - [x] Balance pass: faster Sonic, stronger Knuckles (Fired Up), free items (1 per fight), heals for any teammate, flat-or-percent heals, better boss rewards
+- [x] Boss recovery: 50% patch-up after zone bosses, full heal and 3+ Boost after waves 20/40/60/80
+- [x] Random zone order per run (fixed start, shuffled early/mid/late groups)
+- [x] Sonic-style battle HUD: RINGS counter, bag and buff icons on screen with hover info, Boost in the party menu and during rewards
 - [x] Unit tests, end-to-end tests and automatic deploys
 
 ## Next
@@ -32,9 +35,10 @@
 - [ ] More badniks from Sonic Advance 1, 2 and 3, with unique enemies per zone
 - [ ] Minibosses and a unique boss per zone
 - [ ] Status effects and moves that deal % HP damage
-- [ ] Choose who gets a healing item
 - [ ] Short dialogue before and after rival fights
 
+- [ ] EXP changes: EXP from Chaos Emeralds, an EXP reward and level caps
+- [ ] Categorized How to Play and an interactive tutorial
 - [ ] Balance pass after the reward revamp: price growth and enemy damage
 
 ## Later

@@ -36,7 +36,7 @@ export interface ZoneDef {
   effect?: ZoneEffect;
 }
 
-/** Volgorde: Advance 3 en Advance 2 wisselen elkaar af, Sky Canyon als finale. */
+/** Alle zones in hun vaste volgorde (oude saves zonder `zoneOrder` gebruiken die nog). */
 export const ZONES: ZoneDef[] = [
   { id: 'route99', name: 'Route 99', backdrop: 'route99', enemies: ['beetle', 'sharkjet', 'octo'], boss: 'turtle' },
   { id: 'leafforest', name: 'Leaf Forest', backdrop: 'leafforest', enemies: ['frog', 'bee', 'beetle'], boss: 'turtle' },
@@ -51,12 +51,44 @@ export const ZONES: ZoneDef[] = [
 
 export const EMERALDS = ['red', 'blue', 'yellow', 'green', 'white', 'cyan', 'purple'] as const;
 
-export function zoneForWave(wave: number): ZoneDef {
-  return ZONES[Math.floor((wave - 1) / WAVES_PER_ZONE) % ZONES.length];
+/**
+ * Zone-volgorde per run: Route 99 en Leaf Forest staan altijd vooraan, daarna wordt er geschud
+ * binnen drie poules, zodat een zware zone (Sky Canyon) nooit als tweede komt.
+ */
+export const ZONE_START = ['route99', 'leafforest'];
+export const ZONE_POOLS = [
+  ['sunset', 'hotcrater', 'toy'],      // vroeg
+  ['musicplant', 'twinkle'],           // midden
+  ['iceparadise', 'skycanyon'],        // laat
+];
+export const DEFAULT_ZONE_ORDER = ZONES.map(z => z.id);
+
+export function rollZoneOrder(rng: () => number = Math.random): string[] {
+  const shuffle = (a: string[]) => {
+    const out = [...a];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  };
+  return [...ZONE_START, ...ZONE_POOLS.flatMap(shuffle)];
+}
+
+/** Zone van een wave. `order` = de volgorde van deze run (zie rollZoneOrder). */
+export function zoneForWave(wave: number, order: string[] = DEFAULT_ZONE_ORDER): ZoneDef {
+  const id = order[Math.floor((wave - 1) / WAVES_PER_ZONE) % order.length];
+  return ZONES.find(z => z.id === id) ?? ZONES[0];
 }
 export function waveInZone(wave: number) { return ((wave - 1) % WAVES_PER_ZONE) + 1; }
 export function isBossWave(wave: number) { return waveInZone(wave) === WAVES_PER_ZONE; }
 export function isEliteWave(wave: number) { return waveInZone(wave) === Math.ceil(WAVES_PER_ZONE / 2); }
+/** Elke tweede boss (wave 20, 40, 60, 80) is een main boss: daarna is het hele team weer fit. */
+export function isMainBossWave(wave: number) { return isBossWave(wave) && wave % (WAVES_PER_ZONE * 2) === 0; }
+/** Na een zone-boss (wave 10, 30, 50, 70) gaat iedereen onder deze HP er naartoe. */
+export const ZONE_BOSS_HEAL = 0.5;
+/** Na een main boss staat iedereen op minstens zoveel Boost. */
+export const MAIN_BOSS_BOOST = 3;
 
 /**
  * Rivals kunnen opduiken op wave 15, 25, 35, 45, 55 (en daarna elke wave die op 5 eindigt),

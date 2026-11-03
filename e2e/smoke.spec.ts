@@ -214,6 +214,33 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').party[1].hp)).toBeGreaterThan(0);
   });
 
+  test('zone boss patches the team up to 50%; a main boss (wave 20) heals everyone fully with 3+ Boost', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    const team = () => page.evaluate(() => (window as any).game.scene.getScene('Battle').party.map((f: any) => ({ hp: f.hp, max: f.maxHp, boost: f.boost })));
+    await setup(page, 's.party[1].hp = 1; s.wave = 10; s.enemy.hp = 1;');
+    await press(page, 'z', 'ArrowRight', 'z');
+    await waitForMenu(page, 'reward');
+    let t = await team();
+    expect(t[1].hp).toBe(Math.ceil(t[1].max / 2));
+    // party view during rewards: I opens the team screen
+    await press(page, 'i');
+    await expect.poll(() => activeScenes(page)).toContain('Team');
+    await press(page, 'x');
+    await expect.poll(() => activeScenes(page)).not.toContain('Team');
+    await fixReward(page);
+    await press(page, 'z');
+    await waitForMenu(page, 'choice');          // "Will you switch characters?"
+    await press(page, 'ArrowDown', 'z');        // No
+    await waitForMenu(page, 'command');
+    await setup(page, 's.party[1].hp = 0; s.party[0].boost = 2; s.wave = 20; s.enemy.hp = 1;');
+    await press(page, 'z', 'ArrowRight', 'z');
+    await waitForMenu(page, 'reward');
+    t = await team();
+    expect(t.map(f => f.hp)).toEqual(t.map(f => f.max));
+    expect(t.every(f => f.boost >= 3)).toBe(true);
+  });
+
   test('a Revive from the bag brings a KO teammate back', async ({ page }) => {
     await openGame(page);
     await startRun(page);

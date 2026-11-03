@@ -38,6 +38,7 @@ const GIF_IDLES: Array<[string, unknown, { key: string; texture: string; frames:
 ];
 import { EMERALDS } from '../data/zones';
 import { preloadSounds } from '../audio';
+import { addDigitFrames } from './hud';
 
 // alle losse plaatjes uit assets/bg en assets/menu (key = bestandsnaam zonder .png)
 const BG_IMAGES = {
@@ -120,6 +121,8 @@ export class BootScene extends Phaser.Scene {
         frameRate: 12, repeat: -1, repeatDelay: 1600,
       });
     }
+    // blauw cijferfont voor de HUD (ring-teller)
+    addDigitFrames(this);
     // rings, glinsters en monitor-rook
     const strip = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => ({ key: 'ui', frame: `${prefix}_${i}` }));
     this.anims.create({ key: 'ring_spin', frames: strip('ring', 4), frameRate: 10, repeat: -1 });

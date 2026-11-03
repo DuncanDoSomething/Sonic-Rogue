@@ -23,6 +23,8 @@ export interface RunSave {
   fieldCleared?: boolean;
   /** tijdelijke effecten van rewards (Shield, Magnet, ...) */
   buffs?: Partial<RunBuffs>;
+  /** zone-ids in de volgorde van deze run (oude saves: de vaste volgorde) */
+  zoneOrder?: string[];
   /** index in `party` van wie er vecht */
   active: number;
   party: SavedFighter[];
