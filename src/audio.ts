@@ -32,7 +32,7 @@ export type MusicKey = keyof typeof MUSIC;
 export const SFX_FILES = [
   'back', 'bigexplosion', 'bosshit', 'confirm', 'confirm2', 'cursormove', 'enemyhit', 'errorclick',
   'explosion', 'explosion2', 'heal1', 'hurtrings', 'jump', 'levelup', 'monitorbreak', 'ringchime',
-  'ringcollect', 'spindash',
+  'ringcollect', 'spindash', 'statup', 'statdown',
 ] as const;
 export type SfxKey = typeof SFX_FILES[number];
 

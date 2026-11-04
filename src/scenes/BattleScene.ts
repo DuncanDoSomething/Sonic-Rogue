@@ -1531,6 +1531,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     }
     if (move.spendStages && Object.values(att.stages).some(v => v !== 0)) {
       att.stages = { atk: 0, def: 0, spd: 0, acc: 0 };
+      this.statArrows(isPlayer ? this.hero : this.foe, false);
       await this.say(`${att.name} burned up all his stat changes!`, 400);
     }
     if (move.recoil && !att.fainted) {
@@ -1568,7 +1569,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       }
       // moves die je eigen stats verhogen (Homing Attack: SPD +1)
       for (const [k, v] of Object.entries(move.selfStages ?? {})) {
-        if (!att.fainted) await this.say(att.raise(k as StageKey, v), 300);
+        if (!att.fainted) await this.changeStage(att, k as StageKey, v);
       }
       if (guard) await this.say(guard, 350);
       if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (Iron Fists)`, 500);
@@ -2047,7 +2048,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async finishWin(c: { x: number; y: number }) {
     // Sonic Speed: na elke KO SPD +1
     if (this.player.def.passive?.id === 'speedster' && !this.player.fainted) {
-      await this.say(`Sonic Speed! ${this.player.raise('spd')}`, 300);
+      await this.changeStage(this.player, 'spd', 1, 'Sonic Speed! ');
     }
     const kind = isBossWave(this.wave) ? 'boss' : this.elite ? 'elite' : 'normal';
     // Eggman Alarm gehaald: de rewards hierna zijn minstens uncommon
@@ -2138,6 +2139,45 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (low.includes(this.player) || down.includes(this.player)) await this.setBox(this.pBox, this.player, true);
     if (down.length) await this.say(`${names(down)} got back up with ${Math.round(BOSS_REVIVE_HP * 100)}% HP!`, 500);
     if (low.length) await this.say(`${names(low)} ${low.length > 1 ? 'were' : 'was'} patched up to ${Math.round(ZONE_BOSS_HEAL * 100)}% HP!`, 500);
+  }
+
+  /** Stat stage veranderen, met pijltjes en een geluidje als hij echt verandert (net als in Pokémon). */
+  private async changeStage(f: Fighter, k: StageKey, by: number, prefix = '') {
+    const before = f.stages[k];
+    const text = f.raise(k, by);
+    const after = f.stages[k];
+    if (after !== before) this.statArrows(f === this.player ? this.hero : this.foe, after > before);
+    await this.say(prefix + text, 300);
+  }
+
+  /**
+   * Pijltjes over een character: goud en omhoog als een stat stijgt, blauw en omlaag als hij daalt.
+   * Golfjes van vijf pijltjes die opkomen en vervagen.
+   */
+  private statArrows(spr: Phaser.GameObjects.Sprite, up: boolean) {
+    audio.sfx(up ? 'statup' : 'statdown', { volume: 0.6 });
+    const body = this.bodyHeight(spr);
+    const color = up ? 0xffbe3c : 0x5a8cff;
+    const offsets = [-16, 0, 16, -8, 8];
+    for (let wave = 0; wave < 2; wave++) {
+      offsets.forEach((ox, i) => {
+        const g = this.add.graphics().setDepth(19);
+        // pijl van 12x11 met de donkerpaarse rand van de HUD
+        const pts = up
+          ? [0, 0, 6, 6, 3, 6, 3, 11, -3, 11, -3, 6, -6, 6]
+          : [0, 11, 6, 5, 3, 5, 3, 0, -3, 0, -3, 5, -6, 5];
+        const poly: Phaser.Math.Vector2[] = [];
+        for (let j = 0; j < pts.length; j += 2) poly.push(new Phaser.Math.Vector2(pts[j], pts[j + 1]));
+        g.fillStyle(color).fillPoints(poly, true);
+        g.lineStyle(1, HUD.outline).strokePoints(poly, true);
+        // omhoog: van de voeten tot boven het hoofd; omlaag: vanaf net boven het hoofd tot het middel
+        const y0 = up ? spr.y - 14 : spr.y - body - 6;
+        const y1 = up ? spr.y - body - 14 : spr.y - body * 0.35;
+        g.setPosition(spr.x + ox, y0 + (up ? 1 : -1) * (i % 3) * 5).setAlpha(0);
+        this.tweens.add({ targets: g, y: y1, duration: 520, delay: wave * 260 + i * 60, ease: 'Sine.easeOut' });
+        this.tweens.add({ targets: g, alpha: { from: 1, to: 0 }, duration: 520, delay: wave * 260 + i * 60, ease: 'Quad.easeIn', onComplete: () => g.destroy() });
+      });
+    }
   }
 
   /** Rings springen uit de kapotte badnik en vliegen naar de teller rechtsboven. */
