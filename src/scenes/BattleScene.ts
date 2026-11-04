@@ -18,7 +18,7 @@ import { audio, MusicKey } from '../audio';
 import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
 import { TEST_KEYS, TEST_MODE } from '../data/testMode';
 import { TutorialCoach, tailsTip, type TutorialHost } from './tutorial';
-import { TIPS, markTip, tipDue, type TipId } from '../data/tips';
+import { SERIOUS_TIPS, TIPS, markTip, tipDue, type TipId } from '../data/tips';
 
 const W = 480;
 const H = 270;
@@ -2962,7 +2962,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async tip(id: TipId) {
     if (this.tutorialMode || !tipDue(id)) return;
     markTip(id);
-    const t = tailsTip(this, TIPS[id]);
+    const t = tailsTip(this, TIPS[id], SERIOUS_TIPS.includes(id));
     this.tipBox = t;
     await t.done;
     this.tipBox = undefined;

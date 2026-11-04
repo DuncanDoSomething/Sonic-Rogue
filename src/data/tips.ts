@@ -17,6 +17,8 @@ export const TIPS = {
   shop: 'Pick one free reward. Up top is the shop: rings buy hearts for your bag. Hover the bag to see what is inside.',
 } as const;
 export type TipId = keyof typeof TIPS;
+/** tips waarbij Tails serieus kijkt (gevaar), de rest is blij */
+export const SERIOUS_TIPS: TipId[] = ['zone', 'rival', 'boss', 'ko'];
 
 let seen: Set<string> | null = null;
 function load(): Set<string> {
