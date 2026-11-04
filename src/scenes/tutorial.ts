@@ -13,8 +13,6 @@ const FONT = '"Press Start 2P", monospace';
 
 export interface TutorialStep {
   text: string;
-  /** Tails: 0 = wijzen, 1 = praten, 2 = juichen */
-  face?: 0 | 1 | 2;
   /** wat er uitgelicht wordt (BattleScene.tutRect) */
   focus?: string;
   /** pas tonen als dit gebeurt (bijv. 'command' = je bent weer aan de beurt) */
@@ -28,21 +26,21 @@ export interface TutorialStep {
 }
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
-  { showOn: 'command', face: 1, text: "Hey Sonic! Let's practice before the real thing. I'll walk you through a fight." },
-  { focus: 'pBox', face: 0, text: 'This is you: your HP, and below it the Boost meter. Boost powers your strongest moves.' },
-  { focus: 'eBox', face: 0, text: "That's the foe. Bring its HP down to zero to win the wave." },
-  { focus: 'move:spinAttack', face: 0, text: "Pick FIGHT, then Spin Attack. It's free and gives you +1 Boost!", allow: ['cmd:0', 'move:spinAttack'], waitFor: 'move:spinAttack' },
-  { showOn: 'command', focus: 'pBox', face: 2, text: 'Nice! Your Boost went up. Getting hit gives +1 Boost too.' },
-  { focus: 'move:homingAttack', face: 0, text: 'Now Homing Attack. It costs 1 Boost, never misses and always goes first.', allow: ['cmd:0', 'move:homingAttack'], waitFor: 'move:homingAttack' },
-  { showOn: 'command', prep: 'hurt', focus: 'bag', face: 1, text: "You took some hits. Your bag is up here: hover it to see what's inside." },
-  { focus: 'item:healthRing', face: 0, text: "Open ITEMS and use the heart. Items don't cost your turn, but you get one per fight.", allow: ['cmd:2', 'item:healthRing'], waitFor: 'item' },
-  { showOn: 'command', focus: 'cmd:1', face: 0, text: 'Now switch to me! Open PARTY. Switching costs your turn, so the foe gets a free hit.', allow: ['cmd:1'], waitFor: 'switched' },
-  { showOn: 'command', focus: 'heads', face: 2, text: "I'm in! Your team is shown above your box. Press I anytime to read our moves." },
-  { prep: 'finish', focus: 'move:any', face: 0, text: "Let's finish this: pick FIGHT and any attack!", allow: ['cmd:0', 'move:*'], waitFor: 'win' },
-  { showOn: 'reward', focus: 'cards', face: 2, text: 'We won! After every wave you pick one free reward. The border shows how rare it is.' },
-  { focus: 'shop', face: 1, text: 'Up top is the shop: spend rings on hearts for your bag, or reroll the rewards.' },
-  { focus: 'team', face: 1, text: 'Down here you see the HP and Boost of the whole team.' },
-  { focus: 'cards', face: 0, text: 'Pick a reward to finish the practice!', allow: ['reward:*'], waitFor: 'reward-picked' },
+  { showOn: 'command', text: "Hey Sonic! Let's practice before the real thing. I'll walk you through a fight." },
+  { focus: 'pBox', text: 'This is you: your HP, and below it the Boost meter. Boost powers your strongest moves.' },
+  { focus: 'eBox', text: "That's the foe. Bring its HP down to zero to win the wave." },
+  { focus: 'move:spinAttack', text: "Pick FIGHT, then Spin Attack. It's free and gives you +1 Boost!", allow: ['cmd:0', 'move:spinAttack'], waitFor: 'move:spinAttack' },
+  { showOn: 'command', focus: 'pBox', text: 'Nice! Your Boost went up. Getting hit gives +1 Boost too.' },
+  { focus: 'move:homingAttack', text: 'Now Homing Attack. It costs 1 Boost, never misses and always goes first.', allow: ['cmd:0', 'move:homingAttack'], waitFor: 'move:homingAttack' },
+  { showOn: 'command', prep: 'hurt', focus: 'bag', text: "You took some hits. Your bag is up here: hover it to see what's inside." },
+  { focus: 'item:healthRing', text: "Open ITEMS and use the heart. Items don't cost your turn, but you get one per fight.", allow: ['cmd:2', 'item:healthRing'], waitFor: 'item' },
+  { showOn: 'command', focus: 'cmd:1', text: 'Now switch to me! Open PARTY. Switching costs your turn, so the foe gets a free hit.', allow: ['cmd:1'], waitFor: 'switched' },
+  { showOn: 'command', focus: 'heads', text: "I'm in! Your team is shown above your box. Press I anytime to read our moves." },
+  { prep: 'finish', focus: 'move:any', text: "Let's finish this: pick FIGHT and any attack!", allow: ['cmd:0', 'move:*'], waitFor: 'win' },
+  { showOn: 'reward', focus: 'cards', text: 'We won! After every wave you pick one free reward. The border shows how rare it is.' },
+  { focus: 'shop', text: 'Up top is the shop: spend rings on hearts for your bag, or reroll the rewards.' },
+  { focus: 'team', text: 'Down here you see the HP and Boost of the whole team.' },
+  { focus: 'cards', text: 'Pick a reward to finish the practice!', allow: ['reward:*'], waitFor: 'reward-picked' },
 ];
 
 export interface TutorialHost {
@@ -121,7 +119,7 @@ export class TutorialCoach {
     if (s.prep) this.host.tutPrep(s.prep);
     this.lastRect = '';
     this.update();
-    this.drawBubble(s.text, s.face ?? 1, !s.waitFor);
+    this.drawBubble(s.text, !s.waitFor);
     if (!s.waitFor) this.blocker.setInteractive(); else this.blocker.disableInteractive();
   }
 
@@ -163,7 +161,7 @@ export class TutorialCoach {
   }
 
   /** Tekstballon met Tails links ernaast; bij praat-stappen een knipperende "Z". */
-  private drawBubble(text: string, face: number, talk: boolean) {
+  private drawBubble(text: string, talk: boolean) {
     this.bubble?.destroy();
     const bw = 300, x = 150;
     const c = this.scene.add.container(x, this.bubbleY(this.step?.focus ? this.host.tutRect(this.step.focus) : undefined)).setDepth(61);
@@ -172,7 +170,7 @@ export class TutorialCoach {
     const g = sonicPanel(this.scene.add.graphics(), 0, 0, bw, bh, 'cream');
     // puntje naar Tails
     g.fillStyle(HUD.outline).fillTriangle(-6, bh / 2, 1, bh / 2 - 6, 1, bh / 2 + 6);
-    const tails = this.scene.add.image(-8, bh, `guide_tails_${face}`).setOrigin(1, 1);
+    const tails = this.scene.add.image(-8, bh, 'guide_tails').setOrigin(1, 1);
     c.add([g, t, tails]);
     if (talk) {
       const z = this.scene.add.text(bw - 10, bh - 6, 'Z', { fontFamily: FONT, fontSize: '8px', color: HUD.ink }).setOrigin(1, 1);
@@ -185,11 +183,11 @@ export class TutorialCoach {
   }
 
   /** Slotwoord (zonder te wachten): de keuze erna doet BattleScene. */
-  say(text: string, face: 0 | 1 | 2 = 2) {
+  say(text: string) {
     this.index = this.steps.length;
     this.hide();
     this.shown = false;
-    this.drawBubble(text, face, false);
+    this.drawBubble(text, false);
     if (this.bubble) this.bubble.y = 40;
   }
 
@@ -204,7 +202,7 @@ export class TutorialCoach {
  * Losse tip van Tails (de eerste keer dat iets gebeurt): ballon bovenin, Z of klik sluit hem.
  * `done` is klaar als hij dicht is.
  */
-export function tailsTip(scene: Phaser.Scene, text: string, face: 0 | 1 | 2 = 1) {
+export function tailsTip(scene: Phaser.Scene, text: string) {
   const bw = 300, x = 150;
   const blocker = scene.add.zone(0, 0, W, H).setOrigin(0).setDepth(59).setInteractive();
   const c = scene.add.container(x, 66).setDepth(61);
@@ -215,7 +213,7 @@ export function tailsTip(scene: Phaser.Scene, text: string, face: 0 | 1 | 2 = 1)
   const tag = scene.add.text(12, -4, 'TIP', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', stroke: '#281060', strokeThickness: 3 });
   const z = scene.add.text(bw - 10, bh - 6, 'Z', { fontFamily: FONT, fontSize: '8px', color: HUD.ink }).setOrigin(1, 1);
   scene.tweens.add({ targets: z, alpha: 0.2, duration: 400, yoyo: true, repeat: -1 });
-  c.add([g, t, tag, z, scene.add.image(-8, bh, `guide_tails_${face}`).setOrigin(1, 1)]);
+  c.add([g, t, tag, z, scene.add.image(-8, bh, 'guide_tails').setOrigin(1, 1)]);
   c.setScale(0.9).setAlpha(0);
   scene.tweens.add({ targets: c, alpha: 1, scale: 1, duration: 160, ease: 'Back.easeOut' });
   audio.sfx('confirm');

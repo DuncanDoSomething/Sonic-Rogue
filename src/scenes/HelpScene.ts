@@ -5,6 +5,7 @@ import { EFFECTS, FIRST_RIVAL_WAVE, MAIN_BOSS_BOOST, RIVAL_CHANCE, ZONE_BOSS_HEA
 import { BAG_SIZE, ITEMS, ITEMS_PER_FIGHT } from '../data/items';
 import { TIER_COLOR, TIER_NAME, TIERS } from '../data/rewards';
 import { HUD, sonicPanel } from './hud';
+import { richLine } from './richText';
 
 const W = 480;
 const H = 270;
@@ -410,7 +411,7 @@ export class HelpScene extends Phaser.Scene {
     };
     if (this.isTutorial) {
       // Tails stelt zich voor
-      this.layer.add(this.add.image(x0 + 4, y0 + 22, 'guide_tails_0').setOrigin(0, 0));
+      this.layer.add(this.add.image(x0 + 4, y0 + 22, 'guide_tails').setOrigin(0, 0));
       txt(x0, y0, 'PRACTICE WITH TAILS', HUD.label);
       wrap('Hey! I\'m Tails. Let\'s practice a fight together: attacking, Boost, items, switching and rewards. It takes about two minutes and nothing is saved.', 26)
         .forEach((l, i) => txt(x0 + 74, y0 + 22 + i * 13, l));
@@ -436,7 +437,8 @@ export class HelpScene extends Phaser.Scene {
       prev.on('pointerdown', () => this.turn(-1));
     }
     const step = Math.min(14, Math.floor(184 / Math.max(1, p.lines.length)));
-    p.lines.forEach((line, i) => txt(x0, y0 + 20 + i * step, line));
+    // getallen, stats en effecten in kleur, zodat het geen muur van tekst is
+    p.lines.forEach((line, i) => richLine(this, x0, y0 + 20 + i * step, line, '#ffffff', this.layer));
     for (const ic of p.icons ?? []) {
       const y = y0 + 24 + ic.row * step;
       if (ic.color !== undefined) {

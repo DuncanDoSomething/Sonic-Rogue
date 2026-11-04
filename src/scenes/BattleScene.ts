@@ -13,6 +13,7 @@ import { BOSS_TIER_ODDS, HAMMER_CRIT, MAGNET_BONUS, REWARDS, SHIELD_FACTOR, TIER
 import { battleTimeScale, charDelay, holdFactor, settings } from '../data/settings';
 import { addHelpButton, addMenuButton } from './ui';
 import { HUD, RingCounter, checkerBand, sonicPanel, tooltip } from './hud';
+import { richText } from './richText';
 import { audio, MusicKey } from '../audio';
 import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
 import { TEST_KEYS, TEST_MODE } from '../data/testMode';
@@ -185,7 +186,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private infoLayer!: Phaser.GameObjects.Container;
   private infoBg!: Phaser.GameObjects.Graphics;
   private infoTitle!: Phaser.GameObjects.Text;
-  private infoBody!: Phaser.GameObjects.Text;
+  /** uitleg van de move, in kleur (zie richText) */
+  private infoBody!: Phaser.GameObjects.Container;
 
   constructor() { super('Battle'); }
 
@@ -621,7 +623,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // het vak groeit mee met de tekst (zie updateMoveInfo)
     this.infoBg = this.add.graphics();
     this.infoTitle = this.add.text(18, PANEL_Y - 66, '', { fontFamily: FONT, fontSize: '8px', color: '#f2c230' });
-    this.infoBody = this.add.text(18, PANEL_Y - 50, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', lineSpacing: 5, wordWrap: { width: 322 } });
+    this.infoBody = this.add.container(18, PANEL_Y - 50);
     this.infoLayer.add([this.infoBg, this.infoTitle, this.infoBody]);
 
     // Stats-paneel (C in het hoofdmenu, of tik op je HP-box)
@@ -731,9 +733,12 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const stats = m.teamHeal ? `Heals the team ${Math.round(m.teamHeal * 100)}% HP${cost}`
       : m.heal ? `Heals ${Math.round(m.heal * 100)}% HP${cost}`
       : `Power ${movePower(m, this.player, this.enemy)}   Acc ${m.accuracy}%${m.priority > 0 ? '   First' : ''}${cost}`;
-    this.infoBody.setText(`${stats}\n${m.desc}`);
+    // getallen goud, stats cyaan, wat de move doet groen, nadelen oranje
+    this.infoBody.removeAll(true);
+    const lineH = 13;
+    const lines = richText(this, 0, 0, `${stats}\n${m.desc}`, 40, lineH, '#ffffff', this.infoBody);
     // vak net zo hoog als de tekst nodig heeft; de onderkant blijft boven het menu staan
-    const w = 342, h = 30 + this.infoBody.height, x = 8, y = PANEL_Y - 4 - h;
+    const w = 342, h = 30 + lines * lineH - 5, x = 8, y = PANEL_Y - 4 - h;
     this.infoBg.clear();
     sonicPanel(this.infoBg, x, y, w, h, 'blue', 0.97);
     this.infoTitle.setPosition(x + 10, y + 8);
@@ -2214,7 +2219,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   }
 
   /** Keuze-lijstje rechts boven het tekstvak. Geeft de gekozen index terug, of -1 bij X (als dat mag). */
-  private choose(title: string, rows: ChoiceRow[], cancel: boolean): Promise<number> {
+  private choose(title: string, rows: ChoiceRow[], cancel: boolean, center = false): Promise<number> {
     this.endChoice();
     this.cmdLayer.setVisible(false);
     this.fightLayer.setVisible(false);
@@ -2225,8 +2230,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.choiceCancel = cancel;
     const rowH = rows.some(r => r.head) ? 20 : 15;
     const boost = rows.some(r => r.boost !== undefined);
-    const w = boost ? 262 : rows.some(r => r.head) ? 210 : 90, h = rows.length * rowH + 12;
-    const x = W - w - 8, y = PANEL_Y - h - 4;
+    // breed genoeg voor de langste regel (8 px per letter + cursor en rand)
+    const longest = Math.max(...rows.map(r => r.label.length)) * 8 + 32;
+    const w = boost ? 262 : rows.some(r => r.head) ? 210 : Math.max(90, longest), h = rows.length * rowH + 12;
+    // `center`: midden in beeld (einde van de tutorial), anders rechts boven het tekstvak
+    const x = center ? Math.round((W - w) / 2) : W - w - 8, y = center ? Math.round((PANEL_Y - h) / 2) + 24 : PANEL_Y - h - 4;
     const c = this.add.container(0, 0).setDepth(46);
     const g = this.add.graphics();
     sonicPanel(g, x, y, w, h, 'blue', 0.97);
@@ -2914,7 +2922,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async tip(id: TipId) {
     if (this.tutorialMode || !tipDue(id)) return;
     markTip(id);
-    const t = tailsTip(this, TIPS[id], id === 'boss' || id === 'rival' ? 0 : 1);
+    const t = tailsTip(this, TIPS[id]);
     this.tipBox = t;
     await t.done;
     this.tipBox = undefined;
@@ -2923,9 +2931,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   /** Slot van de tutorial: Tails zegt gedag, dan een echte run starten of terug naar het titelscherm. */
   private async finishTutorial() {
     audio.sfx('confirm2');
-    this.tut?.say("That's it, you're ready for a real run! Good luck out there, Sonic!", 2);
+    this.tut?.say("That's it, you're ready for a real run! Good luck out there, Sonic!");
     markTip('shop'); // de shop heb je nu al gezien
-    const pick = await this.choose('Practice complete!', [{ label: 'Start a run' }, { label: 'Back to title' }], false);
+    const pick = await this.choose('Practice complete!', [{ label: 'Start a run' }, { label: 'Back to title' }], false, true);
     this.tut?.destroy();
     this.tut = undefined;
     this.menu = 'busy';

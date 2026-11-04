@@ -4,6 +4,7 @@
 // ---------------------------------------------------------------------------
 import Phaser from 'phaser';
 import { sonicPanel } from './hud';
+import { richLine } from './richText';
 import { FIGHTERS, Fighter, MAX_BOOST, MOVES, SPEED_POWER, ULTIMATE_LEVEL, type MoveDef } from '../data/fighters';
 
 const W = 480;
@@ -95,7 +96,7 @@ export function buildCharacterInfo(scene: Phaser.Scene, id: string, o: InfoOptio
   if (def.passive) {
     txt(x, y, `PASSIVE  ${def.passive.name}`, '#7cf07c');
     y += 11;
-    for (const line of wrap(def.passive.desc, 54)) { txt(x, y, line, '#cfd6ee'); y += 10; }
+    for (const line of wrap(def.passive.desc, 54)) { richLine(scene, x, y, line, '#cfd6ee', c); y += 10; }
     y += 5;
   }
   const moves = [...def.moves, ...(def.ultimate ? [def.ultimate] : [])];
@@ -107,7 +108,11 @@ export function buildCharacterInfo(scene: Phaser.Scene, id: string, o: InfoOptio
     right(bx + bw - 14, y, `${powerLabel(m)}  ${costLabel(m)}${ult ? `  Lv.${ULTIMATE_LEVEL}` : ''}`, learned ? '#9aa4c4' : '#5a6070');
     y += 11;
     const desc = m.desc.replace(/ Uses all Boost\.$/, '');
-    for (const line of wrap(desc, 54)) { txt(x, y, line, learned ? '#cfd6ee' : '#6b7493'); y += 10; }
+    // nog niet geleerd: grijs zonder kleuren; anders getallen, stats en effecten in kleur
+    for (const line of wrap(desc, 54)) {
+      if (learned) richLine(scene, x, y, line, '#cfd6ee', c); else txt(x, y, line, '#6b7493');
+      y += 10;
+    }
     y += 4;
   }
   txt(x, by + bh - 16, o.footer, '#9aa4c4');
