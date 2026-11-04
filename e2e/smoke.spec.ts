@@ -87,6 +87,16 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect((await battle(page)).cursorMove).toBe('lightSpeed');
   });
 
+  test('regression: Light Speed Attack really gives Sonic SPD +3', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.player.level = 30; s.player.boost = 6; s.enemy.hp = 9999;');
+    await press(page, 'z', 'ArrowRight', 'ArrowDown', 'z');
+    await waitForMenu(page, 'command');
+    const spd = await page.evaluate(() => (window as any).game.scene.getScene('Battle').player.stages.spd);
+    expect(spd).toBe(3);
+  });
+
   test('auto-save: after a reload you can continue from the same wave with the same team', async ({ page }) => {
     await openGame(page);
     await startRun(page);

@@ -1552,7 +1552,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       att.evade = move.evade;
       await this.say(`${att.name} is moving too fast to be hit!`, 400);
     }
-    else {
+    // geraakt: crit/effectiviteit, en daarna de bijeffecten van de move (dit hing per ongeluk aan de
+    // evade-check hierboven, waardoor Light Speed zijn SPD +3 nooit gaf)
+    if (!hit.missed) {
       if (hit.crit) await this.say('A critical hit!', 350);
       if (hit.effect > 1) await this.say("It's super effective!", 350);
       else if (hit.effect < 1) await this.say("It's not very effective...", 350);
