@@ -53,18 +53,19 @@ export const EMERALDS = ['red', 'blue', 'yellow', 'green', 'white', 'cyan', 'pur
 
 /**
  * Zone-volgorde per run: Route 99 en Leaf Forest staan altijd vooraan, daarna wordt er geschud
- * binnen drie poules, zodat een zware zone (Sky Canyon) nooit als tweede komt.
+ * binnen poules, zodat de zware zones aan het eind blijven. Een blok (array) blijft bij elkaar:
+ * Music Plant en Toy Kingdom komen altijd direct na elkaar (in willekeurige volgorde).
  */
 export const ZONE_START = ['route99', 'leafforest'];
-export const ZONE_POOLS = [
-  ['sunset', 'hotcrater', 'toy'],      // vroeg
-  ['musicplant', 'twinkle'],           // midden
-  ['iceparadise', 'skycanyon'],        // laat
+export const ZONE_POOLS: Array<Array<string | string[]>> = [
+  ['sunset', ['musicplant', 'toy']],   // midden
+  ['twinkle', 'iceparadise'],          // midden-laat
+  ['hotcrater', 'skycanyon'],          // eind
 ];
 export const DEFAULT_ZONE_ORDER = ZONES.map(z => z.id);
 
 export function rollZoneOrder(rng: () => number = Math.random): string[] {
-  const shuffle = (a: string[]) => {
+  const shuffle = <T>(a: T[]) => {
     const out = [...a];
     for (let i = out.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));
@@ -72,7 +73,7 @@ export function rollZoneOrder(rng: () => number = Math.random): string[] {
     }
     return out;
   };
-  return [...ZONE_START, ...ZONE_POOLS.flatMap(shuffle)];
+  return [...ZONE_START, ...ZONE_POOLS.flatMap(pool => shuffle(pool).flatMap(u => (Array.isArray(u) ? shuffle(u) : [u])))];
 }
 
 /** Zone van een wave. `order` = de volgorde van deze run (zie rollZoneOrder). */

@@ -3,6 +3,7 @@
 // paarse rand met een cyaan lijntje, blauwe of crème vulling en goud geblokte banden.
 // ---------------------------------------------------------------------------
 import Phaser from 'phaser';
+import { formatRings } from '../data/items';
 
 export const HUD = {
   outline: 0x381078,
@@ -96,7 +97,7 @@ export class RingCounter {
       this.scene.tweens.add({ targets: this.digits, y: RingCounter.DIGITS_Y - 2, duration: 60, yoyo: true });
     }
     this.value = n;
-    this.digits.setText(`${n}`);
+    this.digits.setText(formatRings(n));
     return this;
   }
 }

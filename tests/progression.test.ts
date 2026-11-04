@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BAG_SIZE, ITEMS, bagCount, baseValue, priceAt, rerollCost, shopStock, waveRings } from '../src/data/items';
+import { BAG_SIZE, ITEMS, bagCount, baseValue, formatRings, priceAt, rerollCost, shopStock, waveRings } from '../src/data/items';
 import { Fighter } from '../src/data/fighters';
 import { ZONE_POOLS, canHaveRival, isBossWave, isMainBossWave, rollZoneOrder, zoneForWave, ZONES } from '../src/data/zones';
 import { isUnlocked } from '../src/data/unlocks';
@@ -48,6 +48,13 @@ describe('shop', () => {
   });
 });
 
+describe('ring-teller', () => {
+  it('grote aantallen worden kort (max 4 tekens) en naar beneden afgerond', () => {
+    expect([0, 595, 9999, 10000, 14000, 999999, 1000000, 1590000, 45600000, 3190000000].map(formatRings))
+      .toEqual(['0', '595', '9999', '10K', '14K', '999K', '1M', '1.5M', '45M', '3.1B']);
+  });
+});
+
 describe('zones en rivals', () => {
   it('wave 10 is een boss, wave 11 een nieuwe zone', () => {
     expect(isBossWave(10)).toBe(true);
@@ -65,12 +72,15 @@ describe('zones en rivals', () => {
       const order = rollZoneOrder(rng);
       expect(order.slice(0, 2)).toEqual(['route99', 'leafforest']);
       expect([...order].sort()).toEqual(ZONES.map(z => z.id).sort());
-      // elke poule blijft bij elkaar: Sky Canyon nooit als tweede (of derde) zone
+      // elke poule blijft bij elkaar: Sky Canyon en Hot Crater altijd aan het eind
       let at = 2;
       for (const pool of ZONE_POOLS) {
-        expect([...order.slice(at, at + pool.length)].sort()).toEqual([...pool].sort());
-        at += pool.length;
+        const ids = pool.flat();
+        expect([...order.slice(at, at + ids.length)].sort()).toEqual([...ids].sort());
+        at += ids.length;
       }
+      // Music Plant en Toy Kingdom altijd direct na elkaar
+      expect(Math.abs(order.indexOf('musicplant') - order.indexOf('toy'))).toBe(1);
       expect(zoneForWave(21, order).id).toBe(order[2]);
     }
   });

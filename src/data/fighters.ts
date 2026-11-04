@@ -190,8 +190,9 @@ export const FIGHTERS: Record<string, FighterDef> = {
   sonic: {
     type: 'speed', ultimate: 'lightSpeed', passive: PASSIVES.speedster,
     id: 'sonic', name: 'Sonic', atlas: 'sonic', animPrefix: 'sonic', scale: 2,
-    base: { hp: 21, atk: 12, def: 7, spd: 18 },
-    growth: { hp: 2.8, atk: 2.0, def: 1.1, spd: 2.3 },
+    // HP en SPD omgedraaid: Sonic is veruit de snelste, ook als basis-stat
+    base: { hp: 18, atk: 12, def: 7, spd: 21 },
+    growth: { hp: 2.3, atk: 2.0, def: 1.1, spd: 2.8 },
     moves: ['spinAttack', 'homingAttack', 'spinDash'],
     expYield: 20, // alleen als rival
   },

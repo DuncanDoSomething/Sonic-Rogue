@@ -519,6 +519,9 @@ export class BattleScene extends Phaser.Scene {
     this.ringText = new RingCounter(this, W - 24 - RingCounter.W, 17);
     this.ringText.root.setDepth(42);
     this.ringIcon = this.ringText.ring.setDepth(42);
+    // hover: het precieze aantal (de teller kort grote getallen af: 12K, 3.4M)
+    const ringHit = this.add.zone(W - 24 - RingCounter.W, 17, RingCounter.W, RingCounter.H).setOrigin(0).setDepth(43).setInteractive();
+    this.hoverTip(ringHit, W - 24 - RingCounter.W - 120, 17 + RingCounter.H + 2, 'RINGS', () => this.rings.toLocaleString('en-US'));
     // Chaos Emerald-slots: donker tot je ze verdient (1 per zone-boss)
     EMERALDS.forEach((c, i) => {
       const e = this.add.sprite(18 + i * 22, 13, 'emeralds', `emerald_${c}_0`).setDepth(20);

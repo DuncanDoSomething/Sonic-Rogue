@@ -85,3 +85,19 @@ export function rerollCost(wave: number, rerolls: number) {
 export function shopStock(wave: number): ItemDef[] {
   return Object.values(ITEMS).filter(i => wave >= i.minWave).slice(-4).map(i => ({ ...i, price: priceAt(i, wave) }));
 }
+
+/**
+ * Rings kort genoeg voor de teller (max 4 tekens): 9999, 10K, 999K, 1.2M, 45M, 3.1B ...
+ * Altijd naar beneden afgerond, zodat je nooit meer lijkt te hebben dan je hebt.
+ */
+export function formatRings(n: number): string {
+  n = Math.max(0, Math.floor(n));
+  if (n < 10000) return `${n}`;
+  const units: Array<[string, number]> = [['T', 1e12], ['B', 1e9], ['M', 1e6], ['K', 1e3]];
+  for (const [u, v] of units) {
+    if (n < v) continue;
+    const x = n / v;
+    return x < 10 ? `${Math.floor(x * 10) / 10}${u}` : `${Math.floor(x)}${u}`;
+  }
+  return `${n}`;
+}
