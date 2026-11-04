@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { FIGHTERS, Fighter, MAX_PARTY, MOVES } from '../data/fighters';
 import { buildCharacterInfo } from './characterInfo';
 import { addMenuButton } from './ui';
+import { HUD, sonicPanel } from './hud';
 import { audio } from '../audio';
 import { isUnlocked } from '../data/unlocks';
 
@@ -21,7 +22,7 @@ export class CharSelectScene extends Phaser.Scene {
   private ring!: Phaser.GameObjects.Image;
   private art!: Phaser.GameObjects.Image;
   private rows: Phaser.GameObjects.Container[] = [];
-  private arrow!: Phaser.GameObjects.Triangle;
+  private arrow!: Phaser.GameObjects.Sprite;
   private info!: Phaser.GameObjects.Container;
   /** gekozen team, in volgorde (de eerste begint) */
   private picked: string[] = [];
@@ -80,15 +81,17 @@ export class CharSelectScene extends Phaser.Scene {
       c.on('pointerdown', () => { if (!this.leaving) { this.cursor = i; this.confirm(); } });
       this.rows.push(c);
     });
-    this.arrow = this.add.triangle(0, 0, 0, 0, 0, 10, 7, 5, 0xffd23a).setOrigin(0, 0.5);
-    this.tweens.add({ targets: this.arrow, scaleX: 0.6, duration: 300, yoyo: true, repeat: -1 });
+    // cursor: draaiende ring, net als in het gevecht
+    this.arrow = this.add.sprite(0, 0, 'ui', 'ring_0').setOrigin(0, 0.5).setScale(0.75).play('ring_spin');
 
     // info-paneel
     this.info = this.add.container(PANEL_W + 10, 184);
 
     this.add.text(PANEL_W + 10, H - 12, 'Z pick  X undo  I info', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
       .setShadow(1, 1, '#000', 0);
-    this.teamText = this.add.text(PANEL_W + 8, 12, '', { fontFamily: FONT, fontSize: '8px', color: '#ffd23a' }).setShadow(1, 1, '#000', 0);
+    // team-teller in een Chao Garden-pilletje
+    sonicPanel(this.add.graphics(), PANEL_W + 6, 6, 88, 20, 'blue', 0.95);
+    this.teamText = this.add.text(PANEL_W + 50, 16, '', { fontFamily: FONT, fontSize: '8px', color: HUD.label }).setOrigin(0.5);
     addMenuButton(this, W - 12, H - 12, () => this.openSettings());
 
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
@@ -126,9 +129,7 @@ export class CharSelectScene extends Phaser.Scene {
     this.tweens.add({ targets: this.art, scale: 2, duration: 140, ease: 'Back.easeOut' });
 
     this.info.removeAll(true);
-    const g = this.add.graphics();
-    g.fillStyle(0x10131c, 0.9).fillRoundedRect(0, 0, W - PANEL_W - 20, 62, 5);
-    g.lineStyle(1, 0x5a6690).strokeRoundedRect(0.5, 0.5, W - PANEL_W - 21, 61, 5);
+    const g = sonicPanel(this.add.graphics(), 0, 0, W - PANEL_W - 20, 62, 'blue', 0.95);
     this.info.add(g);
     if (!open) {
       this.info.add(this.add.text(10, 10, 'LOCKED', { fontFamily: FONT, fontSize: '8px', color: '#e8443a' }));
@@ -139,8 +140,13 @@ export class CharSelectScene extends Phaser.Scene {
     const stats: Array<[string, number]> = [['HP', f.maxHp], ['ATK', f.atk], ['DEF', f.dfn], ['SPD', f.spd]];
     stats.forEach(([k, v], i) => {
       const y = 8 + i * 13;
-      this.info.add(this.add.text(10, y, k, { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4' }));
-      this.info.add(this.add.rectangle(44, y + 2, Math.min(80, v * 1.9), 4, 0x4aa8ff).setOrigin(0));
+      this.info.add(this.add.text(10, y, k, { fontFamily: FONT, fontSize: '8px', color: HUD.label }));
+      // balk met een donker spoor erachter, zoals de HP-balk in het gevecht
+      const bar = this.add.graphics();
+      bar.fillStyle(HUD.outline).fillRect(43, y + 1, 82, 6);
+      bar.fillStyle(HUD.pipEmpty).fillRect(44, y + 2, 80, 4);
+      bar.fillStyle(HUD.cyan).fillRect(44, y + 2, Math.min(80, Math.round(v * 1.9)), 4);
+      this.info.add(bar);
     });
     this.info.add(this.add.text(138, 8, f.def.moves.map(m => MOVES[m].name).join('\n'),
       { fontFamily: FONT, fontSize: '8px', color: '#ffffff', lineSpacing: 5 }));

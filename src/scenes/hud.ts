@@ -32,10 +32,11 @@ export type PanelStyle = 'blue' | 'cream' | 'peach';
 /**
  * Paneel met de Chao Garden-rand: paars, cyaan, paars, dan de vulling.
  * Blauw = info (witte tekst), crème = tekstvak (donkere tekst), peach = gestreept vakje.
+ * `accent` = kleur van het lijntje in de rand (standaard cyaan; reward-kaarten gebruiken hun tier-kleur).
  */
-export function sonicPanel(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, style: PanelStyle = 'blue', alpha = 1) {
+export function sonicPanel(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, style: PanelStyle = 'blue', alpha = 1, accent: number = HUD.cyan) {
   g.fillStyle(HUD.outline, alpha).fillRoundedRect(x, y, w, h, 4);
-  g.fillStyle(HUD.cyan, alpha).fillRoundedRect(x + 1, y + 1, w - 2, h - 2, 3);
+  g.fillStyle(accent, alpha).fillRoundedRect(x + 1, y + 1, w - 2, h - 2, 3);
   g.fillStyle(HUD.outline, alpha).fillRoundedRect(x + 2, y + 2, w - 4, h - 4, 2);
   const ix = x + 3, iy = y + 3, iw = w - 6, ih = h - 6;
   if (style === 'blue') {

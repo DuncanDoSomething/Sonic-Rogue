@@ -807,7 +807,7 @@ export class BattleScene extends Phaser.Scene {
     } else if (this.menu === 'reward') {
       this.rewardCards.forEach((c, i) => {
         const sel = this.rewardRow === 0 && i === this.cursor;
-        c.y = sel ? 159 : 162;
+        c.y = sel ? 163 : 166;
         (c.getByName('sel') as Phaser.GameObjects.Graphics).setVisible(sel);
       });
       this.shopButtons.forEach((b, i) => {
@@ -2600,24 +2600,28 @@ export class BattleScene extends Phaser.Scene {
     this.rewardCards.forEach(c => c.destroy());
     this.rewardChoices = forced ?? rollRewards(this.rewardCtx(), 3, Math.random, this.minTier, isBossWave(this.wave) ? BOSS_TIER_ODDS : TIER_ODDS);
     this.rewardCards = this.rewardChoices.map((r, i) => {
-      const c = this.add.container(W / 2 + (i - 1) * 132, 162);
+      const c = this.add.container(W / 2 + (i - 1) * 132, 166);
       const col = TIER_COLOR[r.tier];
-      const g = this.add.graphics();
-      g.fillStyle(0x181b26).fillRoundedRect(-58, -44, 116, 88, 6);
-      g.lineStyle(r.tier === 'common' ? 1 : 2, col).strokeRoundedRect(-57.5, -43.5, 115, 87, 6);
+      // Chao Garden-paneel met het randlijntje in de kleur van de tier
+      const g = sonicPanel(this.add.graphics(), -58, -44, 116, 88, 'blue', 1, col);
       const sel = this.add.graphics().lineStyle(2, 0xffffff).strokeRoundedRect(-61, -47, 122, 94, 7).setVisible(false).setName('sel');
       const name = this.add.text(0, 6, r.name + (r.plus ? '+' : ''), { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setOrigin(0.5, 0);
-      const desc = this.add.text(0, 18, r.desc(this.rewardCtx()), { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4', align: 'center', wordWrap: { width: 108 }, lineSpacing: 2 }).setOrigin(0.5, 0);
-      const mon = this.rewardIcon(r, -16).setName('mon');
-      const tier = this.add.text(0, -41, TIER_NAME[r.tier], { fontFamily: FONT, fontSize: '8px', color: '#' + col.toString(16).padStart(6, '0') }).setOrigin(0.5, 0).setScale(0.75);
+      const desc = this.add.text(0, 18, r.desc(this.rewardCtx()), { fontFamily: FONT, fontSize: '8px', color: '#cfd6ee', align: 'center', wordWrap: { width: 108 }, lineSpacing: 2 }).setOrigin(0.5, 0);
+      const mon = this.rewardIcon(r, -14).setName('mon');
+      // tier als tabje bovenop de kaart, op volle grootte (kleiner wordt het pixelfont onleesbaar)
+      const tier = this.add.text(0, -44, TIER_NAME[r.tier], { fontFamily: FONT, fontSize: '8px', color: '#ffffff', stroke: '#281060', strokeThickness: 3 }).setOrigin(0.5);
+      const tab = this.add.graphics();
+      const tw = tier.width + 6;
+      tab.fillStyle(HUD.outline).fillRoundedRect(-tw / 2 - 1, -51, tw + 2, 14, 4);
+      tab.fillStyle(col).fillRoundedRect(-tw / 2, -50, tw, 12, 3);
       this.tweens.add({ targets: mon, y: mon.y - 3, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: i * 180 });
-      c.add([g, sel, name, desc, mon, tier]);
-      if (r.plus) c.add(this.add.text(12, -28, '+', { fontFamily: FONT, fontSize: '8px', color: '#ffd23a', stroke: '#000000', strokeThickness: 3 }));
+      c.add([g, sel, name, desc, mon, tab, tier]);
+      if (r.plus) c.add(this.add.text(12, -26, '+', { fontFamily: FONT, fontSize: '8px', color: '#ffd23a', stroke: '#000000', strokeThickness: 3 }));
       // zeldzaam: zachte glans in de kleur van de tier
       if (r.tier !== 'common') {
-        const glow = this.add.rectangle(0, 0, 112, 84, col, 0.08);
+        const glow = this.add.rectangle(0, 0, 110, 82, col, 0.06);
         c.addAt(glow, 1);
-        this.tweens.add({ targets: glow, alpha: 0.4, duration: 900, yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: glow, alpha: 0.3, duration: 900, yoyo: true, repeat: -1 });
       }
       c.setSize(116, 88).setInteractive({ useHandCursor: true });
       c.on('pointerover', () => { if (this.menu === 'reward') { this.rewardRow = 0; this.cursor = i; this.refreshCursor(); } });

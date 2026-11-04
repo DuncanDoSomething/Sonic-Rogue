@@ -3,6 +3,7 @@
 // Gebruikt in character select (C of I) en midden in een run (I in het gevecht, met tabjes voor je team).
 // ---------------------------------------------------------------------------
 import Phaser from 'phaser';
+import { sonicPanel } from './hud';
 import { FIGHTERS, Fighter, MAX_BOOST, MOVES, SPEED_POWER, ULTIMATE_LEVEL, type MoveDef } from '../data/fighters';
 
 const W = 480;
@@ -51,9 +52,7 @@ export function buildCharacterInfo(scene: Phaser.Scene, id: string, o: InfoOptio
   const c = scene.add.container(0, 0).setDepth(50);
   const bx = 10, by = 8, bw = W - 20, bh = H - 16;
   c.add(scene.add.rectangle(0, 0, W, H, 0x05060c, 0.6).setOrigin(0).setInteractive().on('pointerdown', o.onClose));
-  const g = scene.add.graphics();
-  g.fillStyle(0x10131c, 0.97).fillRoundedRect(bx, by, bw, bh, 6);
-  g.lineStyle(2, 0xf2c230).strokeRoundedRect(bx + 1, by + 1, bw - 2, bh - 2, 6);
+  const g = sonicPanel(scene.add.graphics(), bx, by, bw, bh, 'blue', 0.97);
   c.add(g);
   const txt = (x: number, y: number, t: string, color = '#ffffff') => {
     const tt = scene.add.text(x, y, t, { fontFamily: FONT, fontSize: '8px', color });
