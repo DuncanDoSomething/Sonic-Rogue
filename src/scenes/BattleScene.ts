@@ -34,7 +34,7 @@ const SHOP_TILE_Y = 63;
 
 const PLAYER_POS = { x: 118, y: 208 };
 /** textures van de speelbare characters (zie bodyHeight) */
-const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'sonicidle', 'amyidle', 'tailsidle', 'amyvictory', 'sonicbosswin']);
+const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'sonicidle', 'amyidle', 'tailssit', 'amyvictory', 'sonicbosswin']);
 /** lichaamshoogte van een character in sprite-pixels */
 const CHARACTER_BODY = 38;
 const ENEMY_POS = { x: 352, y: 132 };
@@ -2108,7 +2108,25 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     }
     // wave gewonnen: opslaan alsof de volgende wave al begonnen is (Save & Quit tijdens de rewards houdt de winst)
     this.autoSave(this.wave + 1);
+    await this.waitForVictoryPose();
     this.openRewards();
+  }
+
+  /**
+   * De overwinnings-animatie helemaal laten uitspelen voordat de rewards komen
+   * (behalve op Battle Speed 3x: dan gaat het meteen door). Max een paar seconden, voor de zekerheid.
+   */
+  private async waitForVictoryPose() {
+    if (settings.battleSpeed >= 2 || this.player.fainted) return;
+    const anim = this.hero.anims;
+    const key = anim.currentAnim?.key;
+    if (!key || !anim.isPlaying || (key !== this.player.anim('victory') && key !== this.player.anim('bosswin'))) return;
+    await new Promise<void>(resolve => {
+      const done = () => { timer.remove(); resolve(); };
+      const timer = this.time.delayedCall(4500, () => { this.hero.off(Phaser.Animations.Events.ANIMATION_COMPLETE, done); resolve(); });
+      this.hero.once(Phaser.Animations.Events.ANIMATION_COMPLETE, done);
+    });
+    await this.realWait(250); // laatste pose even laten staan
   }
 
   /**

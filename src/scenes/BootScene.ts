@@ -30,9 +30,9 @@ import sonicIdleAnim from '../assets/sonic_idle_anim.json';
 import amyIdlePng from '../assets/amy_idle.png';
 import amyIdleAtlas from '../assets/amy_idle.json';
 import amyIdleAnim from '../assets/amy_idle_anim.json';
-import tailsIdlePng from '../assets/tails_idle.png';
-import tailsIdleAtlas from '../assets/tails_idle.json';
-import tailsIdleAnim from '../assets/tails_idle_anim.json';
+import tailsSitPng from '../assets/tails_sit.png';
+import tailsSitAtlas from '../assets/tails_sit.json';
+import tailsSitAnim from '../assets/tails_sit_anim.json';
 import amyVictoryPng from '../assets/amy_victory.png';
 import amyVictoryAtlas from '../assets/amy_victory.json';
 import amyVictoryAnim from '../assets/amy_victory_anim.json';
@@ -42,12 +42,12 @@ import sonicBossWinAnim from '../assets/sonic_bosswin_anim.json';
 
 /**
  * Animaties uit een referentie-GIF (tools/build_idle_gif.py): eigen atlas met de originele uitlijning en timing.
- * Ze vervangen een animatie met dezelfde naam uit de sheet-atlas (zoals tails_idle en amy_victory).
+ * Ze vervangen een animatie met dezelfde naam uit de sheet-atlas (zoals tails_sit en amy_victory).
  */
 const GIF_IDLES: Array<[string, unknown, { key: string; texture: string; repeat?: number; frames: Array<{ frame: string; duration: number }> }]> = [
   [sonicIdlePng, sonicIdleAtlas, sonicIdleAnim],
   [amyIdlePng, amyIdleAtlas, amyIdleAnim],
-  [tailsIdlePng, tailsIdleAtlas, tailsIdleAnim],
+  [tailsSitPng, tailsSitAtlas, tailsSitAnim],
   [amyVictoryPng, amyVictoryAtlas, amyVictoryAnim],
   [sonicBossWinPng, sonicBossWinAtlas, sonicBossWinAnim],
 ];
@@ -104,7 +104,7 @@ export class BootScene extends Phaser.Scene {
         });
       }
     }
-    // animaties uit een referentie-GIF (idles van Sonic, Amy en Tails, Amy's victory, Sonic's boss-overwinning)
+    // animaties uit een referentie-GIF (idles van Sonic en Amy, Tails na lang wachten, Amy's victory, Sonic's boss-overwinning)
     for (const [, , anim] of GIF_IDLES) {
       if (this.anims.exists(anim.key)) this.anims.remove(anim.key);
       this.anims.create({

@@ -1,0 +1,175 @@
+{
+ "key": "tails_sit",
+ "texture": "tailssit",
+ "repeat": -1,
+ "frames": [
+  {
+   "frame": "tailssit_0",
+   "duration": 17
+  },
+  {
+   "frame": "tailssit_1",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_2",
+   "duration": 133
+  },
+  {
+   "frame": "tailssit_3",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_4",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_5",
+   "duration": 133
+  },
+  {
+   "frame": "tailssit_6",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_7",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_8",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_9",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_10",
+   "duration": 300
+  },
+  {
+   "frame": "tailssit_11",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_12",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_13",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_14",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_15",
+   "duration": 117
+  },
+  {
+   "frame": "tailssit_16",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_17",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_18",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_19",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_20",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_21",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_22",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_23",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_24",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_25",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_26",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_27",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_28",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_29",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_30",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_31",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_32",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_33",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_34",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_35",
+   "duration": 167
+  },
+  {
+   "frame": "tailssit_36",
+   "duration": 133
+  },
+  {
+   "frame": "tailssit_37",
+   "duration": 133
+  },
+  {
+   "frame": "tailssit_38",
+   "duration": 67
+  },
+  {
+   "frame": "tailssit_39",
+   "duration": 67
+  },
+  {
+   "frame": "tailssit_40",
+   "duration": 100
+  },
+  {
+   "frame": "tailssit_41",
+   "duration": 83
+  }
+ ]
+}
