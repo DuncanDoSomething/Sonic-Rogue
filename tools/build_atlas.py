@@ -63,7 +63,8 @@ CHARACTERS = {
         # staart-zwiep is een cyclus van 8 frames; 14-15 zijn varianten die de loop laten haperen
         'idle':    {'frames': [(0, c) for c in range(0, 8)], 'fps': 10, 'repeat': -1},
         'spin':    {'frames': [(14, 7), (14, 8), (14, 9), (14, 10)], 'fps': 20, 'repeat': -1},
-        'fly':     {'frames': [(19, 0), (19, 1), (19, 2), (19, 3)], 'fps': 16, 'repeat': -1},
+        # vliegen met draaiende staarten, armen vooruit (de oude 19.0-3 hing er sloom bij)
+        'fly':     {'frames': [(18, 8), (18, 9), (18, 10), (18, 11)], 'fps': 16, 'repeat': -1},
         'punch':   {'frames': [(20, c) for c in range(6, 12)], 'fps': 14, 'repeat': 0},
         'hurt':    {'frames': [(25, 0), (25, 1)], 'fps': 8, 'repeat': 0},
         'ko':      {'frames': [(25, 0), (26, 17), (26, 18), (27, 0), (27, 1)], 'fps': 6, 'repeat': 0},

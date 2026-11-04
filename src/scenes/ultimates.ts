@@ -348,17 +348,27 @@ async function thunderShoot(c: UltCtx) {
   arcs.clear();
   s.clearTint();
 
-  // lanceren als een bliksemschicht
-  s.play(c.p.anim('spin')).setTint(0xfff27a);
-  const bolt = scene.add.graphics().setDepth(14).setBlendMode(ADD);
-  drawBolt(bolt, s.x, s.y - 20, tc.x, tc.y, 14, 6);
+  // Tails wordt zelf de bliksemschicht: flits, weg, en een knetterende schicht schiet naar de vijand
+  const sx = s.x, sy = s.y - 22;
+  s.setTintFill(0xffffff);
   scene.cameras.main.flash(120, 255, 250, 180);
+  c.burst(sx, sy, 0xfff27a, 14);
   audio.sfx('explosion2', { volume: 0.7 });
-  const trail = scene.time.addEvent({ delay: 16, loop: true, callback: () => c.ghost(s, 0xfff27a) });
-  scene.tweens.add({ targets: ball, x: tc.x, y: tc.y, duration: 140, ease: 'Quad.easeIn' });
-  await tween(scene, { targets: s, x: tc.x - 18 * dir, y: tc.y + s.displayHeight * 0.4, duration: 140, ease: 'Quad.easeIn' });
-  trail.remove();
-  scene.tweens.add({ targets: bolt, alpha: 0, duration: 200, onComplete: () => bolt.destroy() });
+  await sleep(scene, 60);
+  s.setVisible(false).clearTint();
+  ball.setPosition(sx, sy).setScale(1.4);
+  const bolt = scene.add.graphics().setDepth(14).setBlendMode(ADD);
+  const head = { t: 0 };
+  await tween(scene, {
+    targets: head, t: 1, duration: 170, ease: 'Quad.easeIn',
+    onUpdate: () => {
+      const hx = sx + (tc.x - sx) * head.t, hy = sy + (tc.y - sy) * head.t;
+      ball.setPosition(hx, hy);
+      bolt.clear();
+      drawBolt(bolt, sx, sy, hx, hy, 12, 6);
+    },
+  });
+  scene.tweens.add({ targets: bolt, alpha: 0, duration: 220, onComplete: () => bolt.destroy() });
 
   // inslag: drie bliksems uit de lucht
   c.strike();
@@ -378,10 +388,11 @@ async function thunderShoot(c: UltCtx) {
   target.clearTint();
   scene.tweens.add({ targets: dark, fillAlpha: 0, duration: 250, onComplete: () => dark.destroy() });
 
-  // terug
-  s.clearTint();
-  await tween(scene, { targets: s, x: (home.x + tc.x) / 2, y: home.y - 70, duration: 260, ease: 'Quad.easeOut' });
-  await tween(scene, { targets: s, x: home.x, y: home.y, duration: 240, ease: 'Quad.easeIn' });
+  // terug: Tails verschijnt weer in de lucht met een glinstering en vliegt naar huis
+  s.setPosition(home.x + 20 * dir, home.y - 62).setVisible(true).clearTint().setAlpha(0).play(c.p.anim('fly'));
+  c.burst(s.x, s.y - 22, 0xfff27a, 10);
+  await tween(scene, { targets: s, alpha: 1, duration: 160 });
+  await tween(scene, { targets: s, x: home.x, y: home.y, duration: 320, ease: 'Sine.easeInOut' });
 }
 
 // ---------------------------------------------------------------- Knuckles: Maximum Heat

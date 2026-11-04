@@ -28,10 +28,10 @@
  "fly": {
   "key": "tails_fly",
   "frames": [
-   "tails_19_0",
-   "tails_19_1",
-   "tails_19_2",
-   "tails_19_3"
+   "tails_18_8",
+   "tails_18_9",
+   "tails_18_10",
+   "tails_18_11"
   ],
   "frameRate": 16,
   "repeat": -1
