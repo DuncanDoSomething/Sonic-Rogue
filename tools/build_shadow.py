@@ -5,7 +5,8 @@ Gebruik: python3 tools/build_shadow.py "<map 'Sonic rogue sprites'>" src/assets
 Bronnen:
 - character sprites/Shadow/10045.png: Shadow uit Sonic Battle (ripped by QuadFactor), kijkt op de sheet naar RECHTS
 - character sprites/Shadow/18232.png: Super Shadow battle style (Shadow Mastah, voor het Pixeltendo Sonic Battle Project)
-- character sprites/10822.png: Sonic Battle story-portretten (Bacon), voor het character select-portret
+- character sprites/10822.png: Sonic Battle story-portretten (Bacon), voor het portret naast de HP-box
+- tools/ref/shadow_select.png: Shadow in Advance-stijl (aangeleverd door Moe), voor character select
 - het Advance 3-life icon (head_shadow) is het Sonic-icoon in Shadow's kleuren
 
 Alles wordt gespiegeld zodat het naar LINKS kijkt, net als de Advance 3-sprites van de rest (zie build_atlas.py).
@@ -169,15 +170,15 @@ FX = {}
 def fx(name, frames, fps, repeat=0, anchor='center'):
     FX[name] = {'frames': frames, 'fps': fps, 'repeat': repeat, 'anchor': anchor}
 
-# Super Shadow (kijkt na spiegelen naar links, net als Shadow)
+# Super Shadow: deze sheet kijkt al naar links (niet spiegelen), net als Shadow na het spiegelen
 top = [(3, 6, 36, 44), (39, 18, 70, 44), (73, 15, 104, 44), (107, 11, 142, 44), (145, 6, 185, 48), (188, 12, 221, 44),
        (224, 13, 257, 44), (260, 8, 287, 44), (290, 10, 321, 48), (324, 8, 346, 44), (348, 2, 381, 45), (383, 4, 414, 43),
        (417, 4, 450, 43), (453, 4, 484, 43), (487, 4, 520, 43)]
-T = [box(ss, r, SS_BG) for r in top]
+T = [box(ss, r, SS_BG, False) for r in top]
 fx('ssh_transform', [T[7], T[8], T[9], T[11], T[12], T[13], T[14]], 10, 0, 'bottom')
-fx('ssh_idle', [box(ss, (280, 44, 307, 86), SS_BG), box(ss, (307, 44, 334, 86), SS_BG)], 5, -1, 'bottom')
-fx('ssh_dash', [box(ss, (246, 318, 280, 341), SS_BG), box(ss, (283, 318, 317, 341), SS_BG)], 14, -1)
-fx('ssh_combo', [box(ss, r, SS_BG) for r in [(282, 849, 317, 884), (320, 851, 348, 884), (350, 851, 385, 884),
+fx('ssh_idle', [box(ss, (280, 44, 307, 86), SS_BG, False), box(ss, (307, 44, 334, 86), SS_BG, False)], 5, -1, 'bottom')
+fx('ssh_dash', [box(ss, (246, 318, 280, 341), SS_BG, False), box(ss, (283, 318, 317, 341), SS_BG, False)], 14, -1)
+fx('ssh_combo', [box(ss, r, SS_BG, False) for r in [(282, 849, 317, 884), (320, 851, 348, 884), (350, 851, 385, 884),
                                              (388, 851, 418, 884), (421, 853, 452, 884), (455, 848, 485, 884)]], 18, 0, 'bottom')
 # gouden chaos-speren van Super Shadow, en de Chaos Blast-explosie
 fx('ssh_spear', [box(ss, r, SS_BG, False) for r in [(55, 667, 97, 699), (100, 665, 146, 699), (150, 660, 196, 700),
@@ -265,7 +266,27 @@ b[:, :, 3] = np.where(b[:, :, 3] > 110, 255, 0)
 Image.fromarray(b).save(os.path.join(MENU, 'portrait_shadow.png'))
 
 # ------------------------------------------------------------------ 6. character select (Advance 3-stijl)
-cs_art = trim(Image.fromarray(flood_clear(story[592:680, 170:268])))
+# Artwork in Advance-stijl (Shadow en Sonic, van Moe): een uitvergrote screenshot (~4,17x, licht vervaagd).
+# Terug naar de echte pixels: per pixel-cel de mediaan van het midden nemen, dan alleen Shadow (links).
+def unscale(path, cell):
+    a = np.array(Image.open(path).convert('RGB')).astype(float)
+    offs = []
+    for axis in (1, 0):
+        d = np.abs(np.diff(a, axis=axis)).sum(2).sum(1 - axis)
+        ang = np.angle((d * np.exp(2j * np.pi * np.arange(len(d)) / cell)).sum())
+        offs.append((-ang / (2 * np.pi) * cell) % cell + 0.5)   # waar de randen van de cellen liggen
+    ox, oy = offs
+    nx, ny = int((a.shape[1] - ox) / cell), int((a.shape[0] - oy) / cell)
+    out = np.zeros((ny, nx, 4), np.uint8)
+    out[:, :, 3] = 255
+    for j in range(ny):
+        for i in range(nx):
+            cx, cy = int(ox + (i + 0.5) * cell), int(oy + (j + 0.5) * cell)
+            out[j, i, :3] = np.median(a[cy - 1:cy + 1, cx - 1:cx + 1].reshape(-1, 3), axis=0)
+    return out
+
+sel = unscale(os.path.join(os.path.dirname(__file__), 'ref', 'shadow_select.png'), 4.17)
+cs_art = trim(Image.fromarray(keep_largest(flood_clear(sel[:, :80], tol=24))))
 cs_art.save(os.path.join(MENU, 'cs_art_shadow.png'))
 
 # naam in het kleine Advance 3-lettertype: zwart met grijze randjes op wit. H, D en W bestaan niet

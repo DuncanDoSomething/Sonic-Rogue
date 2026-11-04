@@ -502,16 +502,44 @@ test.describe('Sonic Rogue smoke tests', () => {
     await setup(page, 's.enemy.hp = 9999; s.player.boost = 6;');
     await press(page, 'z', 'ArrowRight', 'z');
     await waitForMenu(page, 'command');
-    expect((await shadow()).pierced).toBe(3);
+    const marked = await shadow();
+    expect(marked.pierced).toBe(3);
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.hp)).toBe(9999);  // status-move: geen schade
     // Chaos Control maakt de KO: daarna is hij gratis, en Rampage geeft ATK en SPD +1
     await setup(page, 's.enemy.hp = 1; s.player.boost = 6;');
-    await press(page, 'z', 'ArrowDown', 'z');
+    await press(page, 'z', 'ArrowLeft', 'ArrowDown', 'z');   // de cursor stond nog op Chaos Spear
     await waitForMenu(page, 'reward');
     const after = await shadow();
     expect(after.chaosFree).toBe(true);
     expect([after.atk, after.spd]).toEqual([1, 1]);
     await setup(page, 's.player.boost = 0;');
     expect((await shadow()).canChaos).toBe(true);
+    expect(errors).toEqual([]);
+  });
+
+  test('Shadow: Super Barrage resets after a KO at most 3 times, then costs 6 Boost again', async ({ page }) => {
+    test.setTimeout(180_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startBattleWith(page, ['shadow', 'tails']);
+    await setup(page, 's.player.level = 30; s.player.boost = 6;');
+    const free: boolean[] = [];
+    for (let i = 0; i < 4; i++) {
+      await setup(page, 's.enemy.hp = 1; s.runTurn(window.MOVES.superBarrage);');
+      await waitForMenu(page, 'reward');
+      free.push(await page.evaluate(() => (window as any).game.scene.getScene('Battle').player.ultFree));
+      await fixReward(page);
+      await press(page, 'z');                   // reward
+      await waitForMenu(page, 'choice');
+      await press(page, 'ArrowDown', 'z');      // niet wisselen
+      await waitForMenu(page, 'command');
+      await setup(page, 's.player.boost = 0;');  // alleen gratis kan hij hem nog gebruiken
+    }
+    expect(free).toEqual([true, true, true, false]);
+    expect(await page.evaluate(() => {
+      const s = (window as any).game.scene.getScene('Battle');
+      return s.player.canUse((window as any).MOVES.superBarrage);
+    })).toBe(false);
     expect(errors).toEqual([]);
   });
 });

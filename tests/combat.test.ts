@@ -288,7 +288,7 @@ describe('Shadow', () => {
     sh.spendBoost(MOVES.spinAttack); so.spendBoost(MOVES.spinAttack);
     expect([sh.boost, so.boost]).toEqual([2, 1]);
   });
-  it('Chaos Spear kost 3; het doelwit krijgt 50% meer schade', () => {
+  it('Chaos Spear kost 3; het doelwit krijgt daarna 50% meer schade', () => {
     expect(MOVES.chaosSpear.cost).toBe(3);
     expect(MOVES.chaosSpear.pierce).toBe(3);
     const sonic = new Fighter('sonic', 20);
@@ -344,11 +344,14 @@ describe('Shadow', () => {
     sh.spendBoost(MOVES.superBarrage);
     expect(sh.ultFree).toBe(false);
   });
-  it('super: hij staat als Super Shadow (ssh_idle) tot het afloopt', () => {
+  it('na de ultimate is hij weer gewone Shadow (alleen de Super-kracht blijft)', () => {
     const sh = new Fighter('shadow', 30);
+    sh.superTurns = 2;
     expect(sh.anim('idle')).toBe('shadow_idle');
-    sh.superTurns = 1;
-    expect(sh.anim('idle')).toBe('ssh_idle');
-    expect(sh.anim('hurt')).toBe('shadow_hurt');
+    expect(SUPER_VULNERABLE).toBe(2);
+  });
+  it('Chaos Spear is een status-move: geen power, raakt altijd', () => {
+    expect(MOVES.chaosSpear.power).toBe(0);
+    expect(MOVES.chaosSpear.accuracy).toBe(100);
   });
 });

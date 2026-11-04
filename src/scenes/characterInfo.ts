@@ -36,6 +36,7 @@ export function wrap(text: string, n: number): string[] {
 export function powerLabel(m: MoveDef) {
   if (m.teamHeal) return `HEAL ${Math.round(m.teamHeal * 100)}%`;
   if (m.heal) return `HEAL ${Math.round(m.heal * 100)}%`;
+  if (m.power === 0) return 'STATUS';
   if (m.scaling === 'speed') return `PWR ${SPEED_POWER[SPEED_POWER.length - 1][1]}-${SPEED_POWER[0][1]}`;
   if (m.scaling === 'stages') return `PWR ${m.power}+`;
   return `PWR ${m.power}`;

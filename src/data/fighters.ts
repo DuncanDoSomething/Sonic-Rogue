@@ -77,8 +77,8 @@ export const BASE_CRIT = 0.0625;
 // ---------------------------------------------------------------- Shadow
 /** Chaos Spear: het doelwit krijgt zoveel extra schade, een paar beurten lang. */
 export const PIERCE_BONUS = 1.5;
-/** Super Shadow: zolang hij super is, krijgt Shadow zelf zoveel extra schade. */
-export const SUPER_VULNERABLE = 1.33;
+/** Super Barrage: zolang de Super-kracht duurt, krijgt Shadow zelf dubbele schade. */
+export const SUPER_VULNERABLE = 2;
 /** Zo vaak achter elkaar kan Super Shadow Barrage weer gratis worden door een KO. */
 export const ULT_CHAIN_MAX = 3;
 
@@ -162,7 +162,7 @@ export const MOVES: Record<string, MoveDef> = {
   chaoCheer:    { id: 'chaoCheer', name: 'Chao Cheer', power: 0, accuracy: 100, priority: 0, anim: 'heal', heal: 0.3, ally: true, cost: 3, desc: 'Heals 30% max HP. Use it on Cream or on a teammate.' },
   hammerSmash:  { id: 'hammerSmash', name: 'Piko Hammer', power: 60, accuracy: 100, priority: 0, anim: 'hammer', cost: 2, selfStages: { atk: 1 }, desc: 'Swings her Piko Piko Hammer down on the foe. Raises ATK by 1.' },
   hammerTwirl:  { id: 'hammerTwirl', name: 'Hammer Twirl', power: 80, accuracy: 100, priority: 0, anim: 'twirl', cost: 3, selfHeal: 0.25, desc: 'Spins around with her hammer out and heals 25% of her max HP.' },
-  chaosSpear:   { id: 'chaosSpear', name: 'Chaos Spear', power: 50, accuracy: 100, priority: 0, anim: 'spear', cost: 3, pierce: 3, desc: 'Hurls spears of chaos energy. The foe takes 50% more damage for 3 turns.' },
+  chaosSpear:   { id: 'chaosSpear', name: 'Chaos Spear', power: 0, accuracy: 100, priority: 0, anim: 'spear', cost: 3, pierce: 3, desc: 'Status move: chaos spears mark the foe. It takes 50% more damage from your team for 3 turns.' },
   chaosControl: { id: 'chaosControl', name: 'Chaos Control', power: 100, accuracy: 100, priority: 0, anim: 'chaos', cost: 4, resets: 'anyKo', desc: 'Stops time and strikes freely. Becomes free once after every KO Shadow lands.' },
   copterDive:   { id: 'copterDive', name: 'Copter Dive', power: 50, accuracy: 100, priority: 1, anim: 'fly', cost: 1, desc: 'Rises on spinning tails, flips over and drills down on the foe. Always strikes first.' },
   // --- ultimates (kosten de hele Boost-meter, geleerd op ULTIMATE_LEVEL)
@@ -171,7 +171,7 @@ export const MOVES: Record<string, MoveDef> = {
   maximumHeat:  { id: 'maximumHeat', name: 'Maximum Heat', power: 100, scaling: 'stages', accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, spendStages: true, desc: 'A meteor dive. +25 power for every stat stage Knuckles has, up or down; uses them all up.' },
   chaoAttack:   { id: 'chaoAttack', name: 'Chao Blessing', power: 0, accuracy: 100, priority: 1, anim: 'heal', teamHeal: 1, clearField: true, cost: MAX_BOOST, desc: 'Cheese and friends heal the whole team to full HP and clear the zone effect. No damage.' },
   tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 120, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, critDouble: true, recoil: 0.5, desc: 'A hammer storm. Always crits; doubles at 100% crit chance. Costs Amy 50% max HP (KO if below half).' },
-  superBarrage: { id: 'superBarrage', name: 'Super Barrage', power: 100, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, superTurns: 3, resets: 'ownKo', desc: 'Goes Super and unloads a barrage. Always crits, then 100% crit for 3 turns, but he takes 33% more damage. A KO makes it free again (3x in a row).' },
+  superBarrage: { id: 'superBarrage', name: 'Super Barrage', power: 100, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, superTurns: 3, resets: 'ownKo', desc: 'Goes Super and unloads a barrage. Always crits, then 100% crit for 3 turns, but he takes double damage. A KO makes it free again (max 3x).' },
   // --- badniks
   stingShot:  { id: 'stingShot', name: 'Sting Shot', power: 38, accuracy: 92, priority: 0, anim: 'shoot', desc: '', tint: 0xffb340 },
   snowball:   { id: 'snowball', name: 'Snowball', power: 34, accuracy: 95, priority: 0, anim: 'shoot', desc: '', tint: 0xffffff },
@@ -316,7 +316,7 @@ export class Fighter {
   ultChain = 0;
   /** Chaos Spear: beurten dat hij PIERCE_BONUS extra schade krijgt. */
   pierced = 0;
-  /** Super Shadow: beurten met 100% crit en SUPER_VULNERABLE extra schade. */
+  /** Super Barrage: beurten met 100% crit en SUPER_VULNERABLE schade krijgen (hij is dan weer gewone Shadow). */
   superTurns = 0;
   /** net gezet: de teller loopt pas vanaf de volgende beurt (zo krijg je echt n hele beurten) */
   freshTurns = new Set<'pierced' | 'superTurns'>();
@@ -328,11 +328,7 @@ export class Fighter {
   }
 
   get name() { return this.def.name; }
-  anim(name: string) {
-    // Super Shadow: zolang hij super is, staat hij als Super Shadow te zweven
-    if (this.superTurns > 0 && this.def.id === 'shadow' && (name === 'idle' || name === 'wait')) return 'ssh_idle';
-    return `${this.def.animPrefix}_${name}`;
-  }
+  anim(name: string) { return `${this.def.animPrefix}_${name}`; }
   private stat(k: keyof Stats) { return Math.floor(this.def.base[k] + this.def.growth[k] * (this.level - 1)); }
   get maxHp() { return this.stat('hp'); }
   /** Totale stage (rewards + zone), begrensd op -6..+6. */

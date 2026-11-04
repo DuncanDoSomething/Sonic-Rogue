@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, PIERCE_BONUS, SUPER_VULNERABLE, ULT_CHAIN_MAX, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BOOST_ON_HIT, PIERCE_BONUS, ULT_CHAIN_MAX, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, ZONE_BOSS_HEAL, ZONES, isBossWave, isEliteWave, isMainBossWave, canHaveRival, RIVAL_CHANCE, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -401,7 +401,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (this.alarmWave) out.push({ key: 'alarm', icon: 'mon_alert', name: 'Eggman Alarm', desc: 'This foe is an elite. Beat it for uncommon-or-better rewards.' });
     if (b.eliteNext) out.push({ key: 'alarmN', icon: 'mon_alert', name: 'Eggman Alarm', desc: 'The next foe is an elite. Beat it for uncommon-or-better rewards.' });
     const p = this.player;
-    if (p?.superTurns > 0) out.push({ key: 'super', icon: 'shadowfx:ssh_idle_0', name: 'Super Shadow', desc: `100% crit, but ${p.name} takes ${Math.round((SUPER_VULNERABLE - 1) * 100)}% more damage. ${n(p.superTurns, 'turn')} left.`, count: p.superTurns });
+    if (p?.superTurns > 0) out.push({ key: 'super', icon: 'shadowfx:ssh_idle_0', name: 'Super power', desc: `100% crit, but ${p.name} takes double damage. ${n(p.superTurns, 'turn')} left.`, count: p.superTurns });
     if (p?.chaosFree && p.moves.includes('chaosControl')) out.push({ key: 'chaosFree', icon: 'emeralds:emerald_green_0', name: 'Chaos Control', desc: 'Free to use: costs no Boost.' });
     if (p?.ultFree && p.def.ultimate && p.moves.includes(p.def.ultimate)) out.push({ key: 'ultFree', icon: 'shadowfx:ssh_spear_2', name: MOVES[p.def.ultimate].name, desc: `Free to use: costs no Boost (${p.ultChain}/${ULT_CHAIN_MAX} in a row).` });
     if (this.enemy?.pierced > 0) out.push({ key: 'pierced', icon: 'shadowfx:sh_rune_pink_0', name: 'Pierced', desc: `The foe takes ${Math.round((PIERCE_BONUS - 1) * 100)}% more damage. ${n(this.enemy.pierced, 'turn')} left.`, count: this.enemy.pierced });
@@ -741,6 +741,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const cost = p.isFree(m) ? '   FREE' : m.cost ? `   Boost ${m.cost}` : p.gainOf(m) ? `   Boost +${p.gainOf(m)}` : '';
     const stats = m.teamHeal ? `Heals the team ${Math.round(m.teamHeal * 100)}% HP${cost}`
       : m.heal ? `Heals ${Math.round(m.heal * 100)}% HP${cost}`
+      : m.power === 0 ? `Status move   Never misses${cost}`
       : `Power ${movePower(m, this.player, this.enemy)}   Acc ${m.accuracy}%${m.priority > 0 ? '   First' : ''}${cost}`;
     // getallen goud, stats cyaan, wat de move doet groen, nadelen oranje
     this.infoBody.removeAll(true);
@@ -769,7 +770,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       const t = this.add.text(26 + (i % 2) * 150, PANEL_Y + 15 + Math.floor(i / 2) * 15, m ? m.name : '-',
         { fontFamily: FONT, fontSize: '8px', color });
       // groene gloed = type-voordeel tegen deze vijand, oranje = nadeel (zoals in PokéRogue)
-      const eff = m && !m.heal ? typeMultiplier(this.player.type, this.enemy.type) : 1;
+      const eff = m && !m.heal && m.power > 0 ? typeMultiplier(this.player.type, this.enemy.type) : 1;
       if (eff !== 1 && this.player.canUse(m!)) {
         // groen pijltje omhoog = type-voordeel, oranje omlaag = nadeel
         const ax = t.x + t.width + 5, ay = t.y + 4;
@@ -871,7 +872,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       const p = this.player;
       const boost = p.isFree(m) ? 'FREE!' : m.cost ? `BOOST ${m.cost}` : p.gainOf(m) ? `BOOST +${p.gainOf(m)}` : 'BOOST 0';
       const acc = Math.min(100, Math.round(m.accuracy * stageMultiplier(this.player.stage('acc'))));
-      this.moveInfo.setText(m.heal ? `HEAL ${Math.round(m.heal * 100)}%\n${boost}` : `PWR ${movePower(m, this.player, this.enemy)} ACC ${acc}\n${boost}`);
+      this.moveInfo.setText(m.heal ? `HEAL ${Math.round(m.heal * 100)}%\n${boost}` : m.power === 0 ? `STATUS\n${boost}` : `PWR ${movePower(m, this.player, this.enemy)} ACC ${acc}\n${boost}`);
       this.moveInfo.setColor(this.player.canUse(m) ? '#ffffff' : '#ff7a6a');
       if (this.infoLayer.visible) this.updateMoveInfo();
     } else if (this.menu === 'bag') {
@@ -1507,6 +1508,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     await this.say(`${this.who(att)} used ${move.name}!`, 150);
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
     let hit = calcHit(att, tgt, move, Math.random, isPlayer ? this.critBonus : 0);
+    // status-move (Chaos Spear): raakt altijd en doet geen schade, alleen het effect
+    const status = move.power === 0;
+    if (status) hit = { damage: 0, crit: false, missed: false, effect: 1 };
     let hungOn = false;
     // rewards: Invincibility (eerste aanval mist) en Shield (halve schade) beschermen je team
     let guard = '';
@@ -1527,6 +1531,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const strike = () => {
       if (hit.missed || struck) return;
       struck = true;
+      if (status) { this.hitFlash(isPlayer ? this.foe : this.hero); return; }
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
       if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
       // tutorial: niemand van je team gaat neer, en de vijand pas bij de laatste stap
@@ -1597,7 +1602,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       if (hit.crit) await this.say('A critical hit!', 350);
       if (hit.effect > 1) await this.say("It's super effective!", 350);
       else if (hit.effect < 1) await this.say("It's not very effective...", 350);
-      if (!hit.crit && hit.effect === 1) await this.wait(250);
+      if (!hit.crit && hit.effect === 1 && !status) await this.wait(250);
       // moves die de gebruiker genezen als ze raken (Hammer Twirl)
       if (move.selfHeal && !att.fainted && att.hp < att.maxHp) {
         const h = Math.min(att.maxHp - att.hp, Math.ceil(att.maxHp * move.selfHeal));
@@ -1647,8 +1652,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (move.superTurns && !att.fainted) {
       att.superTurns = move.superTurns;
       att.freshTurns.add('superTurns');
-      (isPlayer ? this.hero : this.foe).play(att.anim('idle'));
-      await this.say(`${att.name} is Super! 100% crit, but he takes ${Math.round((SUPER_VULNERABLE - 1) * 100)}% more damage for ${move.superTurns} turns.`, 450);
+      await this.say(`${att.name} has Super power! 100% crit, but he takes double damage for ${move.superTurns} turns.`, 450);
     }
     await this.shadowAfter(att, tgt, move, isPlayer);
   }
@@ -1660,8 +1664,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async shadowAfter(att: Fighter, tgt: Fighter, move: MoveDef, isPlayer: boolean) {
     const ult = move.id === att.def.ultimate;
     const ko = tgt.fainted && !att.fainted;
-    // de ketting van Super Barrage breekt bij een andere move of als hij niemand KO slaat
-    if (!ult || !ko) att.ultChain = 0;
+    // de ketting telt vanaf de laatste keer dat hij de ultimate met Boost betaalde: max ULT_CHAIN_MAX keer gratis,
+    // daarna weer 6 Boost (een andere move ertussen zet de teller niet terug)
+    if (ult && !this.freeUse) att.ultChain = 0;
     if (!ko) return;
     const resets: string[] = [];
     if (att.moves.includes('chaosControl') && !att.chaosFree) {
@@ -1905,8 +1910,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       return;
     } else if (move.anim === 'ultimate' && p.def.id === 'shadow') {
       // Super Barrage; gratis na een KO = korte versie (hij is nog super)
-      await superShadow({ ...this.ultCtx(s, p, target, home, dir, strike), missed, quick: this.freeUse && p.superTurns > 0 });
-      s.play('ssh_idle'); // hij blijft super (de beurten worden daarna gezet)
+      await superShadow({ ...this.ultCtx(s, p, target, home, dir, strike), missed, quick: this.freeUse });
+      s.play(p.anim('idle')); // na de ultimate weer gewoon Shadow
       return;
     } else if (move.anim === 'ultimate') {
       // eigen animatie per character (ultimates.ts); die zet de sprite zelf weer thuis
@@ -2701,12 +2706,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     for (const f of [this.player, this.enemy]) {
       if (!f || f.fainted) continue;
       for (const k of f.tickTurns()) {
-        if (k === 'superTurns') {
-          const spr = f === this.player ? this.hero : this.foe;
-          this.cameras.main.flash(160, 255, 240, 160);
-          spr.play(f.anim('idle'));
-          await this.say(`${this.who(f)} is no longer Super.`, 350);
-        }
+        if (k === 'superTurns') await this.say(`${this.who(f)}'s Super power wore off.`, 350);
         else await this.say(`${this.who(f)} is no longer pierced.`, 350);
       }
     }

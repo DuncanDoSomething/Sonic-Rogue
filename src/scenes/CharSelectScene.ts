@@ -16,11 +16,7 @@ const PANEL_W = 200;
 const ART = { x: 100, y: 150 };
 /** Rijen: eerste y en stap (6 characters passen net boven het info-paneel). */
 const ROW_Y = 42, ROW_STEP = 25;
-/**
- * Shadow heeft geen Advance 3-artwork: zijn portret is een Sonic Battle-buste (zonder benen).
- * Die staat met de onderkant net onder de rand van het scherm, zodat je de afgesneden kant niet ziet.
- */
-const BUST = new Set(['shadow']);
+
 
 /** Character select in Sonic Advance 3-stijl: zand-paneel, draaiende naamring, groot portret. */
 export class CharSelectScene extends Phaser.Scene {
@@ -130,7 +126,6 @@ export class CharSelectScene extends Phaser.Scene {
 
     this.ring.setTexture(open ? `cs_ring_${id}` : 'cs_ring_unknown');
     this.art.setTexture(`cs_art_${id}`);
-    this.art.setOrigin(0.5, BUST.has(id) ? 1 - (H + 4 - ART.y) / (this.art.height * 2) : 0.75);
     if (open) this.art.clearTint().setAlpha(1); else this.art.setTint(0x000000).setAlpha(0.85);
     // klein "pop"-effect bij wisselen
     this.art.setScale(1.8);

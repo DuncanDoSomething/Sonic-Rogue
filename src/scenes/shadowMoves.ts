@@ -192,7 +192,9 @@ export async function chaosControl(c: ShadowCtx) {
     for (let i = 0; i < 5; i++) {
       scene.time.delayedCall(i * 60, () => chaosHit(c, tc.x + rnd(-20, 20), tc.y + rnd(-18, 14), rndF(0.8, 1.4)));
     }
-    fx(scene, tc.x, tc.y, 'sh_burst', 1.4, 19);
+    // korte lichtflits (één frame): uitdijen en weg, zodat er niks over het doelwit blijft hangen
+    const flash = scene.add.sprite(tc.x, tc.y, 'shadowfx', 'sh_burst_0').setDepth(19).setScale(0.8);
+    scene.tweens.add({ targets: flash, scale: 1.8, alpha: 0, duration: 280, ease: 'Quad.easeOut', onComplete: () => flash.destroy() });
   }
   c.restoreTarget();
   await sleep(scene, 380);
@@ -239,9 +241,13 @@ export async function superShadow(c: ShadowCtx) {
     shockwave(scene, s.x, s.y - 22, 0xffe14a, 120, 600);
     await playDone(scene, s, 'ssh_transform', 1000);
   } else {
-    // gratis vervolg: hij is nog super, één gouden flits en door
+    // gratis vervolg: geen emeralds, een gouden flits en een snelle transformatie
     cam.flash(160, 255, 240, 160);
     audio.sfx('ringchime', { volume: 0.7 });
+    shockwave(scene, s.x, s.y - 22, 0xffe14a, 80, 400);
+    s.anims.timeScale = 2.5;
+    await playDone(scene, s, 'ssh_transform', 600);
+    s.anims.timeScale = 1;
   }
   s.play('ssh_idle');
   const sparks = scene.time.addEvent({ delay: 50, loop: true, callback: () => {
@@ -307,11 +313,16 @@ export async function superShadow(c: ShadowCtx) {
   shockwave(scene, tc.x, tc.y, 0xff5a3a, 160, 600);
   await sleep(scene, 700);
 
-  // 6. terug naar huis; hij blijft nog even super (zie de BattleScene)
+  // 6. terug naar huis en weer gewone Shadow (de Super-kracht blijft nog een paar beurten, zie de BattleScene)
   scene.tweens.add({ targets: dark, fillAlpha: 0, duration: 250, onComplete: () => dark.destroy() });
   c.restoreTarget();
+  s.setFlipX(dir > 0);
   await tween(scene, { targets: s, x: home.x, y: home.y - 20, duration: 300, ease: 'Quad.easeInOut' });
   sparks.remove();
-  await tween(scene, { targets: s, y: home.y, duration: 160, ease: 'Quad.easeIn' });
+  cam.flash(200, 255, 255, 255);
+  audio.sfx('confirm2', { volume: 0.5 });
+  s.play(c.p.anim('spin'));
+  await tween(scene, { targets: s, y: home.y, duration: 180, ease: 'Quad.easeIn' });
+  s.play(c.p.anim('idle'));
   s.setScale(scale);
 }
