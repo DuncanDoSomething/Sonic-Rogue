@@ -21,9 +21,13 @@ const W = 480;
 const H = 270;
 const FONT = '"Press Start 2P", monospace';
 const PANEL_Y = 222;
+/** y van de HP-balk in de info-boxen */
+const BOX_BAR_Y = 21;
 /** shop-band in het reward-scherm (rechts ervan staan de ring-teller en de tas) */
 const SHOP_X = 16;
 const SHOP_W = 360;
+/** midden van de shop-vakjes */
+const SHOP_TILE_Y = 63;
 
 const PLAYER_POS = { x: 118, y: 208 };
 /** textures van de speelbare characters (zie bodyHeight) */
@@ -162,7 +166,8 @@ export class BattleScene extends Phaser.Scene {
   /** je tas: item-id -> aantal */
   private bag: Record<string, number> = {};
   private bagLayer!: Phaser.GameObjects.Container;
-  private bagItems: Phaser.GameObjects.Text[] = [];
+  private bagItems: Phaser.GameObjects.Container[] = [];
+  private bagName?: Phaser.GameObjects.Text;
   private bagIds: string[] = [];
   private bagInfo!: Phaser.GameObjects.Text;
 
@@ -182,6 +187,7 @@ export class BattleScene extends Phaser.Scene {
     this.cmdItems = [];
     this.fightItems = [];
     this.bagItems = [];
+    this.bagName = undefined;
     this.rewardCards = [];
     this.shopButtons = [];
     this.rewardLayer = undefined;
@@ -457,25 +463,26 @@ export class BattleScene extends Phaser.Scene {
 
   private makeInfoBox(x: number, y: number, w: number, isPlayer: boolean): InfoBox {
     const root = this.add.container(x, y).setDepth(20);
-    const h = isPlayer ? 40 : 28;
+    // hoog genoeg dat het type-icoontje (16 px) binnen de rand past
+    const h = isPlayer ? 45 : 32;
     let portrait: Phaser.GameObjects.Image | undefined;
     const g = this.add.graphics();
     sonicPanel(g, 0, 0, w, h, 'blue', 0.94);
-    const barX = 34, barY = 17, barW = w - barX - 8;
+    const barX = 34, barY = BOX_BAR_Y, barW = w - barX - 8;
     g.fillStyle(HUD.outline).fillRect(barX - 2, barY - 2, barW + 4, 8);
     g.fillStyle(HUD.pipEmpty).fillRect(barX - 1, barY - 1, barW + 2, 6);
     root.add(g);
     root.add(this.add.text(10, barY - 1, 'HP', { fontFamily: FONT, fontSize: '8px', color: HUD.label }));
     const bar = this.add.rectangle(barX, barY, barW, 4, 0x4ade5a).setOrigin(0, 0);
-    const name = this.add.text(8, 5, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' });
+    const name = this.add.text(8, 7, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' });
     // jouw kant krijgt het character-icoontje links naast de box
     if (isPlayer) {
-      // Advance 3-portret links naast de box, precies even hoog (40 px)
-      portrait = this.add.image(-4, 0, `portrait_${this.player.def.id}`).setOrigin(1, 0);
+      // Advance 3-portret links naast de box, onderkant gelijk
+      portrait = this.add.image(-4, h, `portrait_${this.player.def.id}`).setOrigin(1, 1);
       root.add(portrait);
     }
-    const level = this.add.text(w - 8, 5, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setOrigin(1, 0);
-    const typeIcon = this.add.image(0, 8, 'type_speed').setOrigin(0, 0.5);
+    const level = this.add.text(w - 8, 7, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setOrigin(1, 0);
+    const typeIcon = this.add.image(0, 4, 'type_speed').setOrigin(0, 0);
     root.add([bar, name, level, typeIcon]);
     const box: InfoBox = { root, name, level, bar, barW, shownHp: 0, typeIcon, portrait };
     if (!isPlayer) {
@@ -487,12 +494,12 @@ export class BattleScene extends Phaser.Scene {
     }
     if (isPlayer) {
       // Boost-meter: 6 blokjes onder de HP-balk
-      root.add(this.add.text(8, 25, 'BOOST', { fontFamily: FONT, fontSize: '8px', color: '#6ad8ff' }));
-      box.boostPips = Array.from({ length: MAX_BOOST }, (_, i) => this.add.rectangle(52 + i * 9, 26, 7, 6, HUD.pipEmpty).setOrigin(0).setStrokeStyle(1, HUD.outline));
+      root.add(this.add.text(8, 30, 'BOOST', { fontFamily: FONT, fontSize: '8px', color: '#6ad8ff' }));
+      box.boostPips = Array.from({ length: MAX_BOOST }, (_, i) => this.add.rectangle(52 + i * 9, 31, 7, 6, HUD.pipEmpty).setOrigin(0).setStrokeStyle(1, HUD.outline));
       root.add(box.boostPips);
-      box.hpText = this.add.text(w - 8, 25, '', { fontFamily: FONT, fontSize: '8px', color: '#cfd6ee' }).setOrigin(1, 0);
-      g.fillStyle(HUD.pipEmpty).fillRect(8, 34, w - 16, 2);
-      box.exp = this.add.rectangle(8, 34, 0, 2, HUD.cyan).setOrigin(0, 0);
+      box.hpText = this.add.text(w - 8, 30, '', { fontFamily: FONT, fontSize: '8px', color: '#cfd6ee' }).setOrigin(1, 0);
+      g.fillStyle(HUD.pipEmpty).fillRect(8, 39, w - 16, 2);
+      box.exp = this.add.rectangle(8, 39, 0, 2, HUD.cyan).setOrigin(0, 0);
       root.add([box.hpText, box.exp]);
     }
     return box;
@@ -500,9 +507,10 @@ export class BattleScene extends Phaser.Scene {
 
   private drawHud() {
     this.eBox = this.makeInfoBox(10, 26, 170, false);
-    this.pBox = this.makeInfoBox(W - 186, 172, 178, true);
-    this.fieldText = this.add.text(W - 186, 161, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
-      .setDepth(20).setShadow(1, 1, '#000', 0);
+    this.pBox = this.makeInfoBox(W - 186, 171, 178, true);
+    // zone-effect rechts boven je box, zodat het nooit over de hoofdjes van je team valt
+    this.fieldText = this.add.text(W - 8, 160, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', stroke: '#281060', strokeThickness: 3 })
+      .setOrigin(1, 0).setDepth(20);
     // je team als kleine hoofdjes boven het portret (donker = KO)
     this.partyHeads = this.party.map(() => this.add.image(0, 154, 'ui', 'head_sonic').setOrigin(0, 0).setDepth(20));
     addMenuButton(this, W - 12, 10, () => this.openPause()).setDepth(21);
@@ -580,7 +588,7 @@ export class BattleScene extends Phaser.Scene {
       this.statsLayer.add([t, b]);
     }
     this.cmdLayer.add(this.add.text(12, PANEL_Y + 30, 'C stats  I info  V field', { fontFamily: FONT, fontSize: '8px', color: HUD.inkMuted }));
-    const statsHit = this.add.zone(this.pBox.root.x, this.pBox.root.y, 178, 40).setOrigin(0).setDepth(21).setInteractive({ useHandCursor: true });
+    const statsHit = this.add.zone(this.pBox.root.x, this.pBox.root.y, 178, 45).setOrigin(0).setDepth(21).setInteractive({ useHandCursor: true });
     statsHit.on('pointerdown', () => { if (this.menu === 'command') this.toggleStats(); });
 
     // Tas (Items)
@@ -603,17 +611,29 @@ export class BattleScene extends Phaser.Scene {
     g.fillStyle(HUD.outline).fillRect(0, PANEL_Y + 6, W, 1);
   }
 
+  /** Tas (Items): elk item als icoontje in een vakje, de naam van wat je kiest staat eronder. */
   private buildBagItems() {
     this.bagItems.forEach(t => t.destroy());
     this.bagItems = [];
     this.bagIds = Object.keys(ITEMS).filter(id => (this.bag[id] ?? 0) > 0);
+    this.bagName?.destroy();
+    this.bagName = this.add.text(26, PANEL_Y + 33, '', { fontFamily: FONT, fontSize: '8px', color: HUD.ink });
+    this.bagLayer.add(this.bagName);
     this.bagIds.forEach((id, i) => {
-      const t = this.add.text(26 + (i % 2) * 150, PANEL_Y + 15 + Math.floor(i / 2) * 15, `${ITEMS[id].name} x${this.bag[id]}`,
-        { fontFamily: FONT, fontSize: '8px', color: HUD.ink }).setInteractive({ useHandCursor: true });
-      t.on('pointerover', () => { if (this.menu === 'bag') { this.cursor = i; this.refreshCursor(); } });
-      t.on('pointerdown', () => { if (this.menu === 'bag') { this.cursor = i; this.confirm(); } });
-      this.bagItems.push(t);
-      this.bagLayer.add(t);
+      // container op de plek van de cursor (links), het vakje zelf er net rechts van
+      const c = this.add.container(26 + i * 64, PANEL_Y + 15);
+      const slot = this.add.graphics();
+      slot.fillStyle(HUD.outline).fillRoundedRect(0, -4, 26, 20, 3);
+      slot.fillStyle(HUD.pipEmpty).fillRoundedRect(1, -3, 24, 18, 2);
+      const icon = this.shopIcon(id, false)[0] as Phaser.GameObjects.Image;
+      icon.setPosition(13, 6);
+      const count = this.add.text(30, 0, `x${this.bag[id]}`, { fontFamily: FONT, fontSize: '8px', color: HUD.ink });
+      const hit = this.add.zone(-12, -4, 76, 20).setOrigin(0).setInteractive({ useHandCursor: true });
+      hit.on('pointerover', () => { if (this.menu === 'bag') { this.cursor = i; this.refreshCursor(); } });
+      hit.on('pointerdown', () => { if (this.menu === 'bag') { this.cursor = i; this.confirm(); } });
+      c.add([slot, icon, count, hit]);
+      this.bagItems.push(c);
+      this.bagLayer.add(c);
     });
   }
 
@@ -782,18 +802,22 @@ export class BattleScene extends Phaser.Scene {
       this.moveInfo.setColor(this.player.canUse(m) ? '#ffffff' : '#ff7a6a');
       if (this.infoLayer.visible) this.updateMoveInfo();
     } else if (this.menu === 'bag') {
-      if (!this.bagIds.length) { this.bagInfo.setText('Your bag is empty. Buy items in the shop after a wave.'); return; }
+      if (!this.bagIds.length) { this.bagInfo.setText('Bag is empty.\nVisit the shop!'); this.bagName?.setText(''); return; }
       const t = this.bagItems[this.cursor];
       this.pointer.setPosition(t.x - 11, t.y);
-      this.bagInfo.setText(ITEMS[this.bagIds[this.cursor]].desc);
+      const it = ITEMS[this.bagIds[this.cursor]];
+      this.bagName?.setText(it.name);
+      this.bagInfo.setText(it.desc);
     } else if (this.menu === 'reward') {
       this.rewardCards.forEach((c, i) => {
         const sel = this.rewardRow === 0 && i === this.cursor;
         c.y = sel ? 159 : 162;
-        (c.getAt(1) as Phaser.GameObjects.Graphics).setVisible(sel);
+        (c.getByName('sel') as Phaser.GameObjects.Graphics).setVisible(sel);
       });
       this.shopButtons.forEach((b, i) => {
-        (b.getByName('arrow') as Phaser.GameObjects.Triangle).setVisible(this.rewardRow === 1 && i === this.cursor);
+        const sel = this.rewardRow === 1 && i === this.cursor;
+        (b.getByName('sel') as Phaser.GameObjects.Graphics).setVisible(sel);
+        b.y = sel ? SHOP_TILE_Y - 2 : SHOP_TILE_Y;
       });
       if (this.rewardRow === 0) {
         const r = this.rewardChoices[this.cursor];
@@ -1026,7 +1050,7 @@ export class BattleScene extends Phaser.Scene {
       box.segments!.clear();
       if (kind === 'BOSS') {
         box.segments!.fillStyle(HUD.outline);
-        for (let i = 1; i < 4; i++) box.segments!.fillRect(34 + (box.barW * i) / 4 - 1, 17, 2, 4);
+        for (let i = 1; i < 4; i++) box.segments!.fillRect(34 + (box.barW * i) / 4 - 1, BOX_BAR_Y, 2, 4);
       }
     }
     box.boostPips?.forEach((pip, i) => pip.setFillStyle(i < f.boost ? (f.boost >= MAX_BOOST ? HUD.pipFull : HUD.pip) : HUD.pipEmpty));
@@ -2090,6 +2114,7 @@ export class BattleScene extends Phaser.Scene {
       img.setFrame(`head_${f.def.id}`).setX(x0 + i * 18);
       if (f.fainted) img.setTint(0x30344a).setAlpha(0.8);
       else img.clearTint().setAlpha(f === this.player ? 1 : 0.6);
+      if (this.rewardLayer) img.setAlpha(0); // reward-scherm: het team staat rechtsonder
     });
   }
 
@@ -2099,11 +2124,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Zes blokjes Boost (vol = goud), zoals in je info-box. */
-  private boostPips(x: number, y: number, boost: number, dim = false) {
+  private boostPips(x: number, y: number, boost: number, dim = false, step = 6) {
     const g = this.add.graphics().setAlpha(dim ? 0.45 : 1);
     for (let i = 0; i < MAX_BOOST; i++) {
-      g.fillStyle(HUD.outline).fillRect(x + i * 6, y, 5, 6);
-      g.fillStyle(i < boost ? (boost >= MAX_BOOST ? HUD.pipFull : HUD.pip) : HUD.pipEmpty).fillRect(x + i * 6 + 1, y + 1, 3, 4);
+      g.fillStyle(HUD.outline).fillRect(x + i * step, y, step - 1, 6);
+      g.fillStyle(i < boost ? (boost >= MAX_BOOST ? HUD.pipFull : HUD.pip) : HUD.pipEmpty).fillRect(x + i * step + 1, y + 1, step - 3, 4);
     }
     return g;
   }
@@ -2529,23 +2554,18 @@ export class BattleScene extends Phaser.Scene {
     const g = this.add.graphics();
     sonicPanel(g, SHOP_X, 26, SHOP_W, 74, 'blue', 0.9);
     layer.add(g);
-    layer.add(this.add.text(SHOP_X + 10, 33, 'SHOP', { fontFamily: FONT, fontSize: '8px', color: HUD.label }));
+    // SHOP staand in een eigen kolom links, zodat de items de hele hoogte hebben
+    layer.add(this.add.text(SHOP_X + 17, 63, 'S\nH\nO\nP', { fontFamily: FONT, fontSize: '8px', color: HUD.label, align: 'center', lineSpacing: 4 }).setOrigin(0.5));
     layer.add(this.add.text(W / 2, 103, 'Choose a reward', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setOrigin(0.5, 0).setShadow(1, 1, '#000', 0));
     this.rewardLayer = layer;
-    this.tweens.add({ targets: this.pBox.root, alpha: 0, duration: 200 });
+    // je info-box, het zone-label en de hoofdjes maken plaats voor het team-paneel
+    this.tweens.add({ targets: [this.pBox.root, this.fieldText, ...this.partyHeads], alpha: 0, duration: 200 });
     this.showStatusPanel();
     this.buildShopRow();
     this.buildRewardRow();
     layer.setAlpha(0);
     this.tweens.add({ targets: layer, alpha: 1, duration: 200 });
     this.refreshCursor();
-  }
-
-  /** gele pijl boven het geselecteerde item */
-  private makeArrow(y: number) {
-    const a = this.add.triangle(0, y, 0, 0, 10, 0, 5, 6, 0xf2c230).setVisible(false);
-    this.tweens.add({ targets: a, y: y + 3, duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    return a;
   }
 
   /** Korte lijst van actieve reward-effecten (voor het field-paneel). */
@@ -2589,10 +2609,10 @@ export class BattleScene extends Phaser.Scene {
       const g = this.add.graphics();
       g.fillStyle(0x181b26).fillRoundedRect(-58, -44, 116, 88, 6);
       g.lineStyle(r.tier === 'common' ? 1 : 2, col).strokeRoundedRect(-57.5, -43.5, 115, 87, 6);
-      const sel = this.add.graphics().lineStyle(2, 0xffffff).strokeRoundedRect(-61, -47, 122, 94, 7).setVisible(false);
+      const sel = this.add.graphics().lineStyle(2, 0xffffff).strokeRoundedRect(-61, -47, 122, 94, 7).setVisible(false).setName('sel');
       const name = this.add.text(0, 6, r.name + (r.plus ? '+' : ''), { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setOrigin(0.5, 0);
       const desc = this.add.text(0, 18, r.desc(this.rewardCtx()), { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4', align: 'center', wordWrap: { width: 108 }, lineSpacing: 2 }).setOrigin(0.5, 0);
-      const mon = this.rewardIcon(r, -16);
+      const mon = this.rewardIcon(r, -16).setName('mon');
       const tier = this.add.text(0, -41, TIER_NAME[r.tier], { fontFamily: FONT, fontSize: '8px', color: '#' + col.toString(16).padStart(6, '0') }).setOrigin(0.5, 0).setScale(0.75);
       this.tweens.add({ targets: mon, y: mon.y - 3, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: i * 180 });
       c.add([g, sel, name, desc, mon, tier]);
@@ -2631,22 +2651,33 @@ export class BattleScene extends Phaser.Scene {
     return [this.add.sprite(0, 0, 'ui', 'monitor_random').setScale(1)];
   }
 
+  /**
+   * Shop: elk item in een eigen vakje (ook met 5 items blijft het rustig), prijs eronder.
+   * Het geselecteerde vakje krijgt een gouden rand en komt iets omhoog.
+   */
   private buildShopRow() {
     this.shopButtons.forEach(b => b.destroy());
     this.shopItems = shopStock(this.wave);
     const slots = [...this.shopItems.map(i => i.id), 'reroll'];
-    const step = 80;
-    const x0 = SHOP_X + SHOP_W / 2 - ((slots.length - 1) * step) / 2;
+    const tw = 58, th = 62, gap = 7;
+    const left = SHOP_X + 36, right = SHOP_X + SHOP_W - 6;
+    const x0 = (left + right) / 2 - ((slots.length - 1) * (tw + gap)) / 2;
     this.shopButtons = slots.map((id, i) => {
-      const b = this.add.container(x0 + i * step, 56);
-      const shadow = this.add.ellipse(0, 16, 34, 7, 0x000000, 0.4);
-      const arrow = this.makeArrow(-32);
-      const price = this.add.text(0, 25, '', { fontFamily: FONT, fontSize: '8px', color: '#f2c230' });
-      // klein ring-icoontje voor de prijs (het grote item-icoon is ook een ring)
-      const coin = this.add.sprite(0, 29, 'ui', 'ring_0').setScale(0.5);
-      arrow.setName('arrow'); price.setName('price'); coin.setName('coin');
-      b.add([shadow, price, coin, ...this.shopIcon(id), arrow]); // pijl bovenop het icoon
-      b.setSize(70, 60).setInteractive({ useHandCursor: true });
+      const b = this.add.container(x0 + i * (tw + gap), SHOP_TILE_Y);
+      const bg = this.add.graphics();
+      bg.fillStyle(HUD.outline).fillRoundedRect(-tw / 2, -th / 2, tw, th, 4);
+      bg.fillStyle(id === 'reroll' ? 0x2a2070 : HUD.pipEmpty, 0.9).fillRoundedRect(-tw / 2 + 1, -th / 2 + 1, tw - 2, th - 2, 3);
+      const sel = this.add.graphics().setName('sel').setVisible(false);
+      sel.fillStyle(HUD.blueTop, 0.6).fillRoundedRect(-tw / 2 + 1, -th / 2 + 1, tw - 2, th - 2, 3);
+      sel.lineStyle(2, HUD.gold).strokeRoundedRect(-tw / 2, -th / 2, tw, th, 4);
+      const price = this.add.text(0, 17, '', { fontFamily: FONT, fontSize: '8px', color: '#f2c230' });
+      // klein ring-icoontje voor de prijs
+      const coin = this.add.sprite(0, 21, 'ui', 'ring_0').setScale(0.5);
+      price.setName('price'); coin.setName('coin');
+      const icon = this.shopIcon(id);
+      icon.forEach(o => (o as Phaser.GameObjects.Image).setY(-8));
+      b.add([bg, sel, price, coin, ...icon]);
+      b.setSize(tw, th).setInteractive({ useHandCursor: true });
       b.on('pointerover', () => { if (this.menu === 'reward') { this.rewardRow = 1; this.cursor = i; this.refreshCursor(); } });
       b.on('pointerdown', () => { if (this.menu === 'reward') { this.rewardRow = 1; this.cursor = i; this.buyItem(i); } });
       this.rewardLayer!.add(b);
@@ -2721,20 +2752,22 @@ export class BattleScene extends Phaser.Scene {
     const w = 180, h = H - PANEL_Y - 10;
     const c = this.add.container(W - w - 6, PANEL_Y + 8).setDepth(41);
     c.add(sonicPanel(this.add.graphics(), 0, 0, w, h, 'blue'));
-    const rowH = this.party.length > 2 ? 10 : 13;
-    const y0 = Math.round((h - this.party.length * rowH) / 2);
+    // een kolom per teamgenoot: hoofdje op ware grootte, HP-balk en Boost ernaast, HP eronder
+    const cw = Math.floor((w - 6) / this.party.length);
     this.party.forEach((f, i) => {
-      const y = y0 + i * rowH;
-      const head = this.add.image(13, y + rowH / 2, 'ui', `head_${f.def.id}`).setScale(rowH / 16 + 0.05);
+      const x = 3 + i * cw;
+      const head = this.add.image(x + 3, 4, 'ui', `head_${f.def.id}`).setOrigin(0);
       if (f.fainted) head.setTint(0x30344a);
-      const barW = 50, frac = Math.max(0, f.hp / f.maxHp);
+      const bx = x + 22, barW = cw - 26, frac = Math.max(0, f.hp / f.maxHp);
       const g = this.add.graphics();
-      g.fillStyle(HUD.outline).fillRect(23, y + rowH / 2 - 3, barW + 2, 6);
-      g.fillStyle(HUD.pipEmpty).fillRect(24, y + rowH / 2 - 2, barW, 4);
-      g.fillStyle(this.hpColor(frac)).fillRect(24, y + rowH / 2 - 2, Math.round(barW * frac), 4);
-      const hp = this.add.text(136, y + rowH / 2 - 4, f.fainted ? 'KO' : `${f.hp}/${f.maxHp}`,
-        { fontFamily: FONT, fontSize: '8px', color: f.fainted ? '#ff7a6a' : f === this.player ? '#ffffff' : '#cfd6ee' }).setOrigin(1, 0);
-      c.add([head, g, hp, this.boostPips(139, y + rowH / 2 - 3, f.boost, f.fainted)]);
+      g.fillStyle(HUD.outline).fillRect(bx - 1, 5, barW + 2, 6);
+      g.fillStyle(HUD.pipEmpty).fillRect(bx, 6, barW, 4);
+      g.fillStyle(this.hpColor(frac)).fillRect(bx, 6, Math.round(barW * frac), 4);
+      // scheidingslijntje tussen de kolommen
+      if (i > 0) g.fillStyle(HUD.outline).fillRect(x - 1, 5, 1, h - 10);
+      const hp = this.add.text(x + cw / 2, 23, f.fainted ? 'KO' : `${f.hp}/${f.maxHp}`,
+        { fontFamily: FONT, fontSize: '8px', color: f.fainted ? '#ff7a6a' : f === this.player ? '#ffffff' : '#cfd6ee' }).setOrigin(0.5, 0);
+      c.add([head, g, hp, this.boostPips(bx, 13, f.boost, f.fainted, barW < 36 ? 5 : 6)]);
     });
     const hit = this.add.zone(0, 0, w, h).setOrigin(0).setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => { if (this.menu === 'reward') this.openTeam(); });
@@ -2758,7 +2791,7 @@ export class BattleScene extends Phaser.Scene {
     this.refreshPartyHeads();
     // monitor kapot: rookwolk + glinsters, net als in de game
     const card = this.rewardCards[i];
-    const mon = card.getAt(r.tier === 'common' ? 4 : 5) as Phaser.GameObjects.Image;
+    const mon = card.getByName('mon') as Phaser.GameObjects.Image;
     const wx = card.x + mon.x, wy = card.y + mon.y;
     mon.setVisible(false);
     const smoke = this.add.sprite(wx, wy, 'ui', 'smoke_0').setDepth(41).play('smoke');
@@ -2774,7 +2807,8 @@ export class BattleScene extends Phaser.Scene {
     this.shopButtons = [];
     this.statusPanel?.destroy();
     this.statusPanel = undefined;
-    this.tweens.add({ targets: this.pBox.root, alpha: 1, duration: 200 });
+    this.tweens.add({ targets: [this.pBox.root, this.fieldText], alpha: 1, duration: 200 });
+    this.refreshPartyHeads();
     this.setBox(this.pBox, this.player, true);
     await this.say(text, 600);
     this.wave++;

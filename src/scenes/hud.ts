@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Sonic-stijl HUD voor het gevecht, naar de UI van de Tiny Chao Garden (Sonic Advance):
 // paarse rand met een cyaan lijntje, blauwe of crème vulling, goud geblokte banden en
-// het blauwe cijferfont. Plaatjes komen uit tools/build_hud.py.
+// het RINGS-label. Plaatjes komen uit tools/build_hud.py.
 // ---------------------------------------------------------------------------
 import Phaser from 'phaser';
 
@@ -60,59 +60,30 @@ export function checkerBand(g: Phaser.GameObjects.Graphics, x: number, y: number
   return g;
 }
 
-/** Getal in het blauwe Chao Garden-font, rechts uitgelijnd op x. */
-export class Digits {
-  readonly root: Phaser.GameObjects.Container;
-  private imgs: Phaser.GameObjects.Image[] = [];
-  constructor(private scene: Phaser.Scene, x: number, y: number, private slots: number, private prefix = false) {
-    this.root = scene.add.container(x, y);
-  }
-
-  set(n: number) {
-    const s = (this.prefix ? 'x' : '') + String(Math.max(0, Math.min(Math.floor(n), 10 ** this.slots - 1)));
-    while (this.imgs.length < s.length) {
-      const img = this.scene.add.image(0, 0, 'hud_digits', '0').setOrigin(1, 0);
-      this.imgs.push(img);
-      this.root.add(img);
-    }
-    this.imgs.forEach((img, i) => {
-      const ch = s[s.length - 1 - i];
-      img.setVisible(ch !== undefined);
-      if (ch !== undefined) img.setFrame(ch).setX(-i * 8);
-    });
-    return this;
-  }
-}
-
-/** Frames '0'..'9' en 'x' op hud_digits zetten (BootScene). */
-export function addDigitFrames(scene: Phaser.Scene) {
-  const t = scene.textures.get('hud_digits');
-  if (!t || t.key === '__MISSING' || t.has('0')) return;
-  '0123456789x'.split('').forEach((ch, i) => t.add(ch, 0, i * 8, 0, 8, 11));
-}
-
 /**
- * Ring-teller rechtsboven: draaiende ring, "RINGS" en het getal in een gestreept venster.
+ * Ring-teller rechtsboven: draaiende ring, "RINGS" en het getal in goud in een donker venster.
  * `setText` zodat hij net zo werkt als de oude tekst-teller.
  */
 export class RingCounter {
   readonly root: Phaser.GameObjects.Container;
   readonly ring: Phaser.GameObjects.Sprite;
-  private digits: Digits;
+  private digits: Phaser.GameObjects.Text;
   private value = -1;
   static readonly W = 60;
   static readonly H = 32;
-  static readonly DIGITS_Y = 15;
+  static readonly DIGITS_Y = 17;
 
   constructor(private scene: Phaser.Scene, x: number, y: number) {
     this.root = scene.add.container(x, y).setDepth(20);
     const g = scene.add.graphics();
     sonicPanel(g, 0, 0, RingCounter.W, RingCounter.H, 'blue');
-    sonicPanel(g, 4, 13, RingCounter.W - 8, 16, 'peach');
+    g.fillStyle(HUD.outline).fillRect(4, 13, RingCounter.W - 8, 16);
+    g.fillStyle(HUD.pipEmpty).fillRect(5, 14, RingCounter.W - 10, 14);
     this.root.add(g);
     this.root.add(scene.add.image(RingCounter.W / 2, 4, 'hud_rings_label').setOrigin(0.5, 0));
-    this.digits = new Digits(scene, RingCounter.W - 9, RingCounter.DIGITS_Y, 5);
-    this.root.add(this.digits.root);
+    this.digits = scene.add.text(RingCounter.W - 8, RingCounter.DIGITS_Y, '0',
+      { fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#f2c230' }).setOrigin(1, 0);
+    this.root.add(this.digits);
     // draaiende ring links van het paneel (de rings uit een wave vliegen hierheen)
     this.ring = scene.add.sprite(x - 9, y + RingCounter.H / 2, 'ui', 'ring_0').setDepth(20).play('ring_spin');
   }
@@ -121,12 +92,12 @@ export class RingCounter {
     const n = Number(text) || 0;
     if (n !== this.value && this.value >= 0) {
       // klein hupje bij elke verandering (altijd terug naar dezelfde plek)
-      this.scene.tweens.killTweensOf(this.digits.root);
-      this.digits.root.y = RingCounter.DIGITS_Y;
-      this.scene.tweens.add({ targets: this.digits.root, y: RingCounter.DIGITS_Y - 2, duration: 60, yoyo: true });
+      this.scene.tweens.killTweensOf(this.digits);
+      this.digits.y = RingCounter.DIGITS_Y;
+      this.scene.tweens.add({ targets: this.digits, y: RingCounter.DIGITS_Y - 2, duration: 60, yoyo: true });
     }
     this.value = n;
-    this.digits.set(n);
+    this.digits.setText(`${n}`);
     return this;
   }
 }
