@@ -17,7 +17,7 @@ export const RICH = {
 const STATS = new Set(['atk', 'def', 'spd', 'acc', 'hp', 'boost', 'power', 'pwr']);
 const GOOD = new Set([
   'stun', 'stuns', 'stunned', 'flinch', 'flinches', 'crit', 'crits', 'critical', 'heal', 'heals', 'healed',
-  'raises', 'dodge', 'dodges', 'survives', 'first', 'miss', 'misses', 'doubled', 'doubles', 'harder',
+  'raises', 'dodge', 'dodges', 'survives', 'first', 'miss', 'misses', 'doubled', 'doubles', 'harder', 'free', 'crits',
 ]);
 const BAD = new Set(['lowers', 'costs', 'cost', 'recoil']);
 /** woord ervoor dat ook groen wordt: "never misses", "always hits", "strikes first" */

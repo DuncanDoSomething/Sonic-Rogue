@@ -14,6 +14,12 @@ import creamAnims from '../assets/cream_anims.json';
 import amyPng from '../assets/amy.png';
 import amyAtlas from '../assets/amy.json';
 import amyAnims from '../assets/amy_anims.json';
+import shadowPng from '../assets/shadow.png';
+import shadowAtlas from '../assets/shadow.json';
+import shadowAnims from '../assets/shadow_anims.json';
+import shadowFxPng from '../assets/shadowfx.png';
+import shadowFxAtlas from '../assets/shadowfx.json';
+import shadowFxAnims from '../assets/shadowfx_anims.json';
 import badniksPng from '../assets/badniks.png';
 import badniksAtlas from '../assets/badniks.json';
 import badnikAnims from '../assets/badnik_anims.json';
@@ -71,6 +77,7 @@ const CHARACTERS: Array<[string, string, unknown, Record<string, CharAnim>]> = [
   ['knuckles', knucklesPng, knucklesAtlas, knucklesAnims as Record<string, CharAnim>],
   ['cream', creamPng, creamAtlas, creamAnims as Record<string, CharAnim>],
   ['amy', amyPng, amyAtlas, amyAnims as Record<string, CharAnim>],
+  ['shadow', shadowPng, shadowAtlas, shadowAnims as Record<string, CharAnim>],
 ];
 
 export class BootScene extends Phaser.Scene {
@@ -83,6 +90,7 @@ export class BootScene extends Phaser.Scene {
     this.load.atlas('emeralds', emeraldsPng, emeraldsAtlas as unknown as string);
     this.load.atlas('ui', uiPng, uiAtlas as unknown as string);
     this.load.atlas('fx', fxPng, fxAtlas as unknown as string);
+    this.load.atlas('shadowfx', shadowFxPng, shadowFxAtlas as unknown as string);
     for (const [png, json, anim] of GIF_IDLES) this.load.atlas(anim.texture, png, json as string);
     for (const [path, url] of Object.entries(CUTINS)) this.load.image(`cutin_${path.split('/').pop()!.replace('.png', '')}`, url);
     preloadSounds(this);
@@ -117,6 +125,10 @@ export class BootScene extends Phaser.Scene {
     // Super Sonic en effecten: 'ss_dash', 'fx_burst', 'cheese_fly', ...
     for (const a of Object.values(fxAnims as Record<string, CharAnim>)) {
       this.anims.create({ key: a.key, frames: a.frames.map(f => ({ key: 'fx', frame: f as string })), frameRate: a.frameRate, repeat: a.repeat });
+    }
+    // Shadow: Super Shadow en zijn chaos-effecten ('ssh_idle', 'sh_spear', ...)
+    for (const a of Object.values(shadowFxAnims as Record<string, CharAnim>)) {
+      this.anims.create({ key: a.key, frames: a.frames.map(f => ({ key: 'shadowfx', frame: f as string })), frameRate: a.frameRate, repeat: a.repeat });
     }
     // Badnik-animaties: '<id>_idle' loopt, '<id>_attack' speelt één keer
     for (const [name, frames] of Object.entries(badnikAnims as Record<string, string[]>)) {

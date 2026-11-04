@@ -9,7 +9,9 @@ import type { RunBuffs } from './rewards';
 const KEY = 'sonicrogue_run';
 const VERSION = 1;
 
-export interface SavedFighter { id: string; level: number; exp: number; hp: number; boost: number; stages: Stages; sash?: boolean; chip?: boolean; }
+export interface SavedFighter { id: string; level: number; exp: number; hp: number; boost: number; stages: Stages; sash?: boolean; chip?: boolean;
+  /** Shadow: Chaos Control / Super Barrage gratis, en de ketting */
+  chaosFree?: boolean; ultFree?: boolean; ultChain?: number; }
 
 export interface RunSave {
   v: number;
@@ -31,7 +33,8 @@ export interface RunSave {
 }
 
 export function fighterToSave(f: Fighter): SavedFighter {
-  return { id: f.def.id, level: f.level, exp: f.exp, hp: f.hp, boost: f.boost, stages: { ...f.stages }, sash: f.sashUsed, chip: f.spinChip };
+  return { id: f.def.id, level: f.level, exp: f.exp, hp: f.hp, boost: f.boost, stages: { ...f.stages }, sash: f.sashUsed, chip: f.spinChip,
+    chaosFree: f.chaosFree || undefined, ultFree: f.ultFree || undefined, ultChain: f.ultChain || undefined };
 }
 
 export function fighterFromSave(s: SavedFighter): Fighter {
@@ -42,6 +45,9 @@ export function fighterFromSave(s: SavedFighter): Fighter {
   f.stages = { ...f.stages, ...s.stages };
   f.sashUsed = !!s.sash;
   f.spinChip = !!s.chip;
+  f.chaosFree = !!s.chaosFree;
+  f.ultFree = !!s.ultFree;
+  f.ultChain = s.ultChain ?? 0;
   return f;
 }
 

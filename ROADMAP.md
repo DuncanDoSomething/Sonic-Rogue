@@ -27,9 +27,10 @@
 - [x] Sonic-style battle HUD: ring counter, bag and buff icons on screen with hover info, Boost in the party menu and during rewards
 - [x] How to Play by topic, a guided practice fight with Tails, and one-time tips (can be turned off)
 - [x] Unit tests, end-to-end tests and automatic deploys
+- [x] Shadow as a playable character (Chaos Spear, Chaos Control, Super Shadow ultimate, Rampage passive)
 
 ## Next
-- [ ] Shadow as a playable character
+- [ ] Shadow as a boss
 - [ ] Main bosses every 20 waves (Eggman, Chaos, Shadow) with boss charms, and a super boss at wave 90 after all seven Chaos Emeralds
 - [ ] Enemies with more interaction: their own status moves, buffs and patterns
 - [ ] Team ultimates

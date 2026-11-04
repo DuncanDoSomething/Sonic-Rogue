@@ -7,6 +7,7 @@
 export type MoveAnim =
   | 'spin' | 'homing' | 'dash' | 'punch' | 'fly'   // team
   | 'glide' | 'hammer' | 'twirl' | 'heal' | 'ultimate'
+  | 'spear' | 'chaos'                               // Shadow
   | 'shoot' | 'tackle' | 'lash' | 'slam';          // badniks
 
 // ---------------------------------------------------------------- types
@@ -56,7 +57,7 @@ export function expShareAfter(cleared: number) {
 }
 
 // ---------------------------------------------------------------- passives
-export type PassiveId = 'speedster' | 'weakSpot' | 'flinch' | 'luckySwing' | 'chaoCare';
+export type PassiveId = 'speedster' | 'weakSpot' | 'flinch' | 'luckySwing' | 'chaoCare' | 'rampage';
 export interface PassiveDef { id: PassiveId; name: string; desc: string; }
 export const PASSIVES: Record<PassiveId, PassiveDef> = {
   speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. Hits harder the faster he is than the foe (up to +75%).' },
@@ -64,6 +65,7 @@ export const PASSIVES: Record<PassiveId, PassiveDef> = {
   flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP.' },
   luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance per ATK stage. Crits cost her 10% max HP (not with Hammer Twirl).' },
   chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'If Cream is on the field when a wave starts, the whole team heals 10% HP.' },
+  rampage:    { id: 'rampage', name: 'Rampage', desc: 'Every time one of his moves becomes free again, his ATK and SPD rise by 1.' },
 };
 export const FLINCH_CHANCE = 0.2;
 export const WEAK_SPOT_BONUS = 2;
@@ -71,6 +73,14 @@ export const WEAK_SPOT_BONUS = 2;
 export const CRIT_RECOIL = 0.1;
 export const CHAO_CARE_HEAL = 0.1;
 export const BASE_CRIT = 0.0625;
+
+// ---------------------------------------------------------------- Shadow
+/** Chaos Spear: het doelwit krijgt zoveel extra schade, een paar beurten lang. */
+export const PIERCE_BONUS = 1.5;
+/** Super Shadow: zolang hij super is, krijgt Shadow zelf zoveel extra schade. */
+export const SUPER_VULNERABLE = 1.33;
+/** Zo vaak achter elkaar kan Super Shadow Barrage weer gratis worden door een KO. */
+export const ULT_CHAIN_MAX = 3;
 
 /** Sonic Speed: x1 bij gelijke snelheid, +25% per keer zo snel, max +75%. */
 export const SPEED_BONUS_CAP = 1.75;
@@ -83,6 +93,8 @@ export function speedBonus(attacker: Fighter, target: Fighter) {
 /** Critical-kans: 1/16, plus Lucky Swing (Amy). */
 export function critChance(attacker: Fighter) {
   const bonus = attacker.def.passive?.id === 'luckySwing' ? 0.25 * Math.max(0, attacker.stage('atk')) : 0;
+  // Super Shadow: 100% crit zolang hij super is
+  if (attacker.superTurns > 0) return 1;
   return Math.min(1, BASE_CRIT + bonus);
 }
 
@@ -114,8 +126,16 @@ export interface MoveDef {
   stunOnce?: boolean;
   /** De volgende n aanvallen op de gebruiker missen gegarandeerd. */
   evade?: number;
-  /** Altijd een critical hit. Staat de crit-kans al op 100%, dan is de power dubbel. */
+  /** Altijd een critical hit. */
   alwaysCrit?: boolean;
+  /** Staat de crit-kans al op 100%, dan is de power dubbel (Tornado Hammer). */
+  critDouble?: boolean;
+  /** Chaos Spear: het doelwit krijgt n beurten lang PIERCE_BONUS extra schade. */
+  pierce?: number;
+  /** Super Shadow: n beurten lang 100% crit, maar ook SUPER_VULNERABLE extra schade krijgen. */
+  superTurns?: number;
+  /** Wordt weer gratis na een KO (Chaos Control: elke KO; de ultimate: als hij zelf de KO maakt). */
+  resets?: 'anyKo' | 'ownKo';
   /** Genees-move die je ook op een teamgenoot kunt gebruiken (je kiest wie). */
   ally?: boolean;
   /** Geneest het hele team met dit deel van hun max-HP (en doet geen schade). */
@@ -142,13 +162,16 @@ export const MOVES: Record<string, MoveDef> = {
   chaoCheer:    { id: 'chaoCheer', name: 'Chao Cheer', power: 0, accuracy: 100, priority: 0, anim: 'heal', heal: 0.3, ally: true, cost: 3, desc: 'Heals 30% max HP. Use it on Cream or on a teammate.' },
   hammerSmash:  { id: 'hammerSmash', name: 'Piko Hammer', power: 60, accuracy: 100, priority: 0, anim: 'hammer', cost: 2, selfStages: { atk: 1 }, desc: 'Swings her Piko Piko Hammer down on the foe. Raises ATK by 1.' },
   hammerTwirl:  { id: 'hammerTwirl', name: 'Hammer Twirl', power: 80, accuracy: 100, priority: 0, anim: 'twirl', cost: 3, selfHeal: 0.25, desc: 'Spins around with her hammer out and heals 25% of her max HP.' },
+  chaosSpear:   { id: 'chaosSpear', name: 'Chaos Spear', power: 50, accuracy: 100, priority: 0, anim: 'spear', cost: 3, pierce: 3, desc: 'Hurls spears of chaos energy. The foe takes 50% more damage for 3 turns.' },
+  chaosControl: { id: 'chaosControl', name: 'Chaos Control', power: 100, accuracy: 100, priority: 0, anim: 'chaos', cost: 4, resets: 'anyKo', desc: 'Stops time and strikes freely. Becomes free once after every KO Shadow lands.' },
   copterDive:   { id: 'copterDive', name: 'Copter Dive', power: 50, accuracy: 100, priority: 1, anim: 'fly', cost: 1, desc: 'Rises on spinning tails, flips over and drills down on the foe. Always strikes first.' },
   // --- ultimates (kosten de hele Boost-meter, geleerd op ULTIMATE_LEVEL)
   lightSpeed:   { id: 'lightSpeed', name: 'Light Speed Atk', power: 150, accuracy: 100, priority: 1, anim: 'ultimate', cost: MAX_BOOST, evade: 2, selfStages: { spd: 3 }, desc: 'Homing attacks faster than light. Raises SPD by 3, and the foe misses its next 2 attacks on Sonic.' },
   thunderShoot: { id: 'thunderShoot', name: 'Thunder Shoot', power: 80, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, stun: [3, 3], desc: 'Fires himself like a lightning bolt and stuns the foe for 3 turns.' },
   maximumHeat:  { id: 'maximumHeat', name: 'Maximum Heat', power: 100, scaling: 'stages', accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, spendStages: true, desc: 'A meteor dive. +25 power for every stat stage Knuckles has, up or down; uses them all up.' },
   chaoAttack:   { id: 'chaoAttack', name: 'Chao Blessing', power: 0, accuracy: 100, priority: 1, anim: 'heal', teamHeal: 1, clearField: true, cost: MAX_BOOST, desc: 'Cheese and friends heal the whole team to full HP and clear the zone effect. No damage.' },
-  tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 120, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, recoil: 0.5, desc: 'A hammer storm. Always crits; doubles at 100% crit chance. Costs Amy 50% max HP (KO if below half).' },
+  tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 120, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, critDouble: true, recoil: 0.5, desc: 'A hammer storm. Always crits; doubles at 100% crit chance. Costs Amy 50% max HP (KO if below half).' },
+  superBarrage: { id: 'superBarrage', name: 'Super Barrage', power: 100, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, superTurns: 3, resets: 'ownKo', desc: 'Goes Super and unloads a barrage. Always crits, then 100% crit for 3 turns, but he takes 33% more damage. A KO makes it free again (3x in a row).' },
   // --- badniks
   stingShot:  { id: 'stingShot', name: 'Sting Shot', power: 38, accuracy: 92, priority: 0, anim: 'shoot', desc: '', tint: 0xffb340 },
   snowball:   { id: 'snowball', name: 'Snowball', power: 34, accuracy: 95, priority: 0, anim: 'shoot', desc: '', tint: 0xffffff },
@@ -183,6 +206,8 @@ export interface FighterDef {
   ultimate?: string;
   /** vaste eigenschap van het character (werkt ook als hij een rival is) */
   passive?: PassiveDef;
+  /** Boost die Spin Attack hem geeft (standaard de boostGain van de move, 1) */
+  spinGain?: number;
 }
 
 export const FIGHTERS: Record<string, FighterDef> = {
@@ -228,6 +253,15 @@ export const FIGHTERS: Record<string, FighterDef> = {
     moves: ['spinAttack', 'hammerSmash', 'hammerTwirl'],
     expYield: 20, // alleen als rival
   },
+  shadow: {
+    type: 'speed', ultimate: 'superBarrage', passive: PASSIVES.rampage, spinGain: 2,
+    id: 'shadow', name: 'Shadow', atlas: 'shadow', animPrefix: 'shadow', scale: 2,
+    // net iets trager dan Sonic, en harder
+    base: { hp: 20, atk: 14, def: 8, spd: 17 },
+    growth: { hp: 2.6, atk: 2.2, def: 1.2, spd: 2.2 },
+    moves: ['spinAttack', 'chaosSpear', 'chaosControl'],
+    expYield: 20, // alleen als rival
+  },
   // ------------------------------------------------------------- badniks
   beetle:   { type: 'fly', id: 'beetle', name: 'Buzz Beetle', atlas: 'badniks', animPrefix: 'beetle', scale: 1.6, facesRight: true, hover: 26,
     base: { hp: 13, atk: 7, def: 5, spd: 11 }, growth: { hp: 2.4, atk: 1.3, def: 0.9, spd: 1.3 }, moves: ['bodyCheck'], expYield: 8 },
@@ -255,7 +289,7 @@ export const FIGHTERS: Record<string, FighterDef> = {
 };
 
 /** Alle speelbare characters (en dus ook mogelijke rivals). */
-export const HEROES = ['sonic', 'tails', 'knuckles', 'cream', 'amy'];
+export const HEROES = ['sonic', 'tails', 'knuckles', 'cream', 'amy', 'shadow'];
 
 export class Fighter {
   readonly def: FighterDef;
@@ -275,6 +309,17 @@ export class Fighter {
   sashUsed = false;
   /** Move Chip (reward): Spin Attack heeft +MOVE_CHIP_POWER power. */
   spinChip = false;
+  /** Shadow: Chaos Control is gratis (na een KO). */
+  chaosFree = false;
+  /** Shadow: de ultimate is gratis (hij maakte er een KO mee), en hoe vaak achter elkaar. */
+  ultFree = false;
+  ultChain = 0;
+  /** Chaos Spear: beurten dat hij PIERCE_BONUS extra schade krijgt. */
+  pierced = 0;
+  /** Super Shadow: beurten met 100% crit en SUPER_VULNERABLE extra schade. */
+  superTurns = 0;
+  /** net gezet: de teller loopt pas vanaf de volgende beurt (zo krijg je echt n hele beurten) */
+  freshTurns = new Set<'pierced' | 'superTurns'>();
 
   constructor(id: string, level: number) {
     this.def = FIGHTERS[id];
@@ -283,7 +328,11 @@ export class Fighter {
   }
 
   get name() { return this.def.name; }
-  anim(name: string) { return `${this.def.animPrefix}_${name}`; }
+  anim(name: string) {
+    // Super Shadow: zolang hij super is, staat hij als Super Shadow te zweven
+    if (this.superTurns > 0 && this.def.id === 'shadow' && (name === 'idle' || name === 'wait')) return 'ssh_idle';
+    return `${this.def.animPrefix}_${name}`;
+  }
   private stat(k: keyof Stats) { return Math.floor(this.def.base[k] + this.def.growth[k] * (this.level - 1)); }
   get maxHp() { return this.stat('hp'); }
   /** Totale stage (rewards + zone), begrensd op -6..+6. */
@@ -298,8 +347,30 @@ export class Fighter {
   get moves(): string[] {
     return this.def.ultimate && this.level >= ULTIMATE_LEVEL ? [...this.def.moves, this.def.ultimate] : this.def.moves;
   }
-  canUse(m: MoveDef) { return (m.cost ?? 0) <= this.boost; }
-  spendBoost(m: MoveDef) { this.boost = Math.max(0, Math.min(MAX_BOOST, this.boost - (m.cost ?? 0) + (m.boostGain ?? 0))); }
+  /** Is deze move nu gratis (Chaos Control na een KO, Super Shadow na een KO met de ultimate)? */
+  isFree(m: MoveDef) {
+    return (m.id === 'chaosControl' && this.chaosFree) || (m.id === this.def.ultimate && this.ultFree);
+  }
+  /** Wat de move nu kost (0 als hij gratis is). */
+  costOf(m: MoveDef) { return this.isFree(m) ? 0 : m.cost ?? 0; }
+  /** Boost die de move oplevert (Shadow's Spin Attack: +2). */
+  gainOf(m: MoveDef) { return m.id === 'spinAttack' && this.def.spinGain ? this.def.spinGain : m.boostGain ?? 0; }
+  canUse(m: MoveDef) { return this.costOf(m) <= this.boost; }
+  spendBoost(m: MoveDef) {
+    const cost = this.costOf(m);
+    // een gratis move is daarna weer gewoon te betalen
+    if (this.isFree(m)) { if (m.id === 'chaosControl') this.chaosFree = false; else this.ultFree = false; }
+    this.boost = Math.max(0, Math.min(MAX_BOOST, this.boost - cost + this.gainOf(m)));
+  }
+  /** Einde van een beurt: tellers van Chaos Spear en Super Shadow aflopen. Geeft terug wat er net afliep. */
+  tickTurns(): Array<'pierced' | 'superTurns'> {
+    const ended: Array<'pierced' | 'superTurns'> = [];
+    for (const k of ['pierced', 'superTurns'] as const) {
+      if (this.freshTurns.has(k)) { this.freshTurns.delete(k); continue; }
+      if (this[k] > 0) { this[k]--; if (this[k] === 0) ended.push(k); }
+    }
+    return ended;
+  }
   gainBoost(n: number) { this.boost = Math.min(MAX_BOOST, this.boost + n); }
   /** Verhoogt/verlaagt een stage. Geeft het bericht terug (of dat hij al op max/min zit). */
   raise(k: StageKey, by = 1): string {
@@ -365,12 +436,14 @@ export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: 
   const chance = Math.min(1, critChance(attacker) + bonusCrit);
   const crit = rng() < chance || !!move.alwaysCrit;
   // Tornado Hammer: crit-kans al op 100%? Dan dubbele power
-  const power = movePower(move, attacker, target) * (move.alwaysCrit && chance >= 1 ? 2 : 1);
+  const power = movePower(move, attacker, target) * (move.critDouble && chance >= 1 ? 2 : 1);
   const base = (((2 * attacker.level) / 5 + 2) * power * (attacker.atk / target.dfn)) / 50 + 2;
   const roll = 0.85 + rng() * 0.15;
   // Weak Spot (Tails): verdoofde vijanden krijgen extra schade
   const weakSpot = attacker.def.passive?.id === 'weakSpot' && target.stun > 0 ? WEAK_SPOT_BONUS : 1;
-  const dmg = base * roll * effect * speedBonus(attacker, target) * weakSpot * (crit ? 1.5 : 1);
+  // Chaos Spear en Super Shadow: het doelwit krijgt meer schade
+  const exposed = (target.pierced > 0 ? PIERCE_BONUS : 1) * (target.superTurns > 0 ? SUPER_VULNERABLE : 1);
+  const dmg = base * roll * effect * speedBonus(attacker, target) * weakSpot * exposed * (crit ? 1.5 : 1);
   return { damage: Math.max(1, Math.floor(dmg)), crit, missed: false, effect };
 }
 

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BOOST_ON_HIT, PIERCE_BONUS, SUPER_VULNERABLE, ULT_CHAIN_MAX, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, ZONE_BOSS_HEAL, ZONES, isBossWave, isEliteWave, isMainBossWave, canHaveRival, RIVAL_CHANCE, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -16,6 +16,7 @@ import { HUD, RingCounter, checkerBand, sonicPanel, tooltip } from './hud';
 import { richText } from './richText';
 import { audio, MusicKey } from '../audio';
 import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
+import { chaosControl, chaosSpear, superShadow } from './shadowMoves';
 import { TEST_KEYS, TEST_MODE } from '../data/testMode';
 import { TutorialCoach, tailsTip, type TutorialHost } from './tutorial';
 import { SERIOUS_TIPS, TIPS, markTip, tipDue, type TipId } from '../data/tips';
@@ -34,7 +35,7 @@ const SHOP_TILE_Y = 63;
 
 const PLAYER_POS = { x: 118, y: 208 };
 /** textures van de speelbare characters (zie bodyHeight) */
-const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'sonicidle', 'amyidle', 'tailssit', 'amyvictory', 'sonicbosswin']);
+const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'shadow', 'shadowfx', 'sonicidle', 'amyidle', 'tailssit', 'amyvictory', 'sonicbosswin']);
 /** lichaamshoogte van een character in sprite-pixels */
 const CHARACTER_BODY = 38;
 const ENEMY_POS = { x: 352, y: 132 };
@@ -248,6 +249,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   create() {
     this.statusFx = new Map();
+    this.pierceFx = new Map();
     this.idleState = new Map();
     this.wave = 1;
     this.rings = 0;
@@ -398,12 +400,18 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (b.critTurns) out.push({ key: 'crit', icon: 'mon_tornado', name: "Amy's Hammer", desc: `+${Math.round(HAMMER_CRIT * 100)}% crit chance for your next ${n(b.critTurns, 'turn')}.`, count: b.critTurns });
     if (this.alarmWave) out.push({ key: 'alarm', icon: 'mon_alert', name: 'Eggman Alarm', desc: 'This foe is an elite. Beat it for uncommon-or-better rewards.' });
     if (b.eliteNext) out.push({ key: 'alarmN', icon: 'mon_alert', name: 'Eggman Alarm', desc: 'The next foe is an elite. Beat it for uncommon-or-better rewards.' });
+    const p = this.player;
+    if (p?.superTurns > 0) out.push({ key: 'super', icon: 'shadowfx:ssh_idle_0', name: 'Super Shadow', desc: `100% crit, but ${p.name} takes ${Math.round((SUPER_VULNERABLE - 1) * 100)}% more damage. ${n(p.superTurns, 'turn')} left.`, count: p.superTurns });
+    if (p?.chaosFree && p.moves.includes('chaosControl')) out.push({ key: 'chaosFree', icon: 'emeralds:emerald_green_0', name: 'Chaos Control', desc: 'Free to use: costs no Boost.' });
+    if (p?.ultFree && p.def.ultimate && p.moves.includes(p.def.ultimate)) out.push({ key: 'ultFree', icon: 'shadowfx:ssh_spear_2', name: MOVES[p.def.ultimate].name, desc: `Free to use: costs no Boost (${p.ultChain}/${ULT_CHAIN_MAX} in a row).` });
+    if (this.enemy?.pierced > 0) out.push({ key: 'pierced', icon: 'shadowfx:sh_rune_pink_0', name: 'Pierced', desc: `The foe takes ${Math.round((PIERCE_BONUS - 1) * 100)}% more damage. ${n(this.enemy.pierced, 'turn')} left.`, count: this.enemy.pierced });
     if (this.fieldCleared && zoneForWave(this.wave, this.zoneOrder).effect) out.push({ key: 'bless', icon: 'head_cream', name: 'Chao Blessing', desc: 'The zone effect is gone until the zone boss.' });
     return out;
   }
 
   /** Plaatje uit de ui-atlas of een los plaatje (mon_*). */
   private hudIcon(key: string) {
+    if (key.includes(':')) { const [tex, frame] = key.split(':'); return this.add.image(0, 0, tex, frame); }
     return this.textures.exists(key) ? this.add.image(0, 0, key) : this.add.image(0, 0, 'ui', key);
   }
 
@@ -729,7 +737,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const m = MOVES[this.player.moves[this.cursor]];
     if (!m) return;
     this.infoTitle.setText(m.name);
-    const cost = m.cost ? `   Boost ${m.cost}` : m.boostGain ? `   Boost +${m.boostGain}` : '';
+    const p = this.player;
+    const cost = p.isFree(m) ? '   FREE' : m.cost ? `   Boost ${m.cost}` : p.gainOf(m) ? `   Boost +${p.gainOf(m)}` : '';
     const stats = m.teamHeal ? `Heals the team ${Math.round(m.teamHeal * 100)}% HP${cost}`
       : m.heal ? `Heals ${Math.round(m.heal * 100)}% HP${cost}`
       : `Power ${movePower(m, this.player, this.enemy)}   Acc ${m.accuracy}%${m.priority > 0 ? '   First' : ''}${cost}`;
@@ -755,7 +764,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     ids.forEach((id, i) => {
       // te weinig Boost = grijs; de ultimate is goud
       const m = id ? MOVES[id] : undefined;
-      const color = !m ? HUD.inkMuted : !this.player.canUse(m) ? HUD.inkMuted : m.anim === 'ultimate' ? '#d04000' : HUD.ink;
+      // gratis (Shadow na een KO) = groen
+      const color = !m ? HUD.inkMuted : !this.player.canUse(m) ? HUD.inkMuted : this.player.isFree(m) ? '#108a30' : m.anim === 'ultimate' ? '#d04000' : HUD.ink;
       const t = this.add.text(26 + (i % 2) * 150, PANEL_Y + 15 + Math.floor(i / 2) * 15, m ? m.name : '-',
         { fontFamily: FONT, fontSize: '8px', color });
       // groene gloed = type-voordeel tegen deze vijand, oranje = nadeel (zoals in PokéRogue)
@@ -858,7 +868,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       const t = this.fightItems[this.cursor];
       this.pointer.setPosition(t.x - 11, t.y);
       const m = MOVES[this.player.moves[this.cursor]];
-      const boost = m.cost ? `BOOST ${m.cost}` : m.boostGain ? `BOOST +${m.boostGain}` : 'BOOST 0';
+      const p = this.player;
+      const boost = p.isFree(m) ? 'FREE!' : m.cost ? `BOOST ${m.cost}` : p.gainOf(m) ? `BOOST +${p.gainOf(m)}` : 'BOOST 0';
       const acc = Math.min(100, Math.round(m.accuracy * stageMultiplier(this.player.stage('acc'))));
       this.moveInfo.setText(m.heal ? `HEAL ${Math.round(m.heal * 100)}%\n${boost}` : `PWR ${movePower(m, this.player, this.enemy)} ACC ${acc}\n${boost}`);
       this.moveInfo.setColor(this.player.canUse(m) ? '#ffffff' : '#ff7a6a');
@@ -1232,7 +1243,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async startWave() {
     this.autoSave();
     this.menu = 'busy';
-    this.party.forEach(f => { f.stun = 0; f.evade = 0; });
+    this.party.forEach(f => { f.stun = 0; f.evade = 0; f.pierced = 0; });
     this.stunUsed.clear();
     this.itemsUsed = 0;
     this.waveShield = this.buffs.shieldWaves > 0;
@@ -1334,6 +1345,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /** Status-effecten in beeld: sterretjes bij een stun, een gouden schim zolang Light Speed werkt. */
   private statusFx = new Map<Phaser.GameObjects.Sprite, Phaser.GameObjects.Image[]>();
+  private pierceFx = new Map<Phaser.GameObjects.Sprite, Phaser.GameObjects.Sprite>();
   private statusClock = 0;
   private updateStatusFx(dt: number) {
     this.statusClock += dt;
@@ -1359,6 +1371,27 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       }
       if (f && f.evade > 0 && !f.fainted && Math.floor(this.statusClock / 140) !== Math.floor((this.statusClock - dt) / 140)) {
         this.ghost(spr, 0xffd23a);
+      }
+      // Chaos Spear: roze rune die langzaam om het doelwit draait
+      const pierced = !!f && f.pierced > 0 && !f.fainted && spr.visible;
+      let rune = this.pierceFx.get(spr);
+      if (pierced && !rune) {
+        rune = this.add.sprite(0, 0, 'shadowfx', 'sh_rune_pink_0').setScale(0.8);
+        this.pierceFx.set(spr, rune);
+      } else if (!pierced && rune) {
+        rune.destroy();
+        this.pierceFx.delete(spr);
+        rune = undefined;
+      }
+      if (rune) {
+        const c = this.center(spr);
+        rune.setPosition(c.x, c.y).setAngle(this.statusClock / 20).setDepth(spr.depth + 1)
+          .setAlpha(0.6 + 0.25 * Math.sin(this.statusClock / 200));
+      }
+      // Super Shadow: gouden schimmen en vonkjes
+      if (f && f.superTurns > 0 && !f.fainted && spr.visible && Math.floor(this.statusClock / 160) !== Math.floor((this.statusClock - dt) / 160)) {
+        const p = this.add.image(spr.x + Phaser.Math.Between(-14, 14), spr.y - Phaser.Math.Between(4, 40), 'px').setTint(0xfff6a0).setDepth(17).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: p, y: p.y - 22, alpha: 0, duration: 420, onComplete: () => p.destroy() });
       }
     }
   }
@@ -1429,12 +1462,17 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       await this.say(`${this.who(att)} flinched and couldn't move!`, 400);
       return;
     }
+    // gratis gebruikt (Chaos Control / Super Barrage na een KO)? Dan geen cut-in bij een kettingreactie
+    this.freeUse = att.isFree(move);
     if (att === this.player) { this.player.spendBoost(move); this.setBox(this.pBox, this.player, false); }
     const hammer = att === this.player && this.buffs.critTurns > 0;
     if (hammer) this.buffs.critTurns--;
     this.critBonus = hammer ? HAMMER_CRIT : 0;
     await this.doAttack(att, tgt, move, ally);
   }
+
+  /** De move die nu bezig is was gratis (Shadow). */
+  private freeUse = false;
 
   private async runTurn(playerMove: MoveDef, ally?: Fighter) {
     this.tut?.event(`move:${playerMove.id}`);
@@ -1515,7 +1553,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     };
 
     this.setActionSpeed(isPlayer ? this.hero : this.foe);
-    if (isPlayer && move.id === att.def.ultimate) await cutIn(this, att.def.id, move.name);
+    // Super Barrage die gratis is na een KO: geen cut-in, hij is nog super en gaat meteen door
+    if (isPlayer && move.id === att.def.ultimate && !(this.freeUse && move.resets)) await cutIn(this, att.def.id, move.name);
     if (isPlayer) await this.charAttack(this.hero, this.player, this.foe, PLAYER_POS, 1, move, strike, hit.missed);
     else if (this.rival) await this.charAttack(this.foe, this.enemy, this.hero, this.foeHome, -1, move, strike, hit.missed);
     else await this.foeAttack(move, strike, hit.missed);
@@ -1596,6 +1635,63 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
         tgt.stun = Math.max(tgt.stun, Phaser.Math.Between(move.stun[0], move.stun[1]));
         audio.sfx('enemyhit', { volume: 0.5 });
         await this.say(`${this.who(tgt)} is stunned!`, 400);
+      }
+      // Chaos Spear: het doelwit krijgt een paar beurten meer schade
+      if (move.pierce && !tgt.fainted) {
+        tgt.pierced = move.pierce;
+        tgt.freshTurns.add('pierced');
+        await this.say(`${this.who(tgt)} is pierced! It takes ${Math.round((PIERCE_BONUS - 1) * 100)}% more damage for ${move.pierce} turns.`, 450);
+      }
+    }
+    // Super Barrage: Shadow blijft een paar beurten super (ook als hij mist)
+    if (move.superTurns && !att.fainted) {
+      att.superTurns = move.superTurns;
+      att.freshTurns.add('superTurns');
+      (isPlayer ? this.hero : this.foe).play(att.anim('idle'));
+      await this.say(`${att.name} is Super! 100% crit, but he takes ${Math.round((SUPER_VULNERABLE - 1) * 100)}% more damage for ${move.superTurns} turns.`, 450);
+    }
+    await this.shadowAfter(att, tgt, move, isPlayer);
+  }
+
+  /**
+   * Shadow na zijn aanval: een KO maakt Chaos Control weer gratis (en Super Barrage, als die de KO maakte,
+   * tot ULT_CHAIN_MAX keer achter elkaar). Rampage: elke move die zo weer gratis wordt geeft ATK en SPD +1.
+   */
+  private async shadowAfter(att: Fighter, tgt: Fighter, move: MoveDef, isPlayer: boolean) {
+    const ult = move.id === att.def.ultimate;
+    const ko = tgt.fainted && !att.fainted;
+    // de ketting van Super Barrage breekt bij een andere move of als hij niemand KO slaat
+    if (!ult || !ko) att.ultChain = 0;
+    if (!ko) return;
+    const resets: string[] = [];
+    if (att.moves.includes('chaosControl') && !att.chaosFree) {
+      att.chaosFree = true;
+      resets.push('Chaos Control');
+    }
+    if (ult && move.resets === 'ownKo' && !att.ultFree && att.ultChain < ULT_CHAIN_MAX) {
+      att.ultFree = true;
+      att.ultChain++;
+      resets.push(`${move.name}|${att.ultChain}/${ULT_CHAIN_MAX}`);
+    }
+    if (!resets.length) return;
+    const spr = isPlayer ? this.hero : this.foe;
+    const c = this.center(spr);
+    shockwave(this, c.x, c.y, 0xff3a4a, 46, 320);
+    audio.sfx('ringchime', { volume: 0.6 });
+    for (const r of resets) {
+      const [name, chain] = r.split('|');
+      // een rival betaalt geen Boost, dus daar alleen de Rampage
+      if (isPlayer) await this.say(`${name} is free again!${chain ? ` (${chain})` : ''}`, 400);
+      if (att.def.passive?.id === 'rampage') {
+        // ATK en SPD tegelijk, in één bericht
+        const before = { ...att.stages };
+        att.raise('atk', 1);
+        att.raise('spd', 1);
+        const rose = (['atk', 'spd'] as const).filter(k => att.stages[k] > before[k]);
+        if (rose.length) this.statArrows(spr, true);
+        await this.say(rose.length === 2 ? `Rampage! ${this.who(att)}'s attack and speed rose!`
+          : rose.length ? `Rampage! ${this.who(att)}'s ${rose[0] === 'atk' ? 'attack' : 'speed'} rose!`
+          : `Rampage! ${this.who(att)}'s stats won't go any higher!`, 350);
       }
     }
   }
@@ -1697,8 +1793,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const base = p.def.scale;
     const run = this.anims.exists(p.anim('run')) ? p.anim('run') : p.anim('spin');
     // aanloop: eerst even door de knieën (niet bij de ultimate en de Spin Dash, die hebben hun eigen opbouw)
-    if (move.anim !== 'ultimate' && move.anim !== 'dash') await this.anticipate(s, base);
-    if (move.anim !== 'hammer' && move.anim !== 'ultimate') audio.sfx(move.anim === 'dash' ? 'spindash' : 'jump', { volume: move.anim === 'dash' ? 0.6 : 0.8 });
+    const ranged = move.anim === 'spear' || move.anim === 'chaos';
+    if (move.anim !== 'ultimate' && move.anim !== 'dash' && !ranged) await this.anticipate(s, base);
+    if (move.anim !== 'hammer' && move.anim !== 'ultimate' && !ranged) audio.sfx(move.anim === 'dash' ? 'spindash' : 'jump', { volume: move.anim === 'dash' ? 0.6 : 0.8 });
     if (move.anim === 'spin') {
       s.play(p.anim('spin'));
       await this.tween({ targets: s, y: home.y - 20, duration: 140, ease: 'Quad.easeOut' });
@@ -1800,6 +1897,17 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       this.dust(tx, ty, 8);
       strike();
       await this.wait(260);
+    } else if (move.anim === 'spear' || move.anim === 'chaos') {
+      // Shadow: Chaos Spear (van een afstand) en Chaos Control (de tijd stilzetten); die zetten hem zelf weer thuis
+      const ctx = { ...this.ultCtx(s, p, target, home, dir, strike), missed };
+      await (move.anim === 'spear' ? chaosSpear(ctx) : chaosControl(ctx));
+      s.play(p.anim('idle'));
+      return;
+    } else if (move.anim === 'ultimate' && p.def.id === 'shadow') {
+      // Super Barrage; gratis na een KO = korte versie (hij is nog super)
+      await superShadow({ ...this.ultCtx(s, p, target, home, dir, strike), missed, quick: this.freeUse && p.superTurns > 0 });
+      s.play('ssh_idle'); // hij blijft super (de beurten worden daarna gezet)
+      return;
     } else if (move.anim === 'ultimate') {
       // eigen animatie per character (ultimates.ts); die zet de sprite zelf weer thuis
       await playUltimate(this.ultCtx(s, p, target, home, dir, strike));
@@ -1943,6 +2051,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
         const a = Math.random() * Math.PI * 2;
         this.tweens.add({ targets: h, x: x + Math.cos(a) * 26, y: y + Math.sin(a) * 22 - 10, alpha: 0, duration: 520, onComplete: () => h.destroy() });
       }
+    } else if (id === 'shadow') {
+      const sp = this.add.sprite(x, y, 'shadowfx').setScale(crit ? 1.3 : 0.9).setDepth(16).play({ key: 'sh_spear_hit', repeat: 0 });
+      sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
     } else if (id === 'cream') {
       const ring = this.add.circle(x, y, 6).setStrokeStyle(2, 0x8ad8ff).setDepth(16);
       this.tweens.add({ targets: ring, scale: 4, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
@@ -2586,6 +2697,19 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /** Einde van een beurt: zone-schade (Hot Crater). */
   private async endOfTurn() {
+    // Chaos Spear en Super Shadow lopen af
+    for (const f of [this.player, this.enemy]) {
+      if (!f || f.fainted) continue;
+      for (const k of f.tickTurns()) {
+        if (k === 'superTurns') {
+          const spr = f === this.player ? this.hero : this.foe;
+          this.cameras.main.flash(160, 255, 240, 160);
+          spr.play(f.anim('idle'));
+          await this.say(`${this.who(f)} is no longer Super.`, 350);
+        }
+        else await this.say(`${this.who(f)} is no longer pierced.`, 350);
+      }
+    }
     const burn = this.fieldEffect?.burn;
     if (!burn || this.player.fainted) return;
     const dmg = Math.max(1, Math.floor(this.player.maxHp * burn));

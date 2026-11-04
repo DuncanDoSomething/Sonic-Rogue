@@ -3,6 +3,7 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES,
 } from '../src/data/fighters';
 
 /** Vaste "random": geeft steeds dezelfde waarde terug, zodat de uitkomst voorspelbaar is. */
@@ -218,7 +219,7 @@ describe('nieuwe moves en ultimates', () => {
     expect(normal.crit).toBe(true);
     amy.stages.atk = 4; // 6,25% + 4 x 25% = 100%
     const maxed = calcHit(amy, foe, MOVES.tornadoHammer, fixed(0.99));
-    const noDouble = calcHit(amy, foe, { ...MOVES.tornadoHammer, alwaysCrit: false }, fixed(0));
+    const noDouble = calcHit(amy, foe, { ...MOVES.tornadoHammer, alwaysCrit: false, critDouble: false }, fixed(0));
     expect(maxed.damage).toBeGreaterThan(noDouble.damage * 1.8);
   });
   it('Weak Spot: Tails doet 1.5x schade tegen een verdoofde vijand, anderen niet', () => {
@@ -235,9 +236,9 @@ describe('nieuwe moves en ultimates', () => {
   it('Light Speed Attack laat de vijand 2x missen', () => {
     expect(MOVES.lightSpeed.evade).toBe(2);
   });
-  it('alle vijf characters hebben een passive', () => {
-    expect(['sonic', 'tails', 'knuckles', 'amy', 'cream'].map(id => FIGHTERS[id].passive?.id))
-      .toEqual(['speedster', 'weakSpot', 'flinch', 'luckySwing', 'chaoCare']);
+  it('alle zes characters hebben een passive', () => {
+    expect(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'shadow'].map(id => FIGHTERS[id].passive?.id))
+      .toEqual(['speedster', 'weakSpot', 'flinch', 'luckySwing', 'chaoCare', 'rampage']);
   });
 });
 
@@ -267,5 +268,87 @@ describe('balans-update', () => {
     sonic.stages.acc = -6;
     expect(calcHit(sonic, foe, MOVES.lightSpeed, fixed(0.99)).missed).toBe(false);
     expect(calcHit(sonic, foe, MOVES.homingAttack, fixed(0.99)).missed).toBe(true);
+  });
+});
+
+describe('Shadow', () => {
+  it('speed-type, Rampage, en zijn kit', () => {
+    const d = FIGHTERS.shadow;
+    expect(d.type).toBe('speed');
+    expect(d.passive?.id).toBe('rampage');
+    expect(d.moves).toEqual(['spinAttack', 'chaosSpear', 'chaosControl']);
+    expect(d.ultimate).toBe('superBarrage');
+    expect(HEROES).toContain('shadow');
+  });
+  it('Spin Attack: 40 power, maar +2 Boost in plaats van +1', () => {
+    const sh = new Fighter('shadow', 10);
+    const so = new Fighter('sonic', 10);
+    expect(MOVES.spinAttack.power).toBe(40);
+    sh.boost = 0; so.boost = 0;
+    sh.spendBoost(MOVES.spinAttack); so.spendBoost(MOVES.spinAttack);
+    expect([sh.boost, so.boost]).toEqual([2, 1]);
+  });
+  it('Chaos Spear kost 3; het doelwit krijgt 50% meer schade', () => {
+    expect(MOVES.chaosSpear.cost).toBe(3);
+    expect(MOVES.chaosSpear.pierce).toBe(3);
+    const sonic = new Fighter('sonic', 20);
+    const foe = new Fighter('beetle', 20);
+    const before = calcHit(sonic, foe, MOVES.spinAttack, fixed(0.5)).damage;
+    foe.pierced = 2;
+    expect(calcHit(sonic, foe, MOVES.spinAttack, fixed(0.5)).damage).toBeCloseTo(before * PIERCE_BONUS, -1);
+  });
+  it('de teller loopt pas af vanaf de beurt erna: 3 hele beurten', () => {
+    const foe = new Fighter('beetle', 20);
+    foe.pierced = 3; foe.freshTurns.add('pierced');
+    expect(foe.tickTurns()).toEqual([]);      // de beurt waarin hij geraakt werd
+    expect(foe.pierced).toBe(3);
+    foe.tickTurns(); foe.tickTurns();
+    expect(foe.tickTurns()).toEqual(['pierced']);
+    expect(foe.pierced).toBe(0);
+  });
+  it('Chaos Control: 100 power, kost 4, gratis na een KO (en dan weer betalen)', () => {
+    const sh = new Fighter('shadow', 10);
+    expect(MOVES.chaosControl.power).toBe(100);
+    sh.boost = 0;
+    expect(sh.canUse(MOVES.chaosControl)).toBe(false);
+    sh.chaosFree = true;
+    expect(sh.canUse(MOVES.chaosControl)).toBe(true);
+    expect(sh.costOf(MOVES.chaosControl)).toBe(0);
+    sh.spendBoost(MOVES.chaosControl);
+    expect(sh.chaosFree).toBe(false);
+    expect(sh.boost).toBe(0);
+    expect(sh.canUse(MOVES.chaosControl)).toBe(false);
+  });
+  it('Super Barrage: altijd crit, daarna 100% crit maar 33% meer schade krijgen; gratis na een KO', () => {
+    const sh = new Fighter('shadow', 30);
+    const foe = new Fighter('beetle', 30);
+    expect(sh.moves).toContain('superBarrage');
+    expect(calcHit(sh, foe, MOVES.superBarrage, fixed(0.99)).crit).toBe(true);
+    expect(MOVES.superBarrage.superTurns).toBe(3);
+    // super: elke aanval crit, en geen dubbele power zoals bij Tornado Hammer
+    sh.superTurns = 3;
+    expect(critChance(sh)).toBe(1);
+    expect(calcHit(sh, foe, MOVES.spinAttack, fixed(0.9)).crit).toBe(true);
+    const a = calcHit(sh, foe, MOVES.superBarrage, fixed(0.5)).damage;
+    sh.superTurns = 0;
+    const b = calcHit(sh, foe, MOVES.superBarrage, fixed(0.5)).damage;
+    expect(a).toBe(b);
+    // terwijl hij super is krijgt hij zelf meer schade
+    const before = calcHit(foe, sh, MOVES.bodyCheck, fixed(0.5)).damage;
+    sh.superTurns = 2;
+    expect(calcHit(foe, sh, MOVES.bodyCheck, fixed(0.5)).damage).toBeCloseTo(before * SUPER_VULNERABLE, -1);
+    // gratis
+    sh.boost = 0;
+    sh.ultFree = true;
+    expect(sh.canUse(MOVES.superBarrage)).toBe(true);
+    sh.spendBoost(MOVES.superBarrage);
+    expect(sh.ultFree).toBe(false);
+  });
+  it('super: hij staat als Super Shadow (ssh_idle) tot het afloopt', () => {
+    const sh = new Fighter('shadow', 30);
+    expect(sh.anim('idle')).toBe('shadow_idle');
+    sh.superTurns = 1;
+    expect(sh.anim('idle')).toBe('ssh_idle');
+    expect(sh.anim('hurt')).toBe('shadow_hurt');
   });
 });

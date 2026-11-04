@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { activeScenes, battle, fixReward, openGame, press, setup, startRun, toCharacterSelect, trackErrors, waitForMenu } from './helpers';
+import { activeScenes, battle, fixReward, openGame, press, setup, startBattleWith, startRun, toCharacterSelect, trackErrors, waitForMenu } from './helpers';
 
 test.describe('Sonic Rogue smoke tests', () => {
   test('the game boots without errors', async ({ page }) => {
@@ -186,7 +186,7 @@ test.describe('Sonic Rogue smoke tests', () => {
     const errors = trackErrors(page);
     await openGame(page);
     await startRun(page);
-    for (const id of ['sonic', 'tails', 'knuckles', 'amy', 'cream']) {
+    for (const id of ['sonic', 'tails', 'knuckles', 'amy', 'cream', 'shadow']) {
       await setup(page, `
         const F = s.player.constructor;
         const f = s.party.find(x => x.def.id === '${id}') ?? new F('${id}', 30);
@@ -487,5 +487,31 @@ test.describe('Sonic Rogue smoke tests', () => {
     await press(page, 'z');
     await expect.poll(tipOpen).toBe(false);
     expect(await page.evaluate(() => localStorage.getItem('sonicrogue_tips_seen'))).toContain('shop');
+  });
+
+  test('Shadow: Chaos Spear pierces, a KO makes Chaos Control free and sets off Rampage', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startBattleWith(page, ['shadow', 'tails']);
+    const shadow = () => page.evaluate(() => {
+      const s = (window as any).game.scene.getScene('Battle');
+      const f = s.player;
+      return { pierced: s.enemy.pierced, chaosFree: f.chaosFree, atk: f.stages.atk, spd: f.stages.spd, boost: f.boost, canChaos: f.canUse((window as any).MOVES.chaosControl) };
+    });
+    // Chaos Spear (kost 3): de vijand is 3 beurten pierced
+    await setup(page, 's.enemy.hp = 9999; s.player.boost = 6;');
+    await press(page, 'z', 'ArrowRight', 'z');
+    await waitForMenu(page, 'command');
+    expect((await shadow()).pierced).toBe(3);
+    // Chaos Control maakt de KO: daarna is hij gratis, en Rampage geeft ATK en SPD +1
+    await setup(page, 's.enemy.hp = 1; s.player.boost = 6;');
+    await press(page, 'z', 'ArrowDown', 'z');
+    await waitForMenu(page, 'reward');
+    const after = await shadow();
+    expect(after.chaosFree).toBe(true);
+    expect([after.atk, after.spd]).toEqual([1, 1]);
+    await setup(page, 's.player.boost = 0;');
+    expect((await shadow()).canChaos).toBe(true);
+    expect(errors).toEqual([]);
   });
 });

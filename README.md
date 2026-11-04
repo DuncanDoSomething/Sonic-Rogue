@@ -17,15 +17,16 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 | ![Ultimate cut-in](docs/cut-in.png) | ![Super Sonic's Light Speed Attack](docs/super-sonic.png) |
 | ![Knuckles' Maximum Heat](docs/maximum-heat.png) | ![Character kits (I)](docs/kits.png) |
 | ![Practice fight with Tails](docs/tutorial.png) | ![How to Play, by topic](docs/how-to-play.png) |
+| ![Shadow's Chaos Control: time stops](docs/chaos-control.png) | ![Super Shadow's Chaos Blast](docs/super-shadow.png) |
 
 ## Gameplay
 
-- **Team of three.** Sonic, Tails and Amy are available from the start. Knuckles and Cream show up as rivals; beat them to unlock them, and they can join your current run.
+- **Team of three.** Sonic, Tails and Amy are available from the start. Knuckles, Cream and Shadow show up as rivals; beat them to unlock them, and they can join your current run.
 - **Boost meter instead of PP.** Spin Attack is free and builds Boost. Stronger moves cost Boost and never miss. Every character learns an ultimate at level 30 that uses the full meter.
 - **Stuns and flinches.** Some moves stop the foe from acting for a turn or more.
-- **Ultimate cut-ins.** Every ultimate opens with a Persona-style cut-in and has its own animation: Sonic turns Super Sonic, Tails calls down lightning, Knuckles hits like a meteor, Amy whips up a tornado and Cream calls in the Chao.
+- **Ultimate cut-ins.** Every ultimate opens with a Persona-style cut-in and has its own animation: Sonic turns Super Sonic, Tails calls down lightning, Knuckles hits like a meteor, Amy whips up a tornado, Cream calls in the Chao and Shadow goes Super Shadow for a Chaos Blast.
 - **Types.** Speed, Fly and Power, based on the team types from Sonic Advance 3 and Heroes. Fly beats Power, Power beats Speed, Speed beats Fly.
-- **Passives and ultimates.** Every character has a passive and an ultimate with its own effect: Sonic gets faster with every KO and can make the foe miss, Tails stuns foes and punishes them for it, Knuckles is a glass cannon who can survive one KO per zone, Amy builds up to huge critical hits that cost her own HP, and Cream heals the team. Press **I** in battle or character select to see everything a character can do.
+- **Passives and ultimates.** Every character has a passive and an ultimate with its own effect: Sonic gets faster with every KO and can make the foe miss, Tails stuns foes and punishes them for it, Knuckles is a glass cannon who can survive one KO per zone, Amy builds up to huge critical hits that cost her own HP, Cream heals the team, and Shadow snowballs: every KO makes Chaos Control free again and raises his ATK and SPD. Press **I** in battle or character select to see everything a character can do.
 - **Stat stages.** Some moves and passives raise ATK, DEF or SPD by a stage (+25% each, up to +6). Stages reset after every zone boss.
 - **Nine zones** from Sonic Advance 2 and 3, each with its own music. Every run starts in Route 99 and Leaf Forest; after that the zones are shuffled within groups (Sunset Hill with Music Plant and Toy Kingdom back to back, then the snow zones, then Hot Crater and Sky Canyon), so every run feels different but the hardest zones stay at the end. Some zones affect your team, like the heat in Hot Crater or the cold in Twinkle Snow.
 - **Bosses and Chaos Emeralds.** Every tenth wave is a boss. Beat it to collect a Chaos Emerald. After a zone boss everyone gets back up to at least 50% HP; after waves 20, 40, 60 and 80 the whole team is fully healed with at least 3 Boost.
@@ -101,7 +102,8 @@ See [ROADMAP.md](ROADMAP.md).
 Sonic the Hedgehog and all related characters, sprites and music are owned by SEGA and Sonic Team.
 This project uses community sprite rips from [The Spriters Resource](https://www.spriters-resource.com/):
 
-- **Characters:** Ren "Foxx" Ramos (Sonic Advance 3), Bonzai (Super Sonic)
+- **Characters:** Ren "Foxx" Ramos (Sonic Advance 3), Bonzai (Super Sonic), QuadFactor (Shadow, Sonic Battle), Shadow Mastah (Super Shadow, Pixeltendo Sonic Battle Project)
+- **Portraits:** Bacon (Sonic Battle story portraits)
 - **Power type icon:** based on the POW icon ripped by Taels (Sonic Battle)
 - **Cut-in art and effects:** QuadFactor (Sonic Battle)
 - **Badniks:** SkyLights (Sonic Advance 3), Fatazz / Turtle474 (Sonic Advance 2)

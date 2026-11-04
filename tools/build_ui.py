@@ -5,6 +5,9 @@ Gebruik: python3 build_ui.py <rings.png> <monitors.png> <out_dir>
 Op deze sheets staat elk frame in een gekleurd vakje (paars of groen) op een transparante
 achtergrond. Het script vindt de vakjes per regio, en maakt binnen elk vakje de vakjeskleur
 transparant.
+
+Let op: tools/build_shadow.py zet daarna head_shadow en oneup_shadow onderaan deze atlas.
+Draai dat script opnieuw als je dit script draait.
 """
 import json, os, sys
 import numpy as np

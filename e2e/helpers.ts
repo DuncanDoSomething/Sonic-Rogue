@@ -92,7 +92,7 @@ export async function startRun(page: Page) {
   await page.waitForTimeout(400);
   await press(page, 'z');                       // Sonic
   await press(page, 'ArrowDown', 'z');          // Tails
-  await press(page, 'ArrowUp', 'ArrowUp', 'z'); // Amy (the list wraps around)
+  await press(page, 'ArrowUp', 'ArrowUp', 'ArrowUp', 'z'); // Amy (the list wraps around, past Shadow)
   await expect.poll(() => activeScenes(page)).toContain('Battle');
   await waitForMenu(page, 'command');
 }
@@ -109,4 +109,15 @@ export function setup(page: Page, fn: string) {
     const s = (window as any).game.scene.getScene('Battle');
     new Function('s', code)(s);
   }, fn);
+}
+
+/** Start a fresh battle with this team (also locked characters, like Shadow) and wait for your first turn. */
+export async function startBattleWith(page: Page, party: string[]) {
+  await page.evaluate(p => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const g = (window as any).game;
+    g.scene.getScenes(true).forEach((sc: { scene: { key: string } }) => g.scene.stop(sc.scene.key));
+    g.scene.start('Battle', { party: p });
+  }, party);
+  await waitForMenu(page, 'command');
 }

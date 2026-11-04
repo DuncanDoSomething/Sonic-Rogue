@@ -42,8 +42,8 @@ export function powerLabel(m: MoveDef) {
 }
 
 /** "+1 BOOST" voor gratis moves, anders wat hij kost. */
-export function costLabel(m: MoveDef) {
-  if (!m.cost) return `+${m.boostGain ?? 0} BOOST`;
+export function costLabel(m: MoveDef, spinGain?: number) {
+  if (!m.cost) return `+${m.id === 'spinAttack' && spinGain ? spinGain : m.boostGain ?? 0} BOOST`;
   return m.cost >= MAX_BOOST ? 'ALL BOOST' : `${m.cost} BOOST`;
 }
 
@@ -105,7 +105,7 @@ export function buildCharacterInfo(scene: Phaser.Scene, id: string, o: InfoOptio
     const ult = mid === def.ultimate;
     const learned = !ult || !f || f.level >= ULTIMATE_LEVEL;
     txt(x, y, m.name, ult ? (learned ? '#f2c230' : '#8a7a40') : '#ffffff');
-    right(bx + bw - 14, y, `${powerLabel(m)}  ${costLabel(m)}${ult ? `  Lv.${ULTIMATE_LEVEL}` : ''}`, learned ? '#9aa4c4' : '#5a6070');
+    right(bx + bw - 14, y, `${powerLabel(m)}  ${costLabel(m, def.spinGain)}${ult ? `  Lv.${ULTIMATE_LEVEL}` : ''}`, learned ? '#9aa4c4' : '#5a6070');
     y += 11;
     const desc = m.desc.replace(/ Uses all Boost\.$/, '');
     // nog niet geleerd: grijs zonder kleuren; anders getallen, stats en effecten in kleur

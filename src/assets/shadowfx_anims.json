@@ -1,0 +1,130 @@
+{
+ "ssh_transform": {
+  "key": "ssh_transform",
+  "frames": [
+   "ssh_transform_0",
+   "ssh_transform_1",
+   "ssh_transform_2",
+   "ssh_transform_3",
+   "ssh_transform_4",
+   "ssh_transform_5",
+   "ssh_transform_6"
+  ],
+  "frameRate": 10,
+  "repeat": 0
+ },
+ "ssh_idle": {
+  "key": "ssh_idle",
+  "frames": [
+   "ssh_idle_0",
+   "ssh_idle_1"
+  ],
+  "frameRate": 5,
+  "repeat": -1
+ },
+ "ssh_dash": {
+  "key": "ssh_dash",
+  "frames": [
+   "ssh_dash_0",
+   "ssh_dash_1"
+  ],
+  "frameRate": 14,
+  "repeat": -1
+ },
+ "ssh_combo": {
+  "key": "ssh_combo",
+  "frames": [
+   "ssh_combo_0",
+   "ssh_combo_1",
+   "ssh_combo_2",
+   "ssh_combo_3",
+   "ssh_combo_4",
+   "ssh_combo_5"
+  ],
+  "frameRate": 18,
+  "repeat": 0
+ },
+ "ssh_spear": {
+  "key": "ssh_spear",
+  "frames": [
+   "ssh_spear_0",
+   "ssh_spear_1",
+   "ssh_spear_2",
+   "ssh_spear_3",
+   "ssh_spear_4"
+  ],
+  "frameRate": 20,
+  "repeat": -1
+ },
+ "ssh_boom": {
+  "key": "ssh_boom",
+  "frames": [
+   "ssh_boom_0",
+   "ssh_boom_1",
+   "ssh_boom_2",
+   "ssh_boom_3",
+   "ssh_boom_4",
+   "ssh_boom_5"
+  ],
+  "frameRate": 12,
+  "repeat": 0
+ },
+ "sh_spear": {
+  "key": "sh_spear",
+  "frames": [
+   "sh_spear_0",
+   "sh_spear_1",
+   "sh_spear_2",
+   "sh_spear_3",
+   "sh_spear_4",
+   "sh_spear_5"
+  ],
+  "frameRate": 20,
+  "repeat": -1
+ },
+ "sh_spear_hit": {
+  "key": "sh_spear_hit",
+  "frames": [
+   "sh_spear_hit_0",
+   "sh_spear_hit_1",
+   "sh_spear_hit_2",
+   "sh_spear_hit_3",
+   "sh_spear_hit_4"
+  ],
+  "frameRate": 18,
+  "repeat": 0
+ },
+ "sh_rune_blue": {
+  "key": "sh_rune_blue",
+  "frames": [
+   "sh_rune_blue_0"
+  ],
+  "frameRate": 1,
+  "repeat": -1
+ },
+ "sh_rune_pink": {
+  "key": "sh_rune_pink",
+  "frames": [
+   "sh_rune_pink_0"
+  ],
+  "frameRate": 1,
+  "repeat": -1
+ },
+ "sh_burst": {
+  "key": "sh_burst",
+  "frames": [
+   "sh_burst_0"
+  ],
+  "frameRate": 1,
+  "repeat": -1
+ },
+ "sh_orb": {
+  "key": "sh_orb",
+  "frames": [
+   "sh_orb_0",
+   "sh_orb_1"
+  ],
+  "frameRate": 6,
+  "repeat": -1
+ }
+}

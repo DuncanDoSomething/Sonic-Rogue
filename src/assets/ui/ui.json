@@ -719,13 +719,53 @@
     "w": 16,
     "h": 16
    }
+  },
+  "head_shadow": {
+   "frame": {
+    "x": 0,
+    "y": 170,
+    "w": 16,
+    "h": 16
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 16,
+    "h": 16
+   },
+   "sourceSize": {
+    "w": 16,
+    "h": 16
+   }
+  },
+  "oneup_shadow": {
+   "frame": {
+    "x": 18,
+    "y": 170,
+    "w": 26,
+    "h": 29
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   "sourceSize": {
+    "w": 26,
+    "h": 29
+   }
   }
  },
  "meta": {
   "image": "ui.png",
   "size": {
    "w": 256,
-   "h": 170
+   "h": 199
   },
   "scale": "1",
   "credits": "Sonic Advance 3 rings and monitors, ripped by Spitfya"
