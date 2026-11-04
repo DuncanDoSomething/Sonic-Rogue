@@ -30,11 +30,26 @@ import sonicIdleAnim from '../assets/sonic_idle_anim.json';
 import amyIdlePng from '../assets/amy_idle.png';
 import amyIdleAtlas from '../assets/amy_idle.json';
 import amyIdleAnim from '../assets/amy_idle_anim.json';
+import tailsIdlePng from '../assets/tails_idle.png';
+import tailsIdleAtlas from '../assets/tails_idle.json';
+import tailsIdleAnim from '../assets/tails_idle_anim.json';
+import amyVictoryPng from '../assets/amy_victory.png';
+import amyVictoryAtlas from '../assets/amy_victory.json';
+import amyVictoryAnim from '../assets/amy_victory_anim.json';
+import sonicBossWinPng from '../assets/sonic_bosswin.png';
+import sonicBossWinAtlas from '../assets/sonic_bosswin.json';
+import sonicBossWinAnim from '../assets/sonic_bosswin_anim.json';
 
-/** Idles uit een referentie-GIF (tools/build_idle_gif.py): eigen atlas met de originele uitlijning en timing. */
-const GIF_IDLES: Array<[string, unknown, { key: string; texture: string; frames: Array<{ frame: string; duration: number }> }]> = [
+/**
+ * Animaties uit een referentie-GIF (tools/build_idle_gif.py): eigen atlas met de originele uitlijning en timing.
+ * Ze vervangen een animatie met dezelfde naam uit de sheet-atlas (zoals tails_idle en amy_victory).
+ */
+const GIF_IDLES: Array<[string, unknown, { key: string; texture: string; repeat?: number; frames: Array<{ frame: string; duration: number }> }]> = [
   [sonicIdlePng, sonicIdleAtlas, sonicIdleAnim],
   [amyIdlePng, amyIdleAtlas, amyIdleAnim],
+  [tailsIdlePng, tailsIdleAtlas, tailsIdleAnim],
+  [amyVictoryPng, amyVictoryAtlas, amyVictoryAnim],
+  [sonicBossWinPng, sonicBossWinAtlas, sonicBossWinAnim],
 ];
 import { EMERALDS } from '../data/zones';
 import { preloadSounds } from '../audio';
@@ -89,13 +104,14 @@ export class BootScene extends Phaser.Scene {
         });
       }
     }
-    // idles uit een referentie-GIF (Sonic, Amy)
+    // animaties uit een referentie-GIF (idles van Sonic, Amy en Tails, Amy's victory, Sonic's boss-overwinning)
     for (const [, , anim] of GIF_IDLES) {
+      if (this.anims.exists(anim.key)) this.anims.remove(anim.key);
       this.anims.create({
         key: anim.key,
         frames: anim.frames.map(f => ({ key: anim.texture, frame: f.frame, duration: f.duration - 1 })),
         frameRate: 1000,
-        repeat: -1,
+        repeat: anim.repeat ?? -1,
       });
     }
     // Super Sonic en effecten: 'ss_dash', 'fx_burst', 'cheese_fly', ...

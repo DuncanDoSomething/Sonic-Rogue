@@ -34,7 +34,7 @@ const SHOP_TILE_Y = 63;
 
 const PLAYER_POS = { x: 118, y: 208 };
 /** textures van de speelbare characters (zie bodyHeight) */
-const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'sonicidle', 'amyidle']);
+const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'sonicidle', 'amyidle', 'tailsidle', 'amyvictory', 'sonicbosswin']);
 /** lichaamshoogte van een character in sprite-pixels */
 const CHARACTER_BODY = 38;
 const ENEMY_POS = { x: 352, y: 132 };
@@ -2054,7 +2054,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // Eggman Alarm gehaald: de rewards hierna zijn minstens uncommon
     this.minTier = this.alarmWave && !this.rival ? 'uncommon' : 'common';
     const gained = Math.round(waveRings(this.wave, kind) * (this.waveMagnet ? 1 + MAGNET_BONUS : 1));
-    if (!this.player.fainted) this.hero.play(this.player.anim('victory'));
+    // na een boss: een eigen, grotere overwinning als die er is (Sonic: breakdance en duim omhoog)
+    const bossWin = this.player.anim('bosswin');
+    if (!this.player.fainted) this.hero.play(isBossWave(this.wave) && this.anims.exists(bossWin) ? bossWin : this.player.anim('victory'));
     this.victoryVoice();
     if (isBossWave(this.wave)) audio.playJingle('victory', zoneForWave(this.wave + 1, this.zoneOrder).backdrop as MusicKey);
     this.spillRings(c.x, c.y, gained);

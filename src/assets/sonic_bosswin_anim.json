@@ -1,0 +1,159 @@
+{
+ "key": "sonic_bosswin",
+ "texture": "sonicbosswin",
+ "repeat": 0,
+ "frames": [
+  {
+   "frame": "sonicbosswin_0",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_1",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_2",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_3",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_4",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_5",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_6",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_7",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_8",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_9",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_10",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_11",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_12",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_13",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_14",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_15",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_16",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_17",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_18",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_19",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_20",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_21",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_22",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_23",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_24",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_25",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_26",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_27",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_28",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_29",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_30",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_31",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_32",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_33",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_34",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_35",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_36",
+   "duration": 70
+  },
+  {
+   "frame": "sonicbosswin_37",
+   "duration": 70
+  }
+ ]
+}

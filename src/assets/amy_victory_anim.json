@@ -1,0 +1,119 @@
+{
+ "key": "amy_victory",
+ "texture": "amyvictory",
+ "repeat": 0,
+ "frames": [
+  {
+   "frame": "amyvictory_0",
+   "duration": 17
+  },
+  {
+   "frame": "amyvictory_1",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_2",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_3",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_4",
+   "duration": 100
+  },
+  {
+   "frame": "amyvictory_5",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_6",
+   "duration": 33
+  },
+  {
+   "frame": "amyvictory_7",
+   "duration": 17
+  },
+  {
+   "frame": "amyvictory_8",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_9",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_10",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_11",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_12",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_13",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_14",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_15",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_16",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_17",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_18",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_19",
+   "duration": 200
+  },
+  {
+   "frame": "amyvictory_20",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_21",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_22",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_23",
+   "duration": 133
+  },
+  {
+   "frame": "amyvictory_24",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_25",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_26",
+   "duration": 50
+  },
+  {
+   "frame": "amyvictory_27",
+   "duration": 50
+  }
+ ]
+}

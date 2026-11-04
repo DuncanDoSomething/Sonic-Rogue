@@ -1,0 +1,175 @@
+{
+ "key": "tails_idle",
+ "texture": "tailsidle",
+ "repeat": -1,
+ "frames": [
+  {
+   "frame": "tailsidle_0",
+   "duration": 17
+  },
+  {
+   "frame": "tailsidle_1",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_2",
+   "duration": 133
+  },
+  {
+   "frame": "tailsidle_3",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_4",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_5",
+   "duration": 133
+  },
+  {
+   "frame": "tailsidle_6",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_7",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_8",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_9",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_10",
+   "duration": 300
+  },
+  {
+   "frame": "tailsidle_11",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_12",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_13",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_14",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_15",
+   "duration": 117
+  },
+  {
+   "frame": "tailsidle_16",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_17",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_18",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_19",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_20",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_21",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_22",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_23",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_24",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_25",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_26",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_27",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_28",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_29",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_30",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_31",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_32",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_33",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_34",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_35",
+   "duration": 167
+  },
+  {
+   "frame": "tailsidle_36",
+   "duration": 133
+  },
+  {
+   "frame": "tailsidle_37",
+   "duration": 133
+  },
+  {
+   "frame": "tailsidle_38",
+   "duration": 67
+  },
+  {
+   "frame": "tailsidle_39",
+   "duration": 67
+  },
+  {
+   "frame": "tailsidle_40",
+   "duration": 100
+  },
+  {
+   "frame": "tailsidle_41",
+   "duration": 83
+  }
+ ]
+}
