@@ -167,7 +167,6 @@ export class BattleScene extends Phaser.Scene {
   private bag: Record<string, number> = {};
   private bagLayer!: Phaser.GameObjects.Container;
   private bagItems: Phaser.GameObjects.Container[] = [];
-  private bagName?: Phaser.GameObjects.Text;
   private bagIds: string[] = [];
   private bagInfo!: Phaser.GameObjects.Text;
 
@@ -187,7 +186,6 @@ export class BattleScene extends Phaser.Scene {
     this.cmdItems = [];
     this.fightItems = [];
     this.bagItems = [];
-    this.bagName = undefined;
     this.rewardCards = [];
     this.shopButtons = [];
     this.rewardLayer = undefined;
@@ -535,8 +533,9 @@ export class BattleScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(30);
     this.panelBase(g);
     sonicPanel(g, 4, PANEL_Y + 8, 288, H - PANEL_Y - 10, 'cream');
-    this.msg = this.add.text(12, PANEL_Y + 14, '', {
-      fontFamily: FONT, fontSize: '8px', color: HUD.ink, lineSpacing: 5, wordWrap: { width: 272 },
+    // drie regels passen precies in het tekstvak (lange rewards en shop-uitleg)
+    this.msg = this.add.text(12, PANEL_Y + 12, '', {
+      fontFamily: FONT, fontSize: '8px', color: HUD.ink, lineSpacing: 3, wordWrap: { width: 272 },
     }).setDepth(31);
 
     // Command-menu (Fight / Party / Items / Run)
@@ -611,24 +610,22 @@ export class BattleScene extends Phaser.Scene {
     g.fillStyle(HUD.outline).fillRect(0, PANEL_Y + 6, W, 1);
   }
 
-  /** Tas (Items): elk item als icoontje in een vakje, de naam van wat je kiest staat eronder. */
+  /** Tas (Items): elk item als icoontje in een vakje; uitleg van wat je kiest staat rechts. */
   private buildBagItems() {
     this.bagItems.forEach(t => t.destroy());
     this.bagItems = [];
     this.bagIds = Object.keys(ITEMS).filter(id => (this.bag[id] ?? 0) > 0);
-    this.bagName?.destroy();
-    this.bagName = this.add.text(26, PANEL_Y + 33, '', { fontFamily: FONT, fontSize: '8px', color: HUD.ink });
-    this.bagLayer.add(this.bagName);
     this.bagIds.forEach((id, i) => {
       // container op de plek van de cursor (links), het vakje zelf er net rechts van
-      const c = this.add.container(26 + i * 64, PANEL_Y + 15);
+      const c = this.add.container(26 + i * 48, PANEL_Y + 21);
       const slot = this.add.graphics();
       slot.fillStyle(HUD.outline).fillRoundedRect(0, -4, 26, 20, 3);
       slot.fillStyle(HUD.pipEmpty).fillRoundedRect(1, -3, 24, 18, 2);
       const icon = this.shopIcon(id, false)[0] as Phaser.GameObjects.Image;
       icon.setPosition(13, 6);
-      const count = this.add.text(30, 0, `x${this.bag[id]}`, { fontFamily: FONT, fontSize: '8px', color: HUD.ink });
-      const hit = this.add.zone(-12, -4, 76, 20).setOrigin(0).setInteractive({ useHandCursor: true });
+      // aantal alleen als je er meer dan één van hebt
+      const count = this.add.text(25, 15, this.bag[id] > 1 ? `${this.bag[id]}` : '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', stroke: '#281060', strokeThickness: 3 }).setOrigin(1, 1);
+      const hit = this.add.zone(-12, -4, 40, 20).setOrigin(0).setInteractive({ useHandCursor: true });
       hit.on('pointerover', () => { if (this.menu === 'bag') { this.cursor = i; this.refreshCursor(); } });
       hit.on('pointerdown', () => { if (this.menu === 'bag') { this.cursor = i; this.confirm(); } });
       c.add([slot, icon, count, hit]);
@@ -802,11 +799,10 @@ export class BattleScene extends Phaser.Scene {
       this.moveInfo.setColor(this.player.canUse(m) ? '#ffffff' : '#ff7a6a');
       if (this.infoLayer.visible) this.updateMoveInfo();
     } else if (this.menu === 'bag') {
-      if (!this.bagIds.length) { this.bagInfo.setText('Bag is empty.\nVisit the shop!'); this.bagName?.setText(''); return; }
+      if (!this.bagIds.length) { this.bagInfo.setText('Bag is empty.\nVisit the shop!'); return; }
       const t = this.bagItems[this.cursor];
-      this.pointer.setPosition(t.x - 11, t.y);
+      this.pointer.setPosition(t.x - 11, t.y + 2);
       const it = ITEMS[this.bagIds[this.cursor]];
-      this.bagName?.setText(it.name);
       this.bagInfo.setText(it.desc);
     } else if (this.menu === 'reward') {
       this.rewardCards.forEach((c, i) => {
