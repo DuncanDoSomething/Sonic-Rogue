@@ -30,6 +30,7 @@ test.describe('Sonic Rogue smoke tests', () => {
     const errors = trackErrors(page);
     await openGame(page);
     await startRun(page);
+    await setup(page, 's.enemy.hp = 9999;');   // Sonic is fast enough to one-shot a wave-1 foe now
     const before = await battle(page);
     await press(page, 'z', 'z');                // Fight > Spin Attack
     await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
