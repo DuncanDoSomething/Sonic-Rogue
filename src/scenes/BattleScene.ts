@@ -388,17 +388,17 @@ export class BattleScene extends Phaser.Scene {
     return this.textures.exists(key) ? this.add.image(0, 0, key) : this.add.image(0, 0, 'ui', key);
   }
 
-  private showHudTip(x: number, y: number, title: string, body: string) {
+  private showHudTip(x: number, y: number, title: string, body: string, right = false) {
     this.hudTip?.destroy();
-    this.hudTip = tooltip(this, x, y, title, body, 190);
+    this.hudTip = tooltip(this, x, y, title, body, 190, right);
   }
   private hideHudTip() { this.hudTip?.destroy(); this.hudTip = undefined; }
 
-  /** Hover (of tik) = uitleg. */
-  private hoverTip(obj: Phaser.GameObjects.GameObject, tx: number, ty: number, title: string, body: () => string, onTap?: () => void) {
-    obj.on('pointerover', () => this.showHudTip(tx, ty, title, body()));
+  /** Hover (of tik) = uitleg. `right`: tx is de rechterkant van het vakje (voor dingen rechts in beeld). */
+  private hoverTip(obj: Phaser.GameObjects.GameObject, tx: number, ty: number, title: string, body: () => string, onTap?: () => void, right = false) {
+    obj.on('pointerover', () => this.showHudTip(tx, ty, title, body(), right));
     obj.on('pointerout', () => this.hideHudTip());
-    obj.on('pointerdown', () => { if (onTap) onTap(); else if (this.hudTip) this.hideHudTip(); else this.showHudTip(tx, ty, title, body()); });
+    obj.on('pointerdown', () => { if (onTap) onTap(); else if (this.hudTip) this.hideHudTip(); else this.showHudTip(tx, ty, title, body(), right); });
   }
 
   /**
@@ -452,10 +452,11 @@ export class BattleScene extends Phaser.Scene {
       const list = [...new Set(items)].map(id => `${ITEMS[id].name}${this.bag[id] > 1 ? ` x${this.bag[id]}` : ''}: ${ITEMS[id].desc}.`).join('\n');
       return `${list}\n${used ? 'You already used an item this fight.' : `Free action, ${ITEMS_PER_FIGHT} per fight.`}`;
     };
-    this.hoverTip(hit, tx - 132, ty + 26, 'BAG', bagText, () => {
+    // uitleg links van de tas, net als bij de rings
+    this.hoverTip(hit, tx - 3, ty, 'BAG', bagText, () => {
       if (this.menu === 'command') { this.hideHudTip(); audio.sfx('confirm'); this.openBag(); }
-      else if (this.hudTip) this.hideHudTip(); else this.showHudTip(tx - 132, ty + 26, 'BAG', bagText());
-    });
+      else if (this.hudTip) this.hideHudTip(); else this.showHudTip(tx - 3, ty, 'BAG', bagText(), true);
+    }, true);
     this.bagTray = tray;
   }
 
@@ -521,7 +522,8 @@ export class BattleScene extends Phaser.Scene {
     this.ringIcon = this.ringText.ring.setDepth(42);
     // hover: het precieze aantal (de teller kort grote getallen af: 12K, 3.4M)
     const ringHit = this.add.zone(W - 24 - RingCounter.W, 17, RingCounter.W, RingCounter.H).setOrigin(0).setDepth(43).setInteractive();
-    this.hoverTip(ringHit, W - 24 - RingCounter.W - 120, 17 + RingCounter.H + 2, 'RINGS', () => this.rings.toLocaleString('en-US'));
+    // uitleg direct links van de teller
+    this.hoverTip(ringHit, W - 24 - RingCounter.W - 3, 17, 'RINGS', () => this.rings.toLocaleString('en-US'), undefined, true);
     // Chaos Emerald-slots: donker tot je ze verdient (1 per zone-boss)
     EMERALDS.forEach((c, i) => {
       const e = this.add.sprite(18 + i * 22, 13, 'emeralds', `emerald_${c}_0`).setDepth(20);

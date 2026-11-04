@@ -84,8 +84,10 @@ export function buildCharacterInfo(scene: Phaser.Scene, id: string, o: InfoOptio
     });
   }
 
-  txt(x, y, def.name.toUpperCase() + (f ? `  Lv.${f.level}` : ''), '#f2c230');
-  txt(x + (f ? 150 : 110), y, `${def.type.toUpperCase()} type`, '#9aa4c4');
+  // hoofdje voor de naam, zodat je meteen ziet van wie deze kit is
+  c.add(scene.add.image(x, y + 4, 'ui', `head_${id}`).setOrigin(0, 0.5).setAlpha(f?.fainted ? 0.5 : 1));
+  txt(x + 22, y, def.name.toUpperCase() + (f ? `  Lv.${f.level}` : ''), '#f2c230');
+  txt(x + 22 + (f ? 150 : 110), y, `${def.type.toUpperCase()} type`, '#9aa4c4');
   y += 16;
 
   if (f?.fainted) { txt(x, y - 4, 'KO - back after the zone boss', '#e8443a'); y += 10; }

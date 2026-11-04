@@ -102,8 +102,8 @@ export class RingCounter {
   }
 }
 
-/** Klein uitlegvakje (hover over een buff of item). */
-export function tooltip(scene: Phaser.Scene, x: number, y: number, title: string, body: string, maxW = 200) {
+/** Klein uitlegvakje (hover over een buff of item). `alignRight`: x is de rechterkant (vakje links van iets). */
+export function tooltip(scene: Phaser.Scene, x: number, y: number, title: string, body: string, maxW = 200, alignRight = false) {
   const FONT = '"Press Start 2P", monospace';
   const c = scene.add.container(x, y).setDepth(48);
   const t1 = scene.add.text(8, 7, title, { fontFamily: FONT, fontSize: '8px', color: HUD.label });
@@ -111,9 +111,11 @@ export function tooltip(scene: Phaser.Scene, x: number, y: number, title: string
   const w = Math.min(maxW, Math.max(t1.width, t2.width) + 16), h = 26 + t2.height;
   const g = sonicPanel(scene.add.graphics(), 0, 0, w, h, 'blue', 0.97);
   c.add([g, t1, t2]);
+  if (alignRight) c.x = x - w;
   // binnen beeld houden
   const cam = scene.cameras.main;
-  if (x + w > cam.width - 2) c.x = cam.width - 2 - w;
+  if (c.x + w > cam.width - 2) c.x = cam.width - 2 - w;
+  if (c.x < 2) c.x = 2;
   if (y + h > cam.height - 2) c.y = cam.height - 2 - h;
   return c;
 }
