@@ -392,6 +392,35 @@ export class BattleScene extends Phaser.Scene {
     this.hudTip?.destroy();
     this.hudTip = tooltip(this, x, y, title, body, 190, right);
   }
+  /** Tas-uitleg: een regel per item met het icoon, het aantal en wat het doet. `rx` = rechterkant. */
+  private showBagTip(rx: number, ty: number, items: string[], used: boolean) {
+    this.hideHudTip();
+    const w = 190;
+    const c = this.add.container(0, ty).setDepth(48);
+    const parts: Phaser.GameObjects.GameObject[] = [this.add.text(8, 7, 'BAG', { fontFamily: FONT, fontSize: '8px', color: HUD.label })];
+    let y = 20;
+    const text = (x: number, t: string, color = '#ffffff') => {
+      const o = this.add.text(x, y, t, { fontFamily: FONT, fontSize: '8px', color, lineSpacing: 3, wordWrap: { width: w - x - 8 } });
+      parts.push(o);
+      return o;
+    };
+    if (!items.length) {
+      y += text(8, `Empty. Buy items in the shop after a wave (max ${BAG_SIZE}).`).height + 4;
+    }
+    for (const id of new Set(items)) {
+      const icon = this.shopIcon(id, false)[0] as Phaser.GameObjects.Image;
+      icon.setPosition(16, y + 4).setScale(Math.min(1, 15 / icon.width, 14 / icon.height));
+      parts.push(icon);
+      if (this.bag[id] > 1) parts.push(this.add.text(25, y + 11, `${this.bag[id]}`, { fontFamily: FONT, fontSize: '8px', color: '#ffffff', stroke: '#281060', strokeThickness: 3 }).setOrigin(1, 1));
+      y += Math.max(14, text(32, ITEMS[id].desc).height) + 6;
+    }
+    if (items.length) y += text(8, used ? 'You already used an item this fight.' : `Free action, ${ITEMS_PER_FIGHT} per fight.`, HUD.muted).height + 4;
+    const h = y + 4;
+    c.add([sonicPanel(this.add.graphics(), 0, 0, w, h, 'blue', 0.97), ...parts]);
+    c.x = Math.max(2, rx - w);
+    this.hudTip = c;
+  }
+
   private hideHudTip() { this.hudTip?.destroy(); this.hudTip = undefined; }
 
   /** Hover (of tik) = uitleg. `right`: tx is de rechterkant van het vakje (voor dingen rechts in beeld). */
@@ -447,16 +476,14 @@ export class BattleScene extends Phaser.Scene {
     }
     const hit = this.add.zone(0, 0, RingCounter.W, 24).setOrigin(0).setInteractive({ useHandCursor: true });
     tray.add(hit);
-    const bagText = () => {
-      if (!items.length) return `Empty. Buy items in the shop after a wave (max ${BAG_SIZE}).`;
-      const list = [...new Set(items)].map(id => `${ITEMS[id].name}${this.bag[id] > 1 ? ` x${this.bag[id]}` : ''}: ${ITEMS[id].desc}.`).join('\n');
-      return `${list}\n${used ? 'You already used an item this fight.' : `Free action, ${ITEMS_PER_FIGHT} per fight.`}`;
-    };
-    // uitleg links van de tas, net als bij de rings
-    this.hoverTip(hit, tx - 3, ty, 'BAG', bagText, () => {
+    // uitleg links van de tas: per item het icoontje met wat het doet (de namen zeggen weinig)
+    const show = () => this.showBagTip(tx - 3, ty, items, used);
+    hit.on('pointerover', show);
+    hit.on('pointerout', () => this.hideHudTip());
+    hit.on('pointerdown', () => {
       if (this.menu === 'command') { this.hideHudTip(); audio.sfx('confirm'); this.openBag(); }
-      else if (this.hudTip) this.hideHudTip(); else this.showHudTip(tx - 3, ty, 'BAG', bagText(), true);
-    }, true);
+      else if (this.hudTip) this.hideHudTip(); else show();
+    });
     this.bagTray = tray;
   }
 
