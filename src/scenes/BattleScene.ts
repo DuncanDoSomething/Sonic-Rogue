@@ -9,13 +9,15 @@ import type { ZoneEffect } from '../data/zones';
 const BOSS_TYPE_NEUTRAL = false;
 import { Backdrop } from './Backdrop';
 import { BAG_SIZE, ITEMS, ITEMS_PER_FIGHT, ItemDef, bagCount, rerollCost, shopStock, waveRings } from '../data/items';
-import { BOSS_TIER_ODDS, HAMMER_CRIT, MAGNET_BONUS, SHIELD_FACTOR, TIER_COLOR, TIER_ODDS, TIER_NAME, emptyBuffs, rollRewards, type RewardCtx, type RewardDef, type RunBuffs, type Tier } from '../data/rewards';
+import { BOSS_TIER_ODDS, HAMMER_CRIT, MAGNET_BONUS, REWARDS, SHIELD_FACTOR, TIER_COLOR, TIER_ODDS, TIER_NAME, emptyBuffs, rollRewards, type RewardCtx, type RewardDef, type RunBuffs, type Tier } from '../data/rewards';
 import { battleTimeScale, charDelay, holdFactor, settings } from '../data/settings';
 import { addHelpButton, addMenuButton } from './ui';
 import { HUD, RingCounter, checkerBand, sonicPanel, tooltip } from './hud';
 import { audio, MusicKey } from '../audio';
 import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
 import { TEST_KEYS, TEST_MODE } from '../data/testMode';
+import { TutorialCoach, tailsTip, type TutorialHost } from './tutorial';
+import { TIPS, markTip, tipDue, type TipId } from '../data/tips';
 
 const W = 480;
 const H = 270;
@@ -60,7 +62,7 @@ interface InfoBox {
   segments?: Phaser.GameObjects.Graphics;
 }
 
-export class BattleScene extends Phaser.Scene {
+export class BattleScene extends Phaser.Scene implements TutorialHost {
   private partyIds: string[] = ['sonic'];
   /** je team (max 3); `player` is wie er nu vecht */
   private party: Fighter[] = [];
@@ -141,6 +143,13 @@ export class BattleScene extends Phaser.Scene {
   private bagTray?: Phaser.GameObjects.Container;
   private hudTip?: Phaser.GameObjects.Container;
   private hudSig = '';
+  /** oefengevecht met Tails als gids (vanaf How to Play op het titelscherm) */
+  private tutorialMode = false;
+  private tut?: TutorialCoach;
+  /** tutorial: de vijand kan pas vallen als Tails zegt dat je hem mag afmaken */
+  private tutGuard = false;
+  /** open tip van Tails (Z of klik sluit hem) */
+  private tipBox?: { close(): void };
 
   private menu: MenuState = 'busy';
   private cursor = 0;
@@ -180,8 +189,9 @@ export class BattleScene extends Phaser.Scene {
 
   constructor() { super('Battle'); }
 
-  init(data: { party?: string[]; starter?: string; save?: RunSave }) {
+  init(data: { party?: string[]; starter?: string; save?: RunSave; tutorial?: boolean }) {
     this.saved = data.save;
+    this.tutorialMode = !!data.tutorial;
     this.partyIds = data.party?.length ? data.party : [data.starter ?? 'sonic'];
     this.cmdItems = [];
     this.fightItems = [];
@@ -194,7 +204,7 @@ export class BattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- setup
   update(_t: number, dt: number) {
-    if (this.hero && this.foe) { this.updateStatusFx(dt); this.updateIdle(dt); this.refreshHudExtras(); }
+    if (this.hero && this.foe) { this.updateStatusFx(dt); this.updateIdle(dt); this.refreshHudExtras(); this.tut?.update(); }
   }
 
   /**
@@ -292,6 +302,13 @@ export class BattleScene extends Phaser.Scene {
     this.drawHud();
     this.drawPanel();
     this.bindInput();
+    this.tut = undefined;
+    if (this.tutorialMode) {
+      // vaste oefen-setup: een heart in de tas, en niks wordt opgeslagen
+      this.bag = { healthRing: 1 };
+      this.tutGuard = true;
+      this.tut = new TutorialCoach(this, this);
+    }
     this.testPanel = undefined;
     if (TEST_MODE) this.drawTestBadge();
 
@@ -316,7 +333,7 @@ export class BattleScene extends Phaser.Scene {
   /** Pauzemenu (drie streepjes / M): Resume, Settings, How to Play, Save & Quit. */
   private openPause() {
     this.scene.pause();
-    this.scene.launch('Pause', { from: this.scene.key });
+    this.scene.launch('Pause', { from: this.scene.key, quitLabel: this.tutorialMode ? 'Quit Tutorial' : undefined });
   }
 
   /** Platforms in de kleuren van de huidige zone. */
@@ -764,6 +781,17 @@ export class BattleScene extends Phaser.Scene {
     kb.removeAllListeners();
     kb.on('keydown', (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
+      // tip van Tails open: Z / X sluit hem, verder niks
+      if (this.tipBox) {
+        if (['z', 'enter', ' ', 'x', 'escape', 'backspace'].includes(k)) this.tipBox.close();
+        return;
+      }
+      // tutorial: als Tails praat, gaat Z verder (M opent het pauzemenu, verder niks)
+      if (this.tut?.talking) {
+        if (['z', 'enter', ' '].includes(k)) this.tut.next();
+        else if (k === 'm') this.openPause();
+        return;
+      }
       if (TEST_MODE && this.testKey(k)) return;
       if (this.menu === 'choice') {
         if (['arrowup', 'w', 'arrowleft', 'a'].includes(k)) this.moveChoice(-1);
@@ -859,7 +887,17 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** Tutorial: mag deze actie nu? Zo niet, dan schudt Tails nee. Buiten de tutorial mag alles. */
+  private tutOk(action: string) {
+    if (!this.tut || this.tut.allows(action)) return true;
+    audio.sfx('errorclick');
+    this.tut.nudge();
+    return false;
+  }
+
   private confirm() {
+    if (this.menu === 'command' && !this.tutOk(`cmd:${this.cursor}`)) return;
+    if (this.menu === 'fight' && this.player.moves[this.cursor] && !this.tutOk(`move:${this.player.moves[this.cursor]}`)) return;
     if (this.menu === 'command' || this.menu === 'fight' || this.menu === 'bag') audio.sfx('confirm');
     if (this.menu === 'command') {
       if (this.cursor === 0) this.openFight();
@@ -908,6 +946,7 @@ export class BattleScene extends Phaser.Scene {
     this.cmdLayer.setVisible(true);
     this.msg.setVisible(true).setText(`What will ${this.player.name} do?`);
     this.refreshCursor();
+    this.tut?.event('command');
   }
 
   private openFight() {
@@ -937,6 +976,7 @@ export class BattleScene extends Phaser.Scene {
    * ITEMS_PER_FIGHT per gevecht gebruiken. Heals kies je zelf voor wie.
    */
   private async useItem(id: string) {
+    if (!this.tutOk(`item:${id}`)) return;
     const item = ITEMS[id];
     let target = this.player;
     if (this.itemsUsed >= ITEMS_PER_FIGHT) {
@@ -986,6 +1026,7 @@ export class BattleScene extends Phaser.Scene {
     }
     const text = item.use(target);
     this.itemsUsed++;
+    this.tut?.event('item');
     audio.sfx('heal1');
     this.refreshPartyHeads();
     await this.setBox(this.pBox, this.player, true);
@@ -1175,6 +1216,7 @@ export class BattleScene extends Phaser.Scene {
   // ---------------------------------------------------------------- flow
   /** Auto-save: de run zoals hij nu is, zodat je na het sluiten verder kunt bij deze wave. */
   private autoSave(wave = this.wave) {
+    if (this.tutorialMode) return; // oefenen telt niet
     saveRun({
       wave, rings: this.rings, emeralds: this.emeralds, expShare: this.expShare,
       bag: { ...this.bag }, rivalsMet: [...this.rivalsMet], fieldCleared: this.fieldCleared, buffs: { ...this.buffs }, zoneOrder: [...this.zoneOrder],
@@ -1211,9 +1253,9 @@ export class BattleScene extends Phaser.Scene {
     this.rival = !!rivalId;
     const elite = (isEliteWave(this.wave) || this.alarmWave) && !this.rival && !boss;
     this.elite = elite;
-    const id = rivalId ?? (boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
+    const id = this.tutorialMode ? 'beetle' : rivalId ?? (boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
     // vijanden stijgen ~0,65 level per wave; jij blijft dan net iets voor (bosses/elites +2, rivals op gelijk niveau)
-    this.enemy = new Fighter(id, 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || elite ? 2 : 0));
+    this.enemy = new Fighter(id, this.tutorialMode ? 3 : 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || elite ? 2 : 0));
     if (rivalId) this.rivalsMet.push(rivalId);
     // zone-bosses zijn type-neutraal zolang je maar 1 character hebt (anders is een boss voor sommigen onmogelijk)
     if (boss && BOSS_TYPE_NEUTRAL) this.enemy.typeOverride = this.player.type;
@@ -1226,9 +1268,12 @@ export class BattleScene extends Phaser.Scene {
     this.waveText.setText(`${zone.name} - Wave ${this.wave}`);
     this.hero.play(this.player.anim('idle'));
     if (firstOfZone) await this.zoneBanner(zone.name, Math.floor((this.wave - 1) / 10) + 1);
-    if (firstOfZone && zone.effect && !this.fieldCleared) await this.say(`${zone.effect.name}! ${zone.effect.desc}.`, 700);
+    if (firstOfZone && zone.effect && !this.fieldCleared) {
+      await this.say(`${zone.effect.name}! ${zone.effect.desc}.`, 700);
+      await this.tip('zone');
+    }
     const d = this.enemy.def;
-    this.waveText.setText(`${zone.name} - Wave ${this.wave}`);
+    this.waveText.setText(this.tutorialMode ? 'TUTORIAL  -  M: quit' : `${zone.name} - Wave ${this.wave}`);
     this.ringText.setText(`${this.rings}`);
 
     this.foeHover?.stop();
@@ -1248,7 +1293,10 @@ export class BattleScene extends Phaser.Scene {
     if (this.rival) await this.rivalBanner();
     await this.say(this.rival ? `Rival ${this.enemy.name} wants to battle!` : boss ? `Watch out! ${this.enemy.name} appeared!` : elite ? `A strong ${this.enemy.name} appeared!` : `A wild ${this.enemy.name} appeared!`, 500);
     // Battle Style "Switch": voor elke wave (behalve de eerste) gratis wisselen
+    if (this.rival) await this.tip('rival');
+    else if (boss) await this.tip('boss');
     if (this.wave > 1 && settings.battleStyle === 0 && this.party.filter(f => !f.fainted).length > 1) {
+      await this.tip('switch');
       const yes = await this.choose(`Will you switch\ncharacters?`, [{ label: 'Yes' }, { label: 'No' }], true);
       if (yes === 0) {
         const i = await this.pickTeammate('Who goes in?', true);
@@ -1384,6 +1432,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async runTurn(playerMove: MoveDef, ally?: Fighter) {
+    this.tut?.event(`move:${playerMove.id}`);
     this.toggleField(false);
     this.menu = 'busy';
     this.pointer.setVisible(false);
@@ -1437,6 +1486,8 @@ export class BattleScene extends Phaser.Scene {
       struck = true;
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
       if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
+      // tutorial: niemand van je team gaat neer, en de vijand pas bij de laatste stap
+      if (this.tutorialMode && tgt.hp === 0 && (this.party.includes(tgt) || this.tutGuard)) tgt.hp = 1;
       const spr = isPlayer ? this.foe : this.hero;
       const c = this.center(spr);
       this.burst(c.x, c.y, hit.crit ? 0xf2c230 : 0xffffff, hit.crit ? 16 : 10);
@@ -1958,6 +2009,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async winWave() {
+    this.tut?.event('win');
     this.foeHover?.stop();
     if (this.rival) return this.winRival();
     const c = this.center(this.foe);
@@ -2328,6 +2380,7 @@ export class BattleScene extends Phaser.Scene {
     const i = await this.pickTeammate('Switch to who?\n(the foe gets a free turn)', true);
     if (i < 0) { this.openCommand(1); return; }
     await this.switchTo(this.party[i]);
+    this.tut?.event('switched');
     await this.act(this.enemy, this.player, this.pickEnemyMove());
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(1); return; }
     await this.endOfTurn();
@@ -2342,6 +2395,7 @@ export class BattleScene extends Phaser.Scene {
     const alive = this.party.filter(f => !f.fainted);
     if (!alive.length) { await this.loseRun(); return false; }
     await this.say(`${this.player.name} is down!`, 400);
+    await this.tip('ko');
     let next = alive[0];
     if (alive.length > 1) next = this.party[await this.pickTeammate('Who goes next?', false)];
     await this.switchTo(next);
@@ -2590,10 +2644,14 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: [this.pBox.root, this.fieldText, ...this.partyHeads], alpha: 0, duration: 200 });
     this.showStatusPanel();
     this.buildShopRow();
-    this.buildRewardRow();
+    // tutorial: vaste, simpele rewards
+    const R = (rid: string) => REWARDS.find(r => r.id === rid)!;
+    this.buildRewardRow(this.tutorialMode ? [R('rings'), R('boost'), R('shield')] : undefined);
     layer.setAlpha(0);
     this.tweens.add({ targets: layer, alpha: 1, duration: 200 });
     this.refreshCursor();
+    this.tut?.event('reward');
+    void this.tip('shop');
   }
 
   /** Korte lijst van actieve reward-effecten (voor het field-paneel). */
@@ -2736,6 +2794,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** Item kopen of rerollen. Je blijft in het reward-scherm, dus je kunt meer kopen. */
   private buyItem(i: number) {
+    if (!this.tutOk(`shop:${i}`)) return;
     const isReroll = i === this.shopItems.length;
     const it = this.shopItems[i];
     const cost = isReroll ? this.rerollCost() : it?.price;
@@ -2808,6 +2867,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async pickReward(i: number) {
+    if (!this.tutOk(`reward:${i}`)) return;
     this.menu = 'busy';
     const r = this.rewardChoices[i];
     let target: Fighter | undefined;
@@ -2819,6 +2879,7 @@ export class BattleScene extends Phaser.Scene {
       target = this.party[pick];
     }
     const text = r.apply(this.rewardCtx(), target);
+    this.tut?.event('reward-picked');
     this.minTier = 'common';
     this.refreshPartyHeads();
     // monitor kapot: rookwolk + glinsters, net als in de game
@@ -2843,7 +2904,81 @@ export class BattleScene extends Phaser.Scene {
     this.refreshPartyHeads();
     this.setBox(this.pBox, this.player, true);
     await this.say(text, 600);
+    if (this.tutorialMode) { await this.finishTutorial(); return; }
     this.wave++;
     this.startWave();
+  }
+
+  // ---------------------------------------------------------------- tutorial
+  /** Tip van Tails de eerste keer dat iets gebeurt (niet in de tutorial zelf, en uit te zetten in Settings). */
+  private async tip(id: TipId) {
+    if (this.tutorialMode || !tipDue(id)) return;
+    markTip(id);
+    const t = tailsTip(this, TIPS[id], id === 'boss' || id === 'rival' ? 0 : 1);
+    this.tipBox = t;
+    await t.done;
+    this.tipBox = undefined;
+  }
+
+  /** Slot van de tutorial: Tails zegt gedag, dan een echte run starten of terug naar het titelscherm. */
+  private async finishTutorial() {
+    audio.sfx('confirm2');
+    this.tut?.say("That's it, you're ready for a real run! Good luck out there, Sonic!", 2);
+    markTip('shop'); // de shop heb je nu al gezien
+    const pick = await this.choose('Practice complete!', [{ label: 'Start a run' }, { label: 'Back to title' }], false);
+    this.tut?.destroy();
+    this.tut = undefined;
+    this.menu = 'busy';
+    this.cameras.main.fadeOut(300, 255, 255, 255);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.input.keyboard!.removeAllListeners();
+      if (pick === 0) this.scene.start('CharSelect');
+      else this.scene.start('Title', { toMenu: true });
+    });
+  }
+
+  /** Wat Tails uitlicht, als rechthoek in beeld. Volgt de UI: Fight-menu open of dicht, keuzelijstje ... */
+  tutRect(focus: string): Phaser.Geom.Rectangle | undefined {
+    const R = (x: number, y: number, w: number, h: number) => new Phaser.Geom.Rectangle(x, y, w, h);
+    const textRect = (t?: Phaser.GameObjects.Text) => (t ? R(t.x - 14, t.y - 3, t.width + 18, 14) : undefined);
+    const [kind, arg] = focus.split(':');
+    if (this.menu === 'choice' && this.choiceLayer && (kind === 'cmd' || kind === 'move' || kind === 'item')) {
+      const b = this.choiceLayer.getBounds();
+      return R(b.x, b.y, b.width, b.height);
+    }
+    switch (kind) {
+      case 'pBox': return R(this.pBox.root.x, this.pBox.root.y, 178, 45);
+      case 'eBox': return R(this.eBox.root.x, this.eBox.root.y, 170, 32);
+      case 'bag': return R(W - 24 - RingCounter.W, 17 + RingCounter.H + 4, RingCounter.W, 24);
+      case 'heads': return R(W - 186 - 54, 154, 54, 16);
+      case 'cards': return R(W / 2 - 132 - 61, 113, 132 * 2 + 122, 100);
+      case 'shop': return R(SHOP_X, 26, SHOP_W, 74);
+      case 'team': return R(W - 186, PANEL_Y + 8, 180, H - PANEL_Y - 10);
+      case 'cmd': return textRect(this.cmdItems[Number(arg)]);
+      case 'move': {
+        if (this.menu !== 'fight') return textRect(this.cmdItems[0]);
+        if (arg === 'any') return R(4, PANEL_Y + 8, 330, H - PANEL_Y - 10);
+        return textRect(this.fightItems[this.player.moves.indexOf(arg)]);
+      }
+      case 'item': {
+        if (this.menu !== 'bag') return textRect(this.cmdItems[2]);
+        const c = this.bagItems[this.bagIds.indexOf(arg)];
+        return c ? R(c.x - 14, c.y - 6, 44, 24) : undefined;
+      }
+    }
+    return undefined;
+  }
+
+  /** Klaarzetten voor een stap: 'hurt' = Sonic heeft schade (voor de heart), 'finish' = de vijand mag vallen. */
+  tutPrep(what: string) {
+    if (what === 'hurt' && this.player.hp > this.player.maxHp * 0.6) {
+      this.player.hp = Math.ceil(this.player.maxHp * 0.5);
+      this.setBox(this.pBox, this.player, true);
+    }
+    if (what === 'finish') {
+      this.tutGuard = false;
+      this.enemy.hp = Math.min(this.enemy.hp, 1);
+      this.setBox(this.eBox, this.enemy, true);
+    }
   }
 }

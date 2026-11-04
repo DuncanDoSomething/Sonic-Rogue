@@ -16,6 +16,7 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 | ![Buff icons with hover info](docs/hud-tooltip.png) | ![Rewards and shop, with your whole team](docs/rewards.png) |
 | ![Ultimate cut-in](docs/cut-in.png) | ![Super Sonic's Light Speed Attack](docs/super-sonic.png) |
 | ![Knuckles' Maximum Heat](docs/maximum-heat.png) | ![Character kits (I)](docs/kits.png) |
+| ![Practice fight with Tails](docs/tutorial.png) | ![How to Play, by topic](docs/how-to-play.png) |
 
 ## Gameplay
 
@@ -33,8 +34,7 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 - **Exp. Share** after wave 10 (50%, then 80% after wave 20). The character in the fight always levels fastest.
 - **KOs last.** A teammate who goes down stays down until you beat the zone boss. From wave 20 the shop sells an expensive Revive.
 - **Auto-save** after every wave. Use Save & Quit in the pause menu, or just close the tab, and continue later.
-
-Press **H** (or the **?** button) in game for the full rules.
+- **Learn as you go.** How to Play (on the title screen, or **H** / **?** in game) is split into topics. From the title screen you can also start a short practice fight where Tails walks you through attacking, Boost, items, switching and rewards. During your first runs Tails pops up with a tip the first time something new happens (a zone effect, a rival, a boss, a KO); turn the tips off in Settings.
 
 ### Controls
 

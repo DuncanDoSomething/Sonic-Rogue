@@ -21,12 +21,15 @@ export class PauseScene extends Phaser.Scene {
   private from = '';
   private row = 0;
   private labels: Phaser.GameObjects.Text[] = [];
+  /** andere tekst voor Save & Quit (de tutorial slaat niks op) */
+  private quitLabel?: string;
   private pointer!: Phaser.GameObjects.Triangle;
 
   constructor() { super('Pause'); }
 
-  init(data: { from: string }) {
+  init(data: { from: string; quitLabel?: string }) {
     this.from = data.from;
+    this.quitLabel = data.quitLabel;
     this.row = 0;
     this.labels = [];
   }
@@ -40,7 +43,8 @@ export class PauseScene extends Phaser.Scene {
     this.add.text(W / 2, by + 14, 'Paused', { fontFamily: FONT, fontSize: '8px', color: '#f2c230' }).setOrigin(0.5);
 
     ROWS.forEach((r, i) => {
-      const t = this.add.text(bx + 50, by + 36 + i * 20, r.label, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
+      const label = r.act === 'quit' && this.quitLabel ? this.quitLabel : r.label;
+      const t = this.add.text(bx + 50, by + 36 + i * 20, label, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
         .setInteractive({ useHandCursor: true });
       t.on('pointerover', () => { if (this.row !== i) { this.row = i; audio.sfx('cursormove'); this.refresh(); } });
       t.on('pointerdown', () => { this.row = i; this.pick(); });

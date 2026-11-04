@@ -400,4 +400,81 @@ test.describe('Sonic Rogue smoke tests', () => {
     await expect.poll(() => activeScenes(page)).not.toContain('Pause');
     await waitForMenu(page, 'command');
   });
+
+  test('How to Play on the title screen: topics, pages, and back to the menu', async ({ page }) => {
+    await openGame(page);
+    await press(page, 'z');
+    await page.waitForTimeout(400);
+    await press(page, 'z', 'z');                // skip intro, press start
+    await press(page, 'ArrowDown', 'z');        // How to Play
+    await expect.poll(() => activeScenes(page)).toContain('Help');
+    const help = () => page.evaluate(() => { const h = (window as any).game.scene.getScene('Help'); return { cat: h.cat, page: h.page, entries: h.entries }; });
+    expect((await help()).entries[0]).toBe('TUTORIAL');
+    await press(page, 'ArrowDown', 'ArrowDown', 'ArrowRight'); // BATTLE, page 2
+    expect(await help()).toMatchObject({ cat: 2, page: 1 });
+    await press(page, 'x');
+    await expect.poll(() => activeScenes(page)).not.toContain('Help');
+    expect(await activeScenes(page)).toContain('Title');
+  });
+
+  test('tutorial with Tails: guided fight from How to Play, nothing saved', async ({ page }) => {
+    await openGame(page);
+    await press(page, 'z');
+    await page.waitForTimeout(400);
+    await press(page, 'z', 'z', 'ArrowDown', 'z');
+    await expect.poll(() => activeScenes(page)).toContain('Help');
+    await press(page, 'z');                     // TUTORIAL is selected: start
+    await expect.poll(() => activeScenes(page)).toContain('Battle');
+    const tut = () => page.evaluate(() => { const s = (window as any).game.scene.getScene('Battle'); return { step: s.tut?.index, shown: s.tut?.shown, talking: s.tut?.talking, menu: s.menu, active: s.player?.def.id }; });
+    const atStep = async (step: number) => expect.poll(async () => { const t = await tut(); return t.shown ? t.step : -1; }, { timeout: 30_000 }).toBe(step);
+    await atStep(0);
+    await press(page, 'z', 'z', 'z');          // intro, HP/Boost, the foe
+    await atStep(3);
+    await press(page, 'ArrowRight', 'z');      // Party is not allowed yet
+    expect((await tut()).menu).toBe('command');
+    await press(page, 'ArrowLeft', 'z', 'z');  // Fight > Spin Attack
+    await atStep(4);
+    await press(page, 'z');
+    await atStep(5);
+    await press(page, 'z', 'ArrowRight', 'z'); // Fight > Homing Attack
+    await atStep(6);
+    await press(page, 'z');
+    await atStep(7);
+    await press(page, 'ArrowDown', 'z', 'z');  // Items > the heart
+    await atStep(8);
+    await press(page, 'ArrowUp', 'ArrowRight', 'z', 'z'); // Party > Tails
+    await atStep(9);
+    expect((await tut()).active).toBe('tails');
+    await press(page, 'z');
+    await atStep(10);
+    await press(page, 'ArrowLeft', 'z', 'z');  // finish it
+    await atStep(11);
+    expect((await tut()).menu).toBe('reward');
+    await press(page, 'z', 'z', 'z');          // rewards, shop, team
+    await atStep(14);
+    await press(page, 'z');                    // pick a reward
+    await waitForMenu(page, 'choice');         // Start a run / Back to title
+    await press(page, 'ArrowDown', 'z');
+    await expect.poll(() => activeScenes(page)).toContain('Title');
+    expect(await page.evaluate(() => localStorage.getItem('sonic-rogue-run'))).toBeNull();
+  });
+
+  test("Tails' tips: shown the first time, then remembered", async ({ page }) => {
+    await openGame(page);
+    // openGame zet de tips uit; dit init-script komt daarna en zet ze weer aan
+    await page.addInitScript(() => {
+      localStorage.setItem('sonic-rogue-settings', JSON.stringify({ textSpeed: 3, battleSpeed: 2, musicVolume: 0, sfxVolume: 0, battleStyle: 0, tips: 0 }));
+    });
+    await page.reload();
+    await expect.poll(() => activeScenes(page)).toContain('Title');
+    await startRun(page);
+    await setup(page, 's.enemy.hp = 1;');
+    await press(page, 'z', 'ArrowRight', 'z');  // Homing Attack wins
+    await waitForMenu(page, 'reward');
+    const tipOpen = () => page.evaluate(() => !!(window as any).game.scene.getScene('Battle').tipBox);
+    await expect.poll(tipOpen).toBe(true);     // first reward screen: the shop tip
+    await press(page, 'z');
+    await expect.poll(tipOpen).toBe(false);
+    expect(await page.evaluate(() => localStorage.getItem('sonicrogue_tips_seen'))).toContain('shop');
+  });
 });

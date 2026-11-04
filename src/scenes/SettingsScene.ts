@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BATTLE_SPEEDS, BATTLE_STYLES, TEXT_SPEEDS, VOLUMES, saveSettings, settings } from '../data/settings';
+import { BATTLE_SPEEDS, BATTLE_STYLES, TEXT_SPEEDS, TIP_OPTIONS, VOLUMES, saveSettings, settings } from '../data/settings';
 import { audio } from '../audio';
 
 const W = 480;
@@ -10,6 +10,7 @@ const ROWS = [
   { label: 'Text Speed', key: 'textSpeed' as const, options: TEXT_SPEEDS },
   { label: 'Battle Speed', key: 'battleSpeed' as const, options: BATTLE_SPEEDS },
   { label: 'Battle Style', key: 'battleStyle' as const, options: BATTLE_STYLES },
+  { label: 'Tails Tips', key: 'tips' as const, options: TIP_OPTIONS },
   { label: 'Music', key: 'musicVolume' as const, options: VOLUMES },
   { label: 'Sound FX', key: 'sfxVolume' as const, options: VOLUMES },
 ];
@@ -34,13 +35,13 @@ export class SettingsScene extends Phaser.Scene {
   create() {
     this.add.rectangle(0, 0, W, H, 0x05060c, 0.7).setOrigin(0).setInteractive();
     const g = this.add.graphics();
-    const bx = 90, by = 40, bw = 300, bh = 180;
+    const bx = 90, by = 34, bw = 300, bh = 194;
     g.fillStyle(0x10131c, 0.97).fillRoundedRect(bx, by, bw, bh, 6);
     g.lineStyle(2, 0xc0392b).strokeRoundedRect(bx + 1, by + 1, bw - 2, bh - 2, 6);
     this.add.text(W / 2, by + 14, 'Settings', { fontFamily: FONT, fontSize: '8px', color: '#f2c230' }).setOrigin(0.5);
 
     ROWS.forEach((r, i) => {
-      const y = by + 40 + i * 26;
+      const y = by + 36 + i * 21;
       const lab = this.add.text(bx + 24, y, r.label, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' });
       const left = this.add.text(bx + 160, y, '<', { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4' }).setOrigin(0.5, 0).setInteractive({ useHandCursor: true });
       const val = this.add.text(bx + 216, y, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setOrigin(0.5, 0);

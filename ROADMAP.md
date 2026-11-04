@@ -25,6 +25,7 @@
 - [x] Boss recovery: 50% patch-up after zone bosses, full heal and 3+ Boost after waves 20/40/60/80
 - [x] Random zone order per run (fixed start, shuffled mid / mid-late / end groups)
 - [x] Sonic-style battle HUD: ring counter, bag and buff icons on screen with hover info, Boost in the party menu and during rewards
+- [x] How to Play by topic, a guided practice fight with Tails, and one-time tips (can be turned off)
 - [x] Unit tests, end-to-end tests and automatic deploys
 
 ## Next
@@ -38,7 +39,6 @@
 - [ ] Short dialogue before and after rival fights
 
 - [ ] EXP changes: EXP from Chaos Emeralds, an EXP reward and level caps
-- [ ] Categorized How to Play and an interactive tutorial
 - [ ] Balance pass after the reward revamp: price growth and enemy damage
 
 ## Later

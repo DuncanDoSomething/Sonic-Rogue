@@ -351,11 +351,12 @@ export class TitleScene extends Phaser.Scene {
   private buildMenu() {
     const entries: Array<[string, () => void]> = [
       ['game_start', () => this.openContinue()],
+      ['how_to_play', () => this.openHelp()],
       ['credits', () => this.openCredits()],
       ['options', () => this.openSettings()],
     ];
     entries.forEach(([key, act], i) => {
-      const y = 196 + i * 16;
+      const y = 192 + i * 16;
       const off = this.add.image(W / 2, y, `label_${key}`).setVisible(false).setDepth(10);
       const on = this.add.image(W / 2, y, `label_${key}_on`).setVisible(false).setDepth(10);
       for (const img of [off, on]) {
@@ -486,6 +487,13 @@ export class TitleScene extends Phaser.Scene {
     audio.sfx('confirm');
     this.scene.pause();
     this.scene.launch('Credits', { from: this.scene.key });
+  }
+
+  /** How to Play, met bovenaan de tutorial (oefengevecht met Tails). */
+  private openHelp() {
+    audio.sfx('confirm');
+    this.scene.pause();
+    this.scene.launch('Help', { from: this.scene.key, tutorial: true });
   }
 
   private openSettings() {

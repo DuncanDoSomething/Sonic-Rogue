@@ -33,7 +33,7 @@ export function trackErrors(page: Page) {
 /** Fast text and battle speed, so the tests don't wait on animations. */
 export async function openGame(page: Page, path = '/') {
   await page.addInitScript(() => {
-    localStorage.setItem('sonic-rogue-settings', JSON.stringify({ textSpeed: 3, battleSpeed: 2, musicVolume: 0, sfxVolume: 0, battleStyle: 0 }));
+    localStorage.setItem('sonic-rogue-settings', JSON.stringify({ textSpeed: 3, battleSpeed: 2, musicVolume: 0, sfxVolume: 0, battleStyle: 0, tips: 1 }));
   });
   await page.goto(path);
   await expect.poll(() => activeScenes(page)).toContain('Title');
