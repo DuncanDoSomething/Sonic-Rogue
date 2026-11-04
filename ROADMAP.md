@@ -24,7 +24,7 @@
 - [x] Balance pass: faster Sonic, stronger Knuckles (Fired Up), free items (1 per fight), heals for any teammate, flat-or-percent heals, better boss rewards
 - [x] Boss recovery: 50% patch-up after zone bosses, full heal and 3+ Boost after waves 20/40/60/80
 - [x] Random zone order per run (fixed start, shuffled early/mid/late groups)
-- [x] Sonic-style battle HUD: RINGS counter, bag and buff icons on screen with hover info, Boost in the party menu and during rewards
+- [x] Sonic-style battle HUD: ring counter, bag and buff icons on screen with hover info, Boost in the party menu and during rewards
 - [x] Unit tests, end-to-end tests and automatic deploys
 
 ## Next

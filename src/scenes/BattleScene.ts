@@ -431,13 +431,13 @@ export class BattleScene extends Phaser.Scene {
 
     // tas: elk item een eigen vakje (BAG_SIZE), grijs als je dit gevecht al een item gebruikte
     this.bagTray?.destroy();
-    const tx = W - 24 - RingCounter.W, ty = 52;
+    const tx = W - 24 - RingCounter.W, ty = 17 + RingCounter.H + 4;
     const tray = this.add.container(tx, ty).setDepth(42);
     tray.add(sonicPanel(this.add.graphics(), 0, 0, RingCounter.W, 24, 'blue', 0.92));
     const items = Object.keys(ITEMS).flatMap(id => Array(this.bag[id] ?? 0).fill(id) as string[]);
     const used = this.itemsUsed >= ITEMS_PER_FIGHT;
     for (let i = 0; i < BAG_SIZE; i++) {
-      const sx = 17 + i * 26;
+      const sx = RingCounter.W / 2 - 13 + i * 26;
       tray.add(this.add.rectangle(sx, 12, 20, 16, HUD.pipEmpty, 0.85).setStrokeStyle(1, HUD.outline));
       const id = items[i];
       if (!id) continue;

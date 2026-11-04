@@ -1,7 +1,6 @@
 // ---------------------------------------------------------------------------
 // Sonic-stijl HUD voor het gevecht, naar de UI van de Tiny Chao Garden (Sonic Advance):
-// paarse rand met een cyaan lijntje, blauwe of crème vulling, goud geblokte banden en
-// het RINGS-label. Plaatjes komen uit tools/build_hud.py.
+// paarse rand met een cyaan lijntje, blauwe of crème vulling en goud geblokte banden.
 // ---------------------------------------------------------------------------
 import Phaser from 'phaser';
 
@@ -62,7 +61,7 @@ export function checkerBand(g: Phaser.GameObjects.Graphics, x: number, y: number
 }
 
 /**
- * Ring-teller rechtsboven: draaiende ring, "RINGS" en het getal in goud in een donker venster.
+ * Ring-teller rechtsboven: draaiende ring en het getal in goud in een donker venster.
  * `setText` zodat hij net zo werkt als de oude tekst-teller.
  */
 export class RingCounter {
@@ -70,23 +69,22 @@ export class RingCounter {
   readonly ring: Phaser.GameObjects.Sprite;
   private digits: Phaser.GameObjects.Text;
   private value = -1;
-  static readonly W = 60;
-  static readonly H = 32;
-  static readonly DIGITS_Y = 17;
+  static readonly W = 66;
+  static readonly H = 22;
+  static readonly DIGITS_Y = 7;
 
   constructor(private scene: Phaser.Scene, x: number, y: number) {
     this.root = scene.add.container(x, y).setDepth(20);
     const g = scene.add.graphics();
     sonicPanel(g, 0, 0, RingCounter.W, RingCounter.H, 'blue');
-    g.fillStyle(HUD.outline).fillRect(4, 13, RingCounter.W - 8, 16);
-    g.fillStyle(HUD.pipEmpty).fillRect(5, 14, RingCounter.W - 10, 14);
+    g.fillStyle(HUD.outline).fillRect(21, 4, RingCounter.W - 25, 14);
+    g.fillStyle(HUD.pipEmpty).fillRect(22, 5, RingCounter.W - 27, 12);
     this.root.add(g);
-    this.root.add(scene.add.image(RingCounter.W / 2, 4, 'hud_rings_label').setOrigin(0.5, 0));
-    this.digits = scene.add.text(RingCounter.W - 8, RingCounter.DIGITS_Y, '0',
+    this.digits = scene.add.text(RingCounter.W - 7, RingCounter.DIGITS_Y, '0',
       { fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#f2c230' }).setOrigin(1, 0);
     this.root.add(this.digits);
-    // draaiende ring links van het paneel (de rings uit een wave vliegen hierheen)
-    this.ring = scene.add.sprite(x - 9, y + RingCounter.H / 2, 'ui', 'ring_0').setDepth(20).play('ring_spin');
+    // draaiende ring links in het paneel (de rings uit een wave vliegen hierheen)
+    this.ring = scene.add.sprite(x + 12, y + RingCounter.H / 2, 'ui', 'ring_0').setDepth(20).play('ring_spin');
   }
 
   setText(text: string) {
