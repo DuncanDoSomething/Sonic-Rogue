@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from '../audio';
+import { HUD, checkerBand, sonicPanel } from './hud';
 
 const W = 480;
 const H = 270;
@@ -23,7 +24,10 @@ export class PauseScene extends Phaser.Scene {
   private labels: Phaser.GameObjects.Text[] = [];
   /** andere tekst voor Save & Quit (de tutorial slaat niks op) */
   private quitLabel?: string;
-  private pointer!: Phaser.GameObjects.Triangle;
+  private bx = 0;
+  private bw = 0;
+  private pointer!: Phaser.GameObjects.Sprite;
+  private highlight!: Phaser.GameObjects.Graphics;
 
   constructor() { super('Pause'); }
 
@@ -37,22 +41,28 @@ export class PauseScene extends Phaser.Scene {
   create() {
     this.add.rectangle(0, 0, W, H, 0x05060c, 0.7).setOrigin(0).setInteractive();
     const g = this.add.graphics();
-    const bw = 200, bh = 122, bx = (W - bw) / 2, by = 50;
-    g.fillStyle(0x10131c, 0.97).fillRoundedRect(bx, by, bw, bh, 6);
-    g.lineStyle(2, 0xc0392b).strokeRoundedRect(bx + 1, by + 1, bw - 2, bh - 2, 6);
-    this.add.text(W / 2, by + 14, 'Paused', { fontFamily: FONT, fontSize: '8px', color: '#f2c230' }).setOrigin(0.5);
+    const bw = 180, bh = 152, bx = (W - bw) / 2, by = 46;
+    // Chao Garden-paneel, met de titel boven een geblokte finish-band
+    sonicPanel(g, bx, by, bw, bh, 'blue', 0.97);
+    this.add.text(W / 2, by + 15, 'PAUSED', { fontFamily: FONT, fontSize: '8px', color: HUD.label })
+      .setOrigin(0.5).setShadow(1, 1, '#000', 0);
+    checkerBand(g, bx + 3, by + 26, bw - 6);
+    this.highlight = this.add.graphics();
 
     ROWS.forEach((r, i) => {
       const label = r.act === 'quit' && this.quitLabel ? this.quitLabel : r.label;
-      const t = this.add.text(bx + 50, by + 36 + i * 20, label, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
-        .setInteractive({ useHandCursor: true });
+      const t = this.add.text(bx + 42, by + 44 + i * 20, label, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
+        .setShadow(1, 1, '#000', 0).setInteractive({ useHandCursor: true });
       t.on('pointerover', () => { if (this.row !== i) { this.row = i; audio.sfx('cursormove'); this.refresh(); } });
       t.on('pointerdown', () => { this.row = i; this.pick(); });
       this.labels.push(t);
     });
-    this.add.text(W / 2, by + bh + 12, 'Z to pick, X / M to close', { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4' })
+    // uitleg onderin het paneel (eronder viel hij weg tegen het gevecht)
+    this.add.text(W / 2, by + bh - 14, 'Z to pick, X / M to close', { fontFamily: FONT, fontSize: '8px', color: HUD.muted })
       .setOrigin(0.5).setShadow(1, 1, '#000', 0);
-    this.pointer = this.add.triangle(0, 0, 0, 0, 0, 8, 5, 4, 0xffffff).setOrigin(0, 0);
+    // cursor: de draaiende ring, net als in het gevecht
+    this.pointer = this.add.sprite(0, 0, 'ui', 'ring_0').setOrigin(0, 0).setScale(0.5).play('ring_spin');
+    this.bx = bx; this.bw = bw;
 
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
@@ -69,7 +79,10 @@ export class PauseScene extends Phaser.Scene {
 
   private refresh() {
     const l = this.labels[this.row];
-    this.pointer.setPosition(l.x - 11, l.y);
+    this.pointer.setPosition(l.x - 13, l.y);
+    // gekozen regel: donkere balk erachter en gouden tekst
+    this.highlight.clear().fillStyle(HUD.pipEmpty, 0.6).fillRect(this.bx + 8, l.y - 4, this.bw - 16, 16);
+    this.labels.forEach((t, i) => t.setColor(i === this.row ? HUD.label : '#ffffff'));
   }
 
   private pick() {

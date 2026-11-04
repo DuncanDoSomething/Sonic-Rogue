@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BATTLE_SPEEDS, BATTLE_STYLES, TEXT_SPEEDS, TIP_OPTIONS, VOLUMES, saveSettings, settings } from '../data/settings';
 import { audio } from '../audio';
+import { HUD, checkerBand, sonicPanel } from './hud';
 
 const W = 480;
 const H = 270;
@@ -18,10 +19,14 @@ const ROWS = [
 /** Settings-overlay. Wordt boven een andere scene gestart en pauzeert die zolang. */
 export class SettingsScene extends Phaser.Scene {
   private from = '';
+  private bx = 0;
+  private bw = 0;
   private row = 0;
   private valueTexts: Phaser.GameObjects.Text[] = [];
   private labels: Phaser.GameObjects.Text[] = [];
-  private pointer!: Phaser.GameObjects.Triangle;
+  private pointer!: Phaser.GameObjects.Sprite;
+  private highlight!: Phaser.GameObjects.Graphics;
+  private arrows: Phaser.GameObjects.Text[][] = [];
 
   constructor() { super('Settings'); }
 
@@ -30,35 +35,46 @@ export class SettingsScene extends Phaser.Scene {
     this.row = 0;
     this.valueTexts = [];
     this.labels = [];
+    this.arrows = [];
   }
 
   create() {
     this.add.rectangle(0, 0, W, H, 0x05060c, 0.7).setOrigin(0).setInteractive();
     const g = this.add.graphics();
-    const bx = 90, by = 34, bw = 300, bh = 194;
-    g.fillStyle(0x10131c, 0.97).fillRoundedRect(bx, by, bw, bh, 6);
-    g.lineStyle(2, 0xc0392b).strokeRoundedRect(bx + 1, by + 1, bw - 2, bh - 2, 6);
-    this.add.text(W / 2, by + 14, 'Settings', { fontFamily: FONT, fontSize: '8px', color: '#f2c230' }).setOrigin(0.5);
+    const bx = 90, by = 22, bw = 300, bh = 222;
+    // Chao Garden-paneel, met de titel boven een geblokte finish-band
+    sonicPanel(g, bx, by, bw, bh, 'blue', 0.97);
+    this.add.text(W / 2, by + 15, 'SETTINGS', { fontFamily: FONT, fontSize: '8px', color: HUD.label })
+      .setOrigin(0.5).setShadow(1, 1, '#000', 0);
+    checkerBand(g, bx + 3, by + 26, bw - 6);
+    this.highlight = this.add.graphics();
 
     ROWS.forEach((r, i) => {
-      const y = by + 36 + i * 21;
-      const lab = this.add.text(bx + 24, y, r.label, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' });
-      const left = this.add.text(bx + 160, y, '<', { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4' }).setOrigin(0.5, 0).setInteractive({ useHandCursor: true });
+      const y = by + 44 + i * 21;
+      // waarde in een donker venstertje, zoals de ring-teller
+      g.fillStyle(HUD.outline).fillRoundedRect(bx + 168, y - 4, 96, 16, 3);
+      g.fillStyle(HUD.pipEmpty).fillRoundedRect(bx + 169, y - 3, 94, 14, 2);
+      const lab = this.add.text(bx + 28, y, r.label, { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setShadow(1, 1, '#000', 0);
+      const left = this.add.text(bx + 156, y, '<', { fontFamily: FONT, fontSize: '8px', color: HUD.muted }).setOrigin(0.5, 0).setInteractive({ useHandCursor: true });
       const val = this.add.text(bx + 216, y, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setOrigin(0.5, 0);
-      const right = this.add.text(bx + 272, y, '>', { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4' }).setOrigin(0.5, 0).setInteractive({ useHandCursor: true });
+      const right = this.add.text(bx + 276, y, '>', { fontFamily: FONT, fontSize: '8px', color: HUD.muted }).setOrigin(0.5, 0).setInteractive({ useHandCursor: true });
       left.on('pointerdown', () => { this.row = i; this.change(-1); });
       right.on('pointerdown', () => { this.row = i; this.change(1); });
       lab.setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.row = i; this.change(1); });
       this.labels.push(lab);
       this.valueTexts.push(val);
+      this.arrows.push([left, right]);
     });
 
-    const close = this.add.text(W / 2, by + bh - 20, 'Close', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
-      .setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const close = this.add.text(W / 2, by + bh - 36, 'Close', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
+      .setOrigin(0.5).setShadow(1, 1, '#000', 0).setInteractive({ useHandCursor: true });
     close.on('pointerdown', () => this.close());
-    this.add.text(W / 2, by + bh + 12, 'Arrows to change, X / M to close', { fontFamily: FONT, fontSize: '8px', color: '#9aa4c4' })
+    // uitleg onderin het paneel (eronder viel hij weg tegen het gevecht)
+    this.add.text(W / 2, by + bh - 14, 'Arrows to change, X / M to close', { fontFamily: FONT, fontSize: '8px', color: HUD.muted })
       .setOrigin(0.5).setShadow(1, 1, '#000', 0);
-    this.pointer = this.add.triangle(0, 0, 0, 0, 0, 8, 5, 4, 0xffffff).setOrigin(0, 0);
+    // cursor: de draaiende ring, net als in het gevecht
+    this.pointer = this.add.sprite(0, 0, 'ui', 'ring_0').setOrigin(0, 0).setScale(0.5).play('ring_spin');
+    this.bx = bx; this.bw = bw;
 
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
@@ -89,7 +105,15 @@ export class SettingsScene extends Phaser.Scene {
   private refresh() {
     ROWS.forEach((r, i) => this.valueTexts[i].setText(r.options[settings[r.key]]));
     const l = this.labels[this.row];
-    this.pointer.setPosition(l.x - 11, l.y);
+    this.pointer.setPosition(l.x - 13, l.y);
+    // gekozen regel: donkere balk erachter, gouden label en waarde, cyaan pijltjes
+    this.highlight.clear().fillStyle(HUD.pipEmpty, 0.6).fillRect(this.bx + 8, l.y - 5, this.bw - 16, 18);
+    ROWS.forEach((_, i) => {
+      const on = i === this.row;
+      this.labels[i].setColor(on ? HUD.label : '#ffffff');
+      this.valueTexts[i].setColor(on ? HUD.label : '#ffffff');
+      this.arrows[i].forEach(a => a.setColor(on ? '#50f8f8' : HUD.muted));
+    });
   }
 
   private close() {
