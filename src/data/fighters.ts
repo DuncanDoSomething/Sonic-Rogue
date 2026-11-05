@@ -53,6 +53,12 @@ export const BOSS_REVIVE_HP = 0.5;
  */
 export const EXP_SHARE_STEPS: Array<[number, number]> = [[10, 0.3], [20, 0.5]];
 /** Deel van de EXP dat teamleden op de bank krijgen, als je wave `cleared` net gehaald hebt. */
+/** Elke Chaos Emerald geeft het team op de bank zoveel extra EXP (bovenop de Exp. Share). */
+export const EMERALD_EXP_BONUS = 0.05;
+/** Deel van de EXP voor de bank: Exp. Share plus de emeralds (nooit meer dan 100%). */
+export function benchExpRate(expShare: number, emeralds: number) {
+  return Math.min(1, expShare + EMERALD_EXP_BONUS * emeralds);
+}
 export function expShareAfter(cleared: number) {
   return EXP_SHARE_STEPS.reduce((rate, [wave, r]) => (cleared >= wave ? r : rate), 0);
 }

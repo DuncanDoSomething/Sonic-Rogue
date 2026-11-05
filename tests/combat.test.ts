@@ -3,7 +3,7 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
-  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, RAMPAGE_CHANCE, shieldCap,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, RAMPAGE_CHANCE, shieldCap, benchExpRate,
 } from '../src/data/fighters';
 import { mainBossFor, MAIN_BOSS_SHIELDS, SHADOW_BOSS_CHANCE, enemyScaling, rivalChance, rivalLevelBonus } from '../src/data/zones';
 
@@ -426,5 +426,14 @@ describe('balans: zones, rivals en EXP', () => {
   });
   it('Rampage heeft 50% kans per reset', () => {
     expect(RAMPAGE_CHANCE).toBe(0.5);
+  });
+});
+
+describe('Chaos Emeralds: EXP voor de bank', () => {
+  it('+5% per emerald bovenop de Exp. Share, nooit boven 100%', () => {
+    expect(benchExpRate(0, 0)).toBe(0);
+    expect(benchExpRate(0.3, 1)).toBeCloseTo(0.35);
+    expect(benchExpRate(0.5, 7)).toBeCloseTo(0.85);
+    expect(benchExpRate(0.9, 7)).toBe(1);
   });
 });

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, PIERCE_BONUS, RAMPAGE_CHANCE, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BOOST_ON_HIT, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, RAMPAGE_CHANCE, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -586,6 +586,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       e.setTint(0x30344a).setAlpha(0.75);
       this.emeraldSlots.push(e);
     });
+    // hover: wat de emeralds doen (extra EXP voor de bank)
+    const emHit = this.add.zone(6, 2, EMERALDS.length * 22 + 2, 22).setOrigin(0).setDepth(43).setInteractive();
+    this.hoverTip(emHit, 8, 26, 'CHAOS EMERALDS', () =>
+      `${this.emeralds}/${EMERALDS.length}. Each one gives your bench +${Math.round(EMERALD_EXP_BONUS * 100)}% EXP. ` +
+      `Bench EXP now: ${Math.round(benchExpRate(this.expShare, this.emeralds) * 100)}%.`);
     this.ringText.setText(`${this.rings}`);
   }
 
@@ -713,7 +718,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       [`ATK  ${p.atk}`, st('atk')],
       [`DEF  ${p.dfn}`, st('def')],
       [`SPD  ${p.spd}`, st('spd') + (p.stage('acc') ? `  ACC ${st('acc')}` : '')],
-      [`EXP  ${p.exp}/${p.expToNext}`, ''],
+      [`EXP  ${p.exp}/${p.expToNext}`, `Bench ${Math.round(benchExpRate(this.expShare, this.emeralds) * 100)}%`],
       [`Rings ${this.rings}   Emeralds ${this.emeralds}/7`, ''],
       [p.def.passive ? `Passive: ${p.def.passive.name}` : 'Passive: -', ''],
     ];
@@ -2412,7 +2417,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (share > this.expShare) {
       this.expShare = share;
       audio.sfx('confirm2');
-      await this.say(`Got the Exp. Share! Your team on the bench now gets ${Math.round(share * 100)}% EXP.`, 900);
+      await this.say(`Got the Exp. Share! Your team on the bench now gets ${Math.round(benchExpRate(share, this.emeralds) * 100)}% EXP` +
+        `${this.emeralds ? ' (with the Chaos Emeralds)' : ''}.`, 900);
     }
     // zelf KO gegaan bij het winnen (Tornado Hammer)? Dan eerst iemand anders erin, of game over
     if (this.player.fainted) {
@@ -2559,6 +2565,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     slot.clearTint().setAlpha(1).play(`emerald_${color}`);
     this.burst(slot.x, slot.y, 0xffffff, 8);
     audio.sfx('ringchime');
+    const rate = Math.round(benchExpRate(this.expShare, this.emeralds) * 100);
+    await this.say(`The Chaos Emerald shares its power: bench EXP +${Math.round(EMERALD_EXP_BONUS * 100)}% (now ${rate}%)!`, 450);
     if (this.emeralds === EMERALDS.length) await this.say('All 7 Chaos Emeralds collected!', 600);
   }
 
@@ -2792,10 +2800,12 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // wie deze wave ook heeft meegevochten (en nog staat) krijgt de volle EXP; de bank een deel (Exp. Share)
     const fought = this.party.filter(f => f !== this.player && !f.fainted && this.waveFighters.has(f));
     const bench = this.party.filter(f => f !== this.player && !f.fainted && !this.waveFighters.has(f));
-    const share = Math.max(1, Math.floor(exp * this.expShare));
+    // Exp. Share plus 5% per Chaos Emerald
+    const rate = benchExpRate(this.expShare, this.emeralds);
+    const share = Math.max(1, Math.floor(exp * rate));
     if (fought.length) await this.say(`${fought.map(f => f.name).join(' and ')} also got ${exp} EXP for fighting!`, 300);
-    if (bench.length && this.expShare > 0) await this.say(`The team got ${share} EXP from the Exp. Share!`, 300);
-    const gains: Array<[Fighter, number]> = [...fought.map(f => [f, exp] as [Fighter, number]), ...(this.expShare > 0 ? bench.map(f => [f, share] as [Fighter, number]) : [])];
+    if (bench.length && rate > 0) await this.say(`The bench got ${share} EXP (Exp. Share${this.emeralds ? ' and Chaos Emeralds' : ''})!`, 300);
+    const gains: Array<[Fighter, number]> = [...fought.map(f => [f, exp] as [Fighter, number]), ...(rate > 0 ? bench.map(f => [f, share] as [Fighter, number]) : [])];
     if (!gains.length) return;
     for (const [f, amount] of gains) {
       const before = f.level;

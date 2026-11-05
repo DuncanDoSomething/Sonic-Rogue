@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from '../audio';
-import { EXP_SHARE_STEPS, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MAX_STAGE, type PassiveDef, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
+import { EMERALD_EXP_BONUS, EXP_SHARE_STEPS, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MAX_STAGE, type PassiveDef, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
 import { EFFECTS, FIRST_RIVAL_WAVE, LATE_RIVAL_WAVE, MAIN_BOSS_BOOST, RIVAL_CHANCE, SHADOW_BOSS_CHANCE, ZONE_BOSS_HEAL, ZONES } from '../data/zones';
 import { BAG_SIZE, ITEMS, ITEMS_PER_FIGHT } from '../data/items';
 import { TIER_COLOR, TIER_NAME, TIERS } from '../data/rewards';
@@ -205,7 +205,11 @@ export function categories(): Category[] {
             '',
             `Exp. Share: the bench gets ${EXP_SHARE_STEPS[0][1] * 100}%`,
             `EXP after wave ${EXP_SHARE_STEPS[0][0]}, ${EXP_SHARE_STEPS[1][1] * 100}% after ${EXP_SHARE_STEPS[1][0]}.`,
+            '',
+            `    Every Chaos Emerald adds +${Math.round(EMERALD_EXP_BONUS * 100)}%`,
+            '    for the bench (all 7: +35%).',
           ],
+          icons: [{ row: 6, key: 'emeralds', frame: 'emerald_green_0' }],
         },
         {
           title: 'RIVALS',
