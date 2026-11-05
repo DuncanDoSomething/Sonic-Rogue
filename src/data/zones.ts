@@ -90,10 +90,19 @@ export function isMainBossWave(wave: number) { return isBossWave(wave) && wave %
  * Main bosses: wave 20 en 60 Eggman, wave 40 en 80 Shadow (zit Shadow al in je team, dan Eggman).
  * Shadow verslaan speelt hem vrij.
  */
-export const MAIN_BOSSES = ['eggman', 'shadow'];
-export function mainBossFor(wave: number, party: string[] = []): string {
-  const id = MAIN_BOSSES[(Math.round(wave / (WAVES_PER_ZONE * 2)) - 1) % MAIN_BOSSES.length];
-  return party.includes(id) ? MAIN_BOSSES[0] : id;
+/**
+ * Main bosses (wave 20, 40, 60, 80): altijd Eggman, behalve met een kleine kans Shadow,
+ * als een legendary in Pokémon. Zit Shadow al in je team, dan is het gewoon Eggman.
+ */
+export const SHADOW_BOSS_CHANCE = 0.1;
+export function mainBossFor(_wave: number, party: string[] = [], rng: () => number = Math.random): string {
+  return !party.includes('shadow') && rng() < SHADOW_BOSS_CHANCE ? 'shadow' : 'eggman';
+}
+/** Vijanden (behalve rivals) worden vanaf de derde zone elke zone zoveel sterker (HP, ATK, DEF). */
+export const ENEMY_ZONE_SCALING = 0.08;
+export function enemyScaling(wave: number) {
+  const zone = Math.floor((wave - 1) / WAVES_PER_ZONE);
+  return 1 + ENEMY_ZONE_SCALING * Math.max(0, zone - 1);
 }
 /** Boss-Shadow heeft zoveel keer zijn normale HP. */
 export const SHADOW_BOSS_HP = 2;
@@ -106,9 +115,18 @@ export const ZONE_BOSS_HEAL = 0.5;
 export const MAIN_BOSS_BOOST = 3;
 
 /**
- * Rivals kunnen opduiken op wave 15, 25, 35, 45, 55 (en daarna elke wave die op 5 eindigt),
- * in plaats van de elite badnik. Niet gegarandeerd: RIVAL_CHANCE is de kans per keer.
+ * Rivals kunnen opduiken op wave 15, 25, 35, 45, 55 (elke wave die op 5 eindigt) in plaats van de elite,
+ * met RIVAL_CHANCE. Vanaf LATE_RIVAL_WAVE ook op gewone waves, met een kleinere kans.
  */
 export const FIRST_RIVAL_WAVE = 15;
-export const RIVAL_CHANCE = 0.5;
+export const RIVAL_CHANCE = 0.75;
+export const LATE_RIVAL_WAVE = 30;
+export const LATE_RIVAL_CHANCE = 0.12;
 export function canHaveRival(wave: number) { return wave >= FIRST_RIVAL_WAVE && isEliteWave(wave); }
+export function rivalChance(wave: number) {
+  if (isBossWave(wave) || wave < FIRST_RIVAL_WAVE) return 0;
+  if (isEliteWave(wave)) return RIVAL_CHANCE;
+  return wave > LATE_RIVAL_WAVE ? LATE_RIVAL_CHANCE : 0;
+}
+/** Late rivals staan wat boven je: +1 level vanaf wave 30, +2 vanaf wave 50. */
+export function rivalLevelBonus(wave: number) { return wave >= 50 ? 2 : wave >= 30 ? 1 : 0; }

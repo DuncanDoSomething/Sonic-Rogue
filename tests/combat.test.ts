@@ -3,9 +3,9 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
-  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, shieldCap,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, RAMPAGE_CHANCE, shieldCap,
 } from '../src/data/fighters';
-import { mainBossFor, MAIN_BOSS_SHIELDS } from '../src/data/zones';
+import { mainBossFor, MAIN_BOSS_SHIELDS, SHADOW_BOSS_CHANCE, enemyScaling, rivalChance, rivalLevelBonus } from '../src/data/zones';
 
 /** Vaste "random": geeft steeds dezelfde waarde terug, zodat de uitkomst voorspelbaar is. */
 const fixed = (v: number) => () => v;
@@ -325,18 +325,18 @@ describe('Shadow', () => {
     const foe = new Fighter('beetle', 30);
     expect(sh.moves).toContain('superBarrage');
     expect(calcHit(sh, foe, MOVES.superBarrage, fixed(0.99)).crit).toBe(true);
-    expect(MOVES.superBarrage.superHits).toBe(3);
+    expect(MOVES.superBarrage.superTurns).toBe(3);
     // super: elke aanval crit, en geen dubbele power zoals bij Tornado Hammer
-    sh.superHits = 3;
+    sh.superTurns = 3;
     expect(critChance(sh)).toBe(1);
     expect(calcHit(sh, foe, MOVES.spinAttack, fixed(0.9)).crit).toBe(true);
     const a = calcHit(sh, foe, MOVES.superBarrage, fixed(0.5)).damage;
-    sh.superHits = 0;
+    sh.superTurns = 0;
     const b = calcHit(sh, foe, MOVES.superBarrage, fixed(0.5)).damage;
     expect(a).toBe(b);
     // terwijl hij super is krijgt hij zelf meer schade
     const before = calcHit(foe, sh, MOVES.bodyCheck, fixed(0.5)).damage;
-    sh.superHits = 2;
+    sh.superTurns = 2;
     expect(calcHit(foe, sh, MOVES.bodyCheck, fixed(0.5)).damage).toBeCloseTo(before * SUPER_VULNERABLE, -1);
     // gratis
     sh.boost = 0;
@@ -347,7 +347,7 @@ describe('Shadow', () => {
   });
   it('na de ultimate is hij weer gewone Shadow (alleen de Super-kracht blijft)', () => {
     const sh = new Fighter('shadow', 30);
-    sh.superHits = 2;
+    sh.superTurns = 2;
     expect(sh.anim('idle')).toBe('shadow_idle');
     expect(SUPER_VULNERABLE).toBe(2);
   });
@@ -358,9 +358,11 @@ describe('Shadow', () => {
 });
 
 describe('bosses', () => {
-  it('main bosses: Eggman op wave 20 en 60, Shadow op 40 en 80 (of Eggman als Shadow in je team zit)', () => {
-    expect([20, 40, 60, 80].map(w => mainBossFor(w))).toEqual(['eggman', 'shadow', 'eggman', 'shadow']);
-    expect(mainBossFor(40, ['sonic', 'shadow'])).toBe('eggman');
+  it('main bosses: altijd Eggman, met 10% kans Shadow (niet als hij al in je team zit)', () => {
+    expect(SHADOW_BOSS_CHANCE).toBe(0.1);
+    expect(mainBossFor(20, [], () => 0.5)).toBe('eggman');
+    expect(mainBossFor(40, [], () => 0.05)).toBe('shadow');
+    expect(mainBossFor(40, ['sonic', 'shadow'], () => 0.05)).toBe('eggman');
     expect(FIGHTERS.eggman.moves).toEqual(['eggMissile', 'eggBomb', 'eggLaugh']);
   });
   it('Shadow is geen rival meer, alleen een boss', () => {
@@ -406,5 +408,23 @@ describe('boss-schilden (PokéRogue)', () => {
     f.hp = Math.round((f.maxHp / 4) * 1) - 1;          // onder de laatste grens
     expect(shieldCap(f, 9999).damage).toBe(9999);
     expect(MAIN_BOSS_SHIELDS).toBe(5);
+  });
+});
+
+describe('balans: zones, rivals en EXP', () => {
+  it('vijanden worden vanaf zone 3 per zone 8% sterker (HP, ATK, DEF; SPD niet)', () => {
+    expect([1, 20, 21, 31, 80].map(enemyScaling)).toEqual([1, 1, 1.08, 1.16, 1.48]);
+    const a = new Fighter('beetle', 30), b = new Fighter('beetle', 30);
+    b.statMult = enemyScaling(41);
+    expect(b.atk).toBeGreaterThan(a.atk);
+    expect(b.maxHp).toBeGreaterThan(a.maxHp);
+    expect(b.spd).toBe(a.spd);
+  });
+  it('rivals: 75% op waves die op 5 eindigen, na wave 30 ook soms op gewone waves, nooit op een boss', () => {
+    expect([10, 14, 15, 16, 25, 31, 35, 40].map(rivalChance)).toEqual([0, 0, 0.75, 0, 0.75, 0.12, 0.75, 0]);
+    expect([15, 30, 49, 50].map(rivalLevelBonus)).toEqual([0, 1, 1, 2]);
+  });
+  it('Rampage heeft 50% kans per reset', () => {
+    expect(RAMPAGE_CHANCE).toBe(0.5);
   });
 });

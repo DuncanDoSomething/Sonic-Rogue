@@ -28,7 +28,8 @@
 - [x] How to Play by topic, a guided practice fight with Tails, and one-time tips (can be turned off)
 - [x] Unit tests, end-to-end tests and automatic deploys
 - [x] Shadow as a playable character (Chaos Spear, Chaos Control, Super Shadow ultimate, Rampage passive)
-- [x] Main bosses on wave 20/60 (Dr. Eggman, Death Egg) and 40/80 (Shadow, unlocks him), PokéRogue-style boss shields
+- [x] Main bosses every 20 waves: Dr. Eggman in X-Zone / XX, rarely Shadow instead (unlocks him), PokéRogue-style boss shields
+- [x] Balance pass: enemies scale per zone, more (and later stronger) rivals, full EXP for everyone who fought, Shadow nerfs
 - [x] Toss items from your bag, voice lines for Shadow, spin balls for Knuckles and Shadow
 
 ## Next

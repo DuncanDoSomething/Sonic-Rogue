@@ -140,15 +140,27 @@ export const BACKDROPS: Record<string, { build: Builder; platform: PlatformStyle
       return { container: scene.add.container(0, 0, parts), stop: () => tweens.forEach(t => t.stop()) };
     },
   },
-  // Eggman: de Death Egg-arena uit Sonic Battle (tools/build_eggman.py), iets donkerder zodat de sprites eruit springen
-  deathegg: {
-    platform: { top: 0xd8d8e8, side: 0x7a7a98, shadow: 0x101040 },
+  // ---------------------------------------------------------------- main bosses: de ruimte (tools/build_space.py)
+  // X-Zone (Sonic Advance): sterren met de maan, daaronder de aarde
+  xzone: {
+    platform: { top: 0xe8f0ff, side: 0x7a8ad8, shadow: 0x101848 },
     build: (scene) => {
-      const img = scene.add.image(W / 2, -70 * S, 'deathegg_back').setOrigin(0.5, 0).setScale(S).setTint(0xb8b8d8);
-      // de lampjes in de gang knipperen zacht
-      const glow = scene.add.rectangle(0, 0, W, 300, 0x2010a0, 0).setOrigin(0).setBlendMode(Phaser.BlendModes.MULTIPLY);
-      const tw = scene.tweens.add({ targets: glow, fillAlpha: 0.25, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      return { container: scene.add.container(0, 0, [img, glow]), stop: () => tw.stop() };
+      const top = scene.add.image(W / 2, 0, 'xzone_top').setOrigin(0.5, 0).setScale(S);
+      const earth = scene.add.image(W / 2, 60 * S, 'xzone_bottom').setOrigin(0.5, 0).setScale(S);
+      // de aarde draait heel langzaam onder je door
+      const tw = scene.tweens.add({ targets: earth, x: W / 2 - 40, duration: 40000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      return { container: scene.add.container(0, 0, [top, earth]), stop: () => tw.stop() };
+    },
+  },
+  // XX (Sonic Advance 2): sterren, daaronder wolken die doorschuiven
+  xx: {
+    platform: { top: 0xf0f8ff, side: 0x8ab0e8, shadow: 0x101848 },
+    build: (scene, h) => {
+      // van de sterren alleen het onderste stuk met de horizon-lijn
+      const top = scene.add.tileSprite(0, -40 * S, W, 96 * S, 'xx_top').setOrigin(0).setTileScale(S);
+      const clouds = scene.add.tileSprite(0, 56 * S, W, h, 'xx_bottom').setOrigin(0).setTileScale(S);
+      const tw = scene.tweens.add({ targets: clouds, tilePositionX: 256, duration: 30000, repeat: -1 });
+      return { container: scene.add.container(0, 0, [top, clouds]), stop: () => tw.stop() };
     },
   },
   chaosangel: {

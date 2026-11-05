@@ -40,6 +40,8 @@ export const VOICE_FILES = [
   'sonicalright', 'sonicyeah', 'tailsalright', 'tailsyeah', 'knucklesalright', 'knucklescool',
   'creamalright', 'creamyeah', 'amywohoo', 'amyyeah', 'eggmanow',
   'shadowhah', 'shadowhmph', 'shadowhuh', 'shadowlaugh', 'shadowsweat', 'shadowult',
+  'sonicult', 'tailsult', 'knucklesult', 'amyult', 'creamult', 'tailsbosswin', 'amybosswin', 'creambosswin',
+  'eggmanlaugh', 'eggmantake', 'eggmanhows', 'eggmandefeat',
   'call_sonic', 'call_tails', 'call_knuckles', 'call_cream', 'call_amy',
 ] as const;
 

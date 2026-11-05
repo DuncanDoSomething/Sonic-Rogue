@@ -104,7 +104,7 @@ describe('unlocks', () => {
 
 describe('Exp Share', () => {
   it('0% tot wave 10, dan 50%, na wave 20 100%', () => {
-    expect([1, 9, 10, 15, 19, 20, 55].map(expShareAfter)).toEqual([0, 0, 0.5, 0.5, 0.5, 0.8, 0.8]);
+    expect([1, 9, 10, 15, 19, 20, 55].map(expShareAfter)).toEqual([0, 0, 0.3, 0.3, 0.3, 0.5, 0.5]);
   });
 });
 

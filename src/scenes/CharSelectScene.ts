@@ -136,8 +136,8 @@ export class CharSelectScene extends Phaser.Scene {
     this.info.add(g);
     if (!open) {
       this.info.add(this.add.text(10, 10, 'LOCKED', { fontFamily: FONT, fontSize: '8px', color: '#e8443a' }));
-      // Shadow is geen rival maar een boss (wave 40 en 80)
-      const how = BOSS_HEROES.includes(id) ? 'Beat him as a boss\n(wave 40 or 80)\nto recruit him!' : 'Beat them as a rival\n(wave 15, 25, 35...)\nto recruit them!';
+      // Shadow is geen rival maar een zeldzame boss (soms in plaats van Eggman)
+      const how = BOSS_HEROES.includes(id) ? 'A rare boss: he can\ntake Eggman\'s place.\nBeat him to recruit him!' : 'Beat them as a rival\n(wave 15, 25, 35...)\nto recruit them!';
       this.info.add(this.add.text(10, 24, how, { fontFamily: FONT, fontSize: '8px', color: '#cfd6ee', lineSpacing: 4 }));
       return;
     }

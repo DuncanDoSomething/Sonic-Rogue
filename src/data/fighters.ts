@@ -51,7 +51,7 @@ export const BOSS_REVIVE_HP = 0.5;
  * Exp Share: na wave 10 krijgt de bank 50% van de EXP, na wave 20 80%.
  * Bewust nooit 100%: wie vecht, levelt het snelst.
  */
-export const EXP_SHARE_STEPS: Array<[number, number]> = [[10, 0.5], [20, 0.8]];
+export const EXP_SHARE_STEPS: Array<[number, number]> = [[10, 0.3], [20, 0.5]];
 /** Deel van de EXP dat teamleden op de bank krijgen, als je wave `cleared` net gehaald hebt. */
 export function expShareAfter(cleared: number) {
   return EXP_SHARE_STEPS.reduce((rate, [wave, r]) => (cleared >= wave ? r : rate), 0);
@@ -66,7 +66,7 @@ export const PASSIVES: Record<PassiveId, PassiveDef> = {
   flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP.' },
   luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance per ATK stage. Crits cost her 10% max HP (not with Hammer Twirl).' },
   chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'If Cream is on the field when a wave starts, the whole team heals 10% HP.' },
-  rampage:    { id: 'rampage', name: 'Rampage', desc: 'Every time one of his moves becomes free again, his ATK and SPD rise by 1.' },
+  rampage:    { id: 'rampage', name: 'Rampage', desc: 'Every time one of his moves becomes free again: 50% chance his ATK and SPD rise by 1.' },
 };
 export const FLINCH_CHANCE = 0.2;
 export const WEAK_SPOT_BONUS = 2;
@@ -82,6 +82,8 @@ export const PIERCE_BONUS = 1.5;
 export const SUPER_VULNERABLE = 2;
 /** Zo vaak achter elkaar kan Super Shadow Barrage weer gratis worden door een KO. */
 export const ULT_CHAIN_MAX = 2;
+/** Rampage: kans per gratis geworden move op ATK en SPD +1. */
+export const RAMPAGE_CHANCE = 0.5;
 
 /** Sonic Speed: x1 bij gelijke snelheid, +25% per keer zo snel, max +75%. */
 export const SPEED_BONUS_CAP = 1.75;
@@ -95,7 +97,7 @@ export function speedBonus(attacker: Fighter, target: Fighter) {
 export function critChance(attacker: Fighter) {
   const bonus = attacker.def.passive?.id === 'luckySwing' ? 0.25 * Math.max(0, attacker.stage('atk')) : 0;
   // Super Shadow: 100% crit zolang hij super is
-  if (attacker.superHits > 0) return 1;
+  if (attacker.superTurns > 0) return 1;
   return Math.min(1, BASE_CRIT + bonus);
 }
 
@@ -133,8 +135,8 @@ export interface MoveDef {
   critDouble?: boolean;
   /** Chaos Spear: het doelwit krijgt n beurten lang PIERCE_BONUS extra schade. */
   pierce?: number;
-  /** Super Shadow: 100% crit en SUPER_VULNERABLE schade krijgen, tot hij n keer geraakt is. */
-  superHits?: number;
+  /** Super Shadow: n beurten 100% crit en SUPER_VULNERABLE schade krijgen (de beurt van de ultimate telt mee). */
+  superTurns?: number;
   /** Wordt weer gratis na een KO (Chaos Control: elke KO; de ultimate: als hij zelf de KO maakt). */
   resets?: 'anyKo' | 'ownKo';
   /** Genees-move die je ook op een teamgenoot kunt gebruiken (je kiest wie). */
@@ -172,7 +174,7 @@ export const MOVES: Record<string, MoveDef> = {
   maximumHeat:  { id: 'maximumHeat', name: 'Maximum Heat', power: 100, scaling: 'stages', accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, spendStages: true, desc: 'A meteor dive. +25 power for every stat stage Knuckles has, up or down; uses them all up.' },
   chaoAttack:   { id: 'chaoAttack', name: 'Chao Blessing', power: 0, accuracy: 100, priority: 1, anim: 'heal', teamHeal: 1, clearField: true, cost: MAX_BOOST, desc: 'Cheese and friends heal the whole team to full HP and clear the zone effect. No damage.' },
   tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 120, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, critDouble: true, recoil: 0.5, desc: 'A hammer storm. Always crits; doubles at 100% crit chance. Costs Amy 50% max HP (KO if below half).' },
-  superBarrage: { id: 'superBarrage', name: 'Super Barrage', power: 100, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, superHits: 3, resets: 'ownKo', desc: 'Goes Super and unloads a barrage. Always crits. Then 100% crit, but double damage taken, until he is hit 3 times. A KO makes it free again (max 2x).' },
+  superBarrage: { id: 'superBarrage', name: 'Super Barrage', power: 100, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, superTurns: 3, resets: 'ownKo', desc: 'Goes Super and unloads a barrage. Always crits. For 3 turns: 100% crit, but he takes double damage (a chain does not refresh it). A KO makes it free again (max 2x).' },
   // --- Eggman (main boss)
   eggMissile: { id: 'eggMissile', name: 'Egg Missile', power: 40, accuracy: 95, priority: 0, anim: 'missile', desc: '' },
   eggBomb:    { id: 'eggBomb', name: 'Egg Bomb', power: 60, accuracy: 85, priority: 0, anim: 'bomb', desc: '' },
@@ -328,7 +330,7 @@ export class Fighter {
   /** Chaos Spear: beurten dat hij PIERCE_BONUS extra schade krijgt. */
   pierced = 0;
   /** Super Barrage: 100% crit en SUPER_VULNERABLE schade krijgen, tot hij zo vaak geraakt is (hij is dan weer gewone Shadow). */
-  superHits = 0;
+  superTurns = 0;
   /** Boss-schilden (zoals PokéRogue): de HP-balk is in zoveel stukken verdeeld (0 = geen schilden). */
   segments = 0;
   /** net gezet: de teller loopt pas vanaf de volgende beurt (zo krijg je echt n hele beurten) */
@@ -342,7 +344,12 @@ export class Fighter {
 
   get name() { return this.def.name; }
   anim(name: string) { return `${this.def.animPrefix}_${name}`; }
-  private stat(k: keyof Stats) { return Math.floor(this.def.base[k] + this.def.growth[k] * (this.level - 1)); }
+  /** Vijanden worden per zone sterker (HP, ATK, DEF; niet SPD), zie enemyScaling in zones.ts. */
+  statMult = 1;
+  private stat(k: keyof Stats) {
+    const v = this.def.base[k] + this.def.growth[k] * (this.level - 1);
+    return Math.floor(k === 'spd' ? v : v * this.statMult);
+  }
   /** Boss-versie van een character (Shadow): meer HP. */
   hpMult = 1;
   get maxHp() { return Math.floor(this.stat('hp') * this.hpMult); }
@@ -453,7 +460,7 @@ export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: 
   // Weak Spot (Tails): verdoofde vijanden krijgen extra schade
   const weakSpot = attacker.def.passive?.id === 'weakSpot' && target.stun > 0 ? WEAK_SPOT_BONUS : 1;
   // Chaos Spear en Super Shadow: het doelwit krijgt meer schade
-  const exposed = (target.pierced > 0 ? PIERCE_BONUS : 1) * (target.superHits > 0 ? SUPER_VULNERABLE : 1);
+  const exposed = (target.pierced > 0 ? PIERCE_BONUS : 1) * (target.superTurns > 0 ? SUPER_VULNERABLE : 1);
   const dmg = base * roll * effect * speedBonus(attacker, target) * weakSpot * exposed * (crit ? 1.5 : 1);
   return { damage: Math.max(1, Math.floor(dmg)), crit, missed: false, effect };
 }

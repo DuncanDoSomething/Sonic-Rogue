@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, PIERCE_BONUS, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
-import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, isBossWave, isEliteWave, isMainBossWave, canHaveRival, RIVAL_CHANCE, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
+import { BOOST_ON_HIT, PIERCE_BONUS, RAMPAGE_CHANCE, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
 import type { ZoneEffect } from '../data/zones';
@@ -283,7 +283,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       this.wave = sv.wave;
       this.rings = sv.rings;
       this.emeralds = sv.emeralds;
-      this.expShare = sv.expShare;
+      this.expShare = expShareAfter(sv.wave - 1);
       this.bag = { ...sv.bag };
       this.rivalsMet = [...sv.rivalsMet];
       this.fieldCleared = !!sv.fieldCleared;
@@ -401,7 +401,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (this.alarmWave) out.push({ key: 'alarm', icon: 'mon_alert', name: 'Eggman Alarm', desc: 'This foe is an elite. Beat it for uncommon-or-better rewards.' });
     if (b.eliteNext) out.push({ key: 'alarmN', icon: 'mon_alert', name: 'Eggman Alarm', desc: 'The next foe is an elite. Beat it for uncommon-or-better rewards.' });
     const p = this.player;
-    if (p?.superHits > 0) out.push({ key: 'super', icon: 'shadowfx:ssh_idle_0', name: 'Super power', desc: `100% crit, but ${p.name} takes double damage. Ends after ${n(p.superHits, 'more hit')}.`, count: p.superHits });
+    if (p?.superTurns > 0) out.push({ key: 'super', icon: 'shadowfx:ssh_idle_0', name: 'Super power', desc: `100% crit, but ${p.name} takes double damage. ${n(p.superTurns, 'turn')} left, this one included.`, count: p.superTurns });
     if (p?.chaosFree && p.moves.includes('chaosControl')) out.push({ key: 'chaosFree', icon: 'emeralds:emerald_green_0', name: 'Chaos Control', desc: 'Free to use: costs no Boost.' });
     if (p?.ultFree && p.def.ultimate && p.moves.includes(p.def.ultimate)) out.push({ key: 'ultFree', icon: 'shadowfx:ssh_spear_2', name: MOVES[p.def.ultimate].name, desc: `Free to use: costs no Boost (${p.ultChain}/${ULT_CHAIN_MAX} in a row).` });
     if (this.enemy?.pierced > 0) out.push({ key: 'pierced', icon: 'shadowfx:sh_rune_pink_0', name: 'Pierced', desc: `The foe takes ${Math.round((PIERCE_BONUS - 1) * 100)}% more damage. ${n(this.enemy.pierced, 'turn')} left.`, count: this.enemy.pierced });
@@ -1306,17 +1306,22 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.setBox(this.pBox, this.player, false);
     const zone = zoneForWave(this.wave, this.zoneOrder);
     const boss = isBossWave(this.wave);
-    const rivalId = this.forceRival || (canHaveRival(this.wave) && Math.random() < RIVAL_CHANCE) ? this.pickRival() : undefined;
+    // rivals: vaak op waves die op 5 eindigen, en later soms ook op een gewone wave
+    const rivalId = this.forceRival || (!this.tutorialMode && Math.random() < rivalChance(this.wave)) ? this.pickRival() : undefined;
     this.forceRival = false;
     this.rival = !!rivalId;
     const elite = (isEliteWave(this.wave) || this.alarmWave) && !this.rival && !boss;
     this.elite = elite;
     // main boss (wave 20, 40, ...): Eggman of Shadow; zone-boss: die van de zone
     const mainBoss = boss && isMainBossWave(this.wave) && !this.tutorialMode;
-    const id = this.tutorialMode ? 'beetle' : rivalId ?? (mainBoss ? mainBossFor(this.wave, this.party.map(f => f.def.id)) : boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
+    const id = this.tutorialMode ? 'beetle' : rivalId ?? (mainBoss ? mainBossFor(this.wave, this.party.map(f => f.def.id), this.mainBossRoll) : boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
     // vijanden stijgen ~0,65 level per wave; jij blijft dan net iets voor (bosses/elites +2, rivals op gelijk niveau)
-    this.enemy = new Fighter(id, this.tutorialMode ? 3 : 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || elite ? 2 : 0));
+    this.enemy = new Fighter(id, this.tutorialMode ? 3 : 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || elite ? 2 : 0) + (rivalId ? rivalLevelBonus(this.wave) : 0));
     this.charFoe = HEROES.includes(id);
+    // badniks en bosses worden per zone sterker (rivals en boss-Shadow hebben al character-stats)
+    if (!this.charFoe && !this.tutorialMode) { this.enemy.statMult = enemyScaling(this.wave); this.enemy.hp = this.enemy.maxHp; }
+    // wie deze wave meevecht, krijgt de volle EXP
+    this.waveFighters = new Set([this.player]);
     this.foeUltUsed = false;
     // boss-Shadow: meer HP; bosses krijgen schilden (stukken HP-balk)
     if (this.charFoe && boss) { this.enemy.hpMult = SHADOW_BOSS_HP; this.enemy.hp = this.enemy.maxHp; }
@@ -1327,7 +1332,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
     // nieuwe zone: achtergrond wisselen + zone-titel; boss-wave: Chaos Angel
     const firstOfZone = waveInZone(this.wave) === 1;
-    this.setBackdrop(id === 'eggman' ? 'deathegg' : boss ? 'chaosangel' : zone.backdrop, this.wave === 1 ? 0 : 600);
+    // main bosses in de ruimte: X-Zone (wave 20, 60) en XX (wave 40, 80, en altijd bij Shadow)
+    const space = id === 'shadow' || this.wave % 40 === 0 ? 'xx' : 'xzone';
+    this.setBackdrop(mainBoss ? space : boss ? 'chaosangel' : zone.backdrop, this.wave === 1 ? 0 : 600);
     this.applyZoneEffect(this.fieldCleared ? undefined : zone.effect);
     audio.playMusic(id === 'eggman' ? 'eggman' : boss || this.rival ? 'boss' : (zone.backdrop as MusicKey));
     this.waveText.setText(`${zone.name} - Wave ${this.wave}`);
@@ -1358,6 +1365,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (this.rival) await this.rivalBanner();
     else if (mainBoss) await this.rivalBanner('BOSS!');
     if (id === 'shadow' && boss) audio.voice('shadowlaugh');
+    else if (id === 'eggman') audio.voice('eggmanlaugh');
     await this.say(this.rival ? `Rival ${this.enemy.name} wants to battle!`
       : id === 'shadow' && boss ? 'Shadow blocks the way! "Show me what you\'ve got."'
       : id === 'eggman' ? 'Dr. Eggman appeared! "Hohoho! You won\'t get past me!"'
@@ -1443,7 +1451,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
           .setAlpha(0.6 + 0.25 * Math.sin(this.statusClock / 200));
       }
       // Super Shadow: gouden schimmen en vonkjes
-      if (f && f.superHits > 0 && !f.fainted && spr.visible && Math.floor(this.statusClock / 160) !== Math.floor((this.statusClock - dt) / 160)) {
+      if (f && f.superTurns > 0 && !f.fainted && spr.visible && Math.floor(this.statusClock / 160) !== Math.floor((this.statusClock - dt) / 160)) {
         const p = this.add.image(spr.x + Phaser.Math.Between(-14, 14), spr.y - Phaser.Math.Between(4, 40), 'px').setTint(0xfff6a0).setDepth(17).setBlendMode(Phaser.BlendModes.ADD);
         this.tweens.add({ targets: p, y: p.y - 22, alpha: 0, duration: 420, onComplete: () => p.destroy() });
       }
@@ -1530,6 +1538,13 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   /** Boss-Shadow heeft zijn ultimate deze wave al gebruikt. */
   private foeUltUsed = false;
 
+  /** Dobbelsteen voor Rampage en de keuze van de main boss (de tests zetten ze vast). */
+  private rampageRoll = () => Math.random();
+  private mainBossRoll = () => Math.random();
+
+  /** Wie er deze wave in het veld stond (krijgen allemaal de volle EXP, zoals in Pokémon). */
+  private waveFighters = new Set<Fighter>();
+
   /** De move die nu bezig is was gratis (Shadow). */
   private freeUse = false;
 
@@ -1553,6 +1568,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       await this.act(att, tgt, move, att === this.player ? ally : undefined);
     }
     this.flinched.clear();
+    await this.tickSuper();
 
     if (this.enemy.fainted) return this.winWave();
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(); return; }
@@ -1587,7 +1603,6 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; }
     let struck = false;
     let shieldsBroken = 0;
-    let superEnded = false;
     const strike = () => {
       if (hit.missed || struck) return;
       struck = true;
@@ -1596,8 +1611,6 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       const cap = shieldCap(tgt, hit.damage);
       if (cap.damage !== hit.damage || cap.broken) { hit = { ...hit, damage: cap.damage }; shieldsBroken = cap.broken; }
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
-      // Super Barrage: de Super-kracht houdt op na zoveel klappen
-      if (tgt.superHits > 0 && hit.damage > 0 && --tgt.superHits === 0) superEnded = true;
       if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
       // tutorial: niemand van je team gaat neer, en de vijand pas bij de laatste stap
       if (this.tutorialMode && tgt.hp === 0 && (this.party.includes(tgt) || this.tutGuard)) tgt.hp = 1;
@@ -1644,7 +1657,6 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       audio.sfx('monitorbreak', { volume: 0.7 });
       await this.say(shieldsBroken > 1 ? `${shieldsBroken} of ${this.who(tgt)}'s shields broke at once!` : `${this.who(tgt)}'s shield broke!`, 400);
     }
-    if (superEnded) await this.say(`${this.who(tgt)}'s Super power wore off.`, 350);
     if (move.spendStages && Object.values(att.stages).some(v => v !== 0)) {
       att.stages = { atk: 0, def: 0, spd: 0, acc: 0 };
       this.statArrows(isPlayer ? this.hero : this.foe, false);
@@ -1721,9 +1733,12 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       }
     }
     // Super Barrage: Shadow blijft een paar beurten super (ook als hij mist)
-    if (move.superHits && !att.fainted) {
-      att.superHits = move.superHits;
-      await this.say(`${att.name} has Super power! 100% crit, but double damage taken until he is hit ${move.superHits} times.`, 450);
+    // Super-kracht: telt vanaf de eerste ultimate; een ketting erachteraan verlengt hem niet
+    if (move.superTurns && !att.fainted && att.superTurns > 0) {
+      await this.say(`Super power: ${att.superTurns === 1 ? 'this is the last turn' : `${att.superTurns} turns left (no refresh)`}.`, 350);
+    } else if (move.superTurns && !att.fainted) {
+      att.superTurns = move.superTurns;
+      await this.say(`${att.name} has Super power! 100% crit, but he takes double damage for ${move.superTurns} turns (this one included).`, 450);
     }
     await this.shadowAfter(att, tgt, move, isPlayer);
   }
@@ -1758,8 +1773,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       const [name, chain] = r.split('|');
       // een rival betaalt geen Boost, dus daar alleen de Rampage
       if (isPlayer) await this.say(`${name} is free again!${chain ? ` (${chain})` : ''}`, 400);
-      if (att.def.passive?.id === 'rampage') {
-        // ATK en SPD tegelijk, in één bericht
+      if (att.def.passive?.id === 'rampage' && this.rampageRoll() < RAMPAGE_CHANCE) {
+        // ATK en SPD tegelijk, in één bericht (50% kans per gratis geworden move)
         const before = { ...att.stages };
         att.raise('atk', 1);
         att.raise('spd', 1);
@@ -2163,12 +2178,14 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const heroC = this.center(this.hero);
     if (move.anim === 'laugh') {
       this.playOnce(b, 'eggman_attack');
+      audio.voice('eggmanlaugh');
       void bigText(this, b.x, b.y - b.displayHeight - 10, 'HOHOHO!', '#ff6a5a');
       await this.tween({ targets: b, y: b.y - 6, duration: 120, yoyo: true, repeat: 2 });
       strike();
       return;
     }
     if (move.anim === 'missile') {
+      audio.voice(Math.random() < 0.5 ? 'eggmantake' : 'eggmanhows');
       // even naar voren draaien (koplamp), dan drie raketten in een boog
       await this.playOnce(b, 'eggman_turn');
       const sx = b.x - 20, sy = b.y - b.displayHeight * 0.45;
@@ -2203,6 +2220,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       return;
     }
     // bommen: over de held vliegen en drie bommen laten vallen
+    audio.voice(Math.random() < 0.5 ? 'eggmanhows' : 'eggmantake');
     b.play('eggman_idle');
     await this.tween({ targets: b, x: heroC.x + 20, y: 96, duration: 520, ease: 'Sine.easeInOut' });
     for (let i = 0; i < 3; i++) {
@@ -2308,7 +2326,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async winEggman() {
     const c = this.center(this.foe);
     this.foe.play('eggman_spin');
-    audio.voice('eggmanow');
+    audio.voice('eggmandefeat');
     for (let i = 0; i < 5; i++) {
       this.time.delayedCall(i * 120, () => {
         const boom = this.add.sprite(c.x + Phaser.Math.Between(-30, 30), c.y + Phaser.Math.Between(-20, 30), 'badniks').setOrigin(0.5, 1).setScale(1.6).setDepth(16).play('explosion');
@@ -2717,6 +2735,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /** Iemand anders in het veld zetten. Stat stages van wie eruit gaat worden gereset (zoals in Pokémon). */
   private async switchTo(next: Fighter, resetStages = true) {
+    this.waveFighters.add(next);
     const prev = this.player;
     if (prev === next) return;
     if (resetStages) prev.stages = emptyStages();
@@ -2747,6 +2766,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     await this.switchTo(this.party[i]);
     this.tut?.event('switched');
     await this.act(this.enemy, this.player, this.pickEnemyMove());
+    await this.tickSuper();
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(1); return; }
     await this.endOfTurn();
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(1); return; }
@@ -2769,14 +2789,17 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /** EXP voor wie op de bank zit (Exp Share). KO-teamleden krijgen niks. */
   private async teamExp(exp: number) {
-    if (this.expShare <= 0) return;
-    const bench = this.party.filter(f => f !== this.player && !f.fainted);
-    if (!bench.length) return;
+    // wie deze wave ook heeft meegevochten (en nog staat) krijgt de volle EXP; de bank een deel (Exp. Share)
+    const fought = this.party.filter(f => f !== this.player && !f.fainted && this.waveFighters.has(f));
+    const bench = this.party.filter(f => f !== this.player && !f.fainted && !this.waveFighters.has(f));
     const share = Math.max(1, Math.floor(exp * this.expShare));
-    await this.say(`The team got ${share} EXP from the Exp. Share!`, 300);
-    for (const f of bench) {
+    if (fought.length) await this.say(`${fought.map(f => f.name).join(' and ')} also got ${exp} EXP for fighting!`, 300);
+    if (bench.length && this.expShare > 0) await this.say(`The team got ${share} EXP from the Exp. Share!`, 300);
+    const gains: Array<[Fighter, number]> = [...fought.map(f => [f, exp] as [Fighter, number]), ...(this.expShare > 0 ? bench.map(f => [f, share] as [Fighter, number]) : [])];
+    if (!gains.length) return;
+    for (const [f, amount] of gains) {
       const before = f.level;
-      if (f.gainExp(share)) await this.say(`${f.name} grew to Lv.${f.level}!`, 350);
+      if (f.gainExp(amount)) await this.say(`${f.name} grew to Lv.${f.level}!`, 350);
       const ult = f.def.ultimate;
       if (ult && before < ULTIMATE_LEVEL && f.level >= ULTIMATE_LEVEL) {
         await this.say(`${f.name} learned the ultimate ${MOVES[ult].name}!`, 700);
@@ -2877,6 +2900,15 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     }
     this.fieldEffect = effect;
     this.fieldText.setText(effect ? `${effect.name}  ${effect.short}` : '').setColor(effect?.color ?? '#ffffff');
+  }
+
+  /** Na elke ronde (ook als de wave gewonnen is): de Super-kracht loopt een beurt af. */
+  private async tickSuper() {
+    for (const f of [this.player, this.enemy]) {
+      if (!f || f.superTurns <= 0) continue;
+      f.superTurns--;
+      if (f.superTurns === 0 && !f.fainted) await this.say(`${this.who(f)}'s Super power wore off.`, 350);
+    }
   }
 
   /** Einde van een beurt: zone-schade (Hot Crater). */
@@ -2983,11 +3015,13 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /** "Alright!" / "Yeah!" van je character bij de victory-pose. */
   private victoryVoice() {
+    const boss = isBossWave(this.wave);
     const lines: Record<string, string[]> = {
-      sonic: ['sonicalright', 'sonicyeah'], tails: ['tailsalright', 'tailsyeah'],
-      knuckles: ['knucklesalright', 'knucklescool'], cream: ['creamalright', 'creamyeah'], amy: ['amywohoo', 'amyyeah'],
+      sonic: ['sonicalright', 'sonicyeah'], tails: boss ? ['tailsbosswin'] : ['tailsalright', 'tailsyeah'],
+      knuckles: ['knucklesalright', 'knucklescool'], cream: boss ? ['creambosswin'] : ['creamalright', 'creamyeah'],
+      amy: boss ? ['amybosswin'] : ['amywohoo', 'amyyeah'],
       // na een boss: "Didn't even break a sweat."
-      shadow: isBossWave(this.wave) ? ['shadowsweat'] : ['shadowhmph', 'shadowhuh'],
+      shadow: boss ? ['shadowsweat'] : ['shadowhmph', 'shadowhuh'],
     };
     const opts = lines[this.player.def.id];
     if (opts) audio.voice(Phaser.Utils.Array.GetRandom(opts) as Parameters<typeof audio.voice>[0]);

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { audio } from '../audio';
 import { EXP_SHARE_STEPS, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MAX_STAGE, type PassiveDef, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
-import { EFFECTS, FIRST_RIVAL_WAVE, MAIN_BOSS_BOOST, RIVAL_CHANCE, ZONE_BOSS_HEAL, ZONES } from '../data/zones';
+import { EFFECTS, FIRST_RIVAL_WAVE, LATE_RIVAL_WAVE, MAIN_BOSS_BOOST, RIVAL_CHANCE, SHADOW_BOSS_CHANCE, ZONE_BOSS_HEAL, ZONES } from '../data/zones';
 import { BAG_SIZE, ITEMS, ITEMS_PER_FIGHT } from '../data/items';
 import { TIER_COLOR, TIER_NAME, TIERS } from '../data/rewards';
 import { HUD, sonicPanel } from './hud';
@@ -198,19 +198,29 @@ export function categories(): Category[] {
           icons: [{ row: 9, key: 'ui', frame: 'head_sonic' }],
         },
         {
-          title: 'EXP SHARE & RIVALS',
+          title: 'EXP',
           lines: [
+            'Everyone who fought in a wave',
+            'gets the full EXP. So switch!',
+            '',
             `Exp. Share: the bench gets ${EXP_SHARE_STEPS[0][1] * 100}%`,
             `EXP after wave ${EXP_SHARE_STEPS[0][0]}, ${EXP_SHARE_STEPS[1][1] * 100}% after ${EXP_SHARE_STEPS[1][0]}.`,
-            '',
+          ],
+        },
+        {
+          title: 'RIVALS',
+          lines: [
             'You start with Sonic, Tails and',
             `Amy. From wave ${FIRST_RIVAL_WAVE}, on waves`,
             `ending in 5, there is a ${Math.round(RIVAL_CHANCE * 100)}%`,
-            'chance a rival shows up.',
+            `chance a rival shows up. After`,
+            `wave ${LATE_RIVAL_WAVE} they can show up on`,
+            'other waves too, a bit stronger.',
+            '',
             'Beat a rival to unlock them. They',
             'can also join your team right',
-            'away. Shadow is no rival: he',
-            'waits for you as a boss.',
+            'away. Shadow is no rival: he is a',
+            'rare boss.',
           ],
         },
       ],
@@ -303,9 +313,10 @@ export function categories(): Category[] {
         {
           title: 'MAIN BOSSES & SHIELDS',
           lines: [
-            '    Wave 20 and 60: Dr. Eggman.',
-            '    Wave 40 and 80: Shadow. Beat',
-            '    him to unlock him.',
+            '    Every 20th wave: Dr. Eggman.',
+            `    Rarely (${Math.round(SHADOW_BOSS_CHANCE * 100)}%) Shadow takes`,
+            '    his place. Beat him to unlock',
+            '    him.',
             '',
             'A boss HP bar is split into',
             'shields. One hit breaks only one',

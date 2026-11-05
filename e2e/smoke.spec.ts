@@ -505,8 +505,8 @@ test.describe('Sonic Rogue smoke tests', () => {
     const marked = await shadow();
     expect(marked.pierced).toBe(3);
     expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.hp)).toBe(9999);  // status-move: geen schade
-    // Chaos Control maakt de KO: daarna is hij gratis, en Rampage geeft ATK en SPD +1
-    await setup(page, 's.enemy.hp = 1; s.player.boost = 6;');
+    // Chaos Control maakt de KO: daarna is hij gratis, en Rampage geeft ATK en SPD +1 (50% kans: hier vast gezet)
+    await setup(page, 's.enemy.hp = 1; s.player.boost = 6; s.rampageRoll = () => 0;');
     await press(page, 'z', 'ArrowLeft', 'ArrowDown', 'z');   // de cursor stond nog op Chaos Spear
     await waitForMenu(page, 'reward');
     const after = await shadow();
@@ -543,12 +543,13 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
-  test('wave 20 is Dr. Eggman: a main boss with 5 shields, one hit breaks one shield', async ({ page }) => {
+  test('wave 20 is Dr. Eggman (Shadow only rarely): a main boss with 5 shields, one hit breaks one shield', async ({ page }) => {
     test.setTimeout(120_000);
     const errors = trackErrors(page);
     await openGame(page);
     await startRun(page);
-    await setup(page, 's.wave = 19; s.enemy.hp = 1;');
+    // Eggman in plaats van de zeldzame Shadow (wave 20 heeft nooit een rival)
+    await setup(page, 's.wave = 19; s.enemy.hp = 1; s.mainBossRoll = () => 0.5;');
     await press(page, 'z', 'ArrowRight', 'z');  // Homing Attack
     await waitForMenu(page, 'reward');
     await fixReward(page);
@@ -583,5 +584,38 @@ test.describe('Sonic Rogue smoke tests', () => {
     await press(page, 'z');                       // Health Ring
     await waitForMenu(page, 'reward');
     expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').bag)).toEqual({});
+  });
+
+  test('Shadow: the Super power lasts 3 turns, counted from the ultimate', async ({ page }) => {
+    test.setTimeout(120_000);
+    await openGame(page);
+    await startBattleWith(page, ['shadow', 'tails']);
+    const superTurns = () => page.evaluate(() => (window as any).game.scene.getScene('Battle').player.superTurns);
+    await setup(page, 's.player.level = 30; s.player.boost = 6; s.player.hp = 9999; s.enemy.hp = 99999; s.runTurn(window.MOVES.superBarrage);');
+    await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
+    await waitForMenu(page, 'command');
+    expect(await superTurns()).toBe(2);
+    for (const left of [1, 0]) {
+      await setup(page, 's.runTurn(window.MOVES.spinAttack);');
+      await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
+      await waitForMenu(page, 'command');
+      expect(await superTurns()).toBe(left);
+    }
+  });
+
+  test('everyone who fought in a wave gets the full EXP', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await press(page, 'ArrowRight', 'z');       // Party
+    await waitForMenu(page, 'choice');
+    await press(page, 'z');                     // Tails in, Sonic heeft al meegevochten
+    await waitForMenu(page, 'command');
+    const before = await page.evaluate(() => (window as any).game.scene.getScene('Battle').party.map((f: any) => f.level * 1000 + f.exp));
+    await setup(page, 's.enemy.hp = 1; s.runTurn(window.MOVES.copterDive);');   // Tails: raakt altijd, gaat eerst
+    await waitForMenu(page, 'reward');
+    const after = await page.evaluate(() => (window as any).game.scene.getScene('Battle').party.map((f: any) => f.level * 1000 + f.exp));
+    expect(after[0]).toBeGreaterThan(before[0]);   // Sonic (meegevochten)
+    expect(after[1]).toBeGreaterThan(before[1]);   // Tails (in het veld)
+    expect(after[2]).toBe(before[2]);              // Amy (bank, nog geen Exp. Share op wave 1)
   });
 });

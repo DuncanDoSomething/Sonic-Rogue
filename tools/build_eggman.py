@@ -1,4 +1,4 @@
-"""Eggman (in de Egg Mobile) als boss: atlas, animaties, de Death Egg-achtergrond en zijn icoontje.
+"""Eggman (in de Egg Mobile) als boss: atlas, animaties en zijn icoontje (achtergronden: build_space.py).
 
 Gebruik: python3 tools/build_eggman.py "<map 'Sonic rogue sprites'>" src/assets
 
@@ -56,10 +56,6 @@ json.dump({'frames': frames, 'meta': {'image': 'eggman.png', 'size': {'w': atlas
 json.dump(anims, open(os.path.join(OUT, 'eggman_anims.json'), 'w'), indent=1)
 print('eggman atlas', atlas.shape)
 
-# Death Egg: de Sonic Battle-arena als boss-achtergrond
-stage = sheet[15:335, 265:585]
-Image.fromarray(stage).save(os.path.join(OUT, 'bg', 'deathegg_back.png'))
-
 # icoontje (Sonic Battle-life icon) in de ui-atlas, voor de boss-balk
 ui_png, ui_json = os.path.join(OUT, 'ui', 'ui.png'), os.path.join(OUT, 'ui', 'ui.json')
 ui = np.array(Image.open(ui_png).convert('RGBA'))
@@ -77,4 +73,4 @@ uj['frames']['head_eggman'] = {'frame': {'x': x, 'y': y, 'w': 16, 'h': 16}, 'rot
                                'spriteSourceSize': {'x': 0, 'y': 0, 'w': 16, 'h': 16}, 'sourceSize': {'w': 16, 'h': 16}}
 Image.fromarray(ui).save(ui_png)
 json.dump(uj, open(ui_json, 'w'), indent=1)
-print('deathegg + head_eggman done')
+print('head_eggman done')
