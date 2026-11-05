@@ -11,7 +11,7 @@ const KEY = 'sonicrogue_tips_seen';
 export const TIPS = {
   zone: 'Zone effects change your stats while you stay in this zone. Press V to see everything that is active.',
   rival: 'A rival! Beat them to unlock them for good. Afterwards they can even join your team.',
-  boss: 'A zone boss! Win and you get a Chaos Emerald, and your team gets patched up.',
+  boss: 'A boss! Its HP bar has shields: one hit breaks one shield. Win for a Chaos Emerald and a patch-up.',
   ko: 'Ouch! A teammate who goes down stays down until you beat the zone boss.',
   switch: 'Before every wave you can swap who fights, for free. You can turn this question off in Settings.',
   shop: 'Pick one free reward. Up top is the shop: rings buy hearts for your bag. Hover the bag to see what is inside.',

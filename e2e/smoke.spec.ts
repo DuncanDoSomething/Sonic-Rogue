@@ -517,14 +517,14 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Shadow: Super Barrage resets after a KO at most 3 times, then costs 6 Boost again', async ({ page }) => {
+  test('Shadow: Super Barrage resets after a KO at most 2 times, then costs 6 Boost again', async ({ page }) => {
     test.setTimeout(180_000);
     const errors = trackErrors(page);
     await openGame(page);
     await startBattleWith(page, ['shadow', 'tails']);
     await setup(page, 's.player.level = 30; s.player.boost = 6;');
     const free: boolean[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       await setup(page, 's.enemy.hp = 1; s.runTurn(window.MOVES.superBarrage);');
       await waitForMenu(page, 'reward');
       free.push(await page.evaluate(() => (window as any).game.scene.getScene('Battle').player.ultFree));
@@ -535,11 +535,53 @@ test.describe('Sonic Rogue smoke tests', () => {
       await waitForMenu(page, 'command');
       await setup(page, 's.player.boost = 0;');  // alleen gratis kan hij hem nog gebruiken
     }
-    expect(free).toEqual([true, true, true, false]);
+    expect(free).toEqual([true, true, false]);
     expect(await page.evaluate(() => {
       const s = (window as any).game.scene.getScene('Battle');
       return s.player.canUse((window as any).MOVES.superBarrage);
     })).toBe(false);
     expect(errors).toEqual([]);
+  });
+
+  test('wave 20 is Dr. Eggman: a main boss with 5 shields, one hit breaks one shield', async ({ page }) => {
+    test.setTimeout(120_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.wave = 19; s.enemy.hp = 1;');
+    await press(page, 'z', 'ArrowRight', 'z');  // Homing Attack
+    await waitForMenu(page, 'reward');
+    await fixReward(page);
+    await press(page, 'z');
+    await waitForMenu(page, 'choice');
+    await press(page, 'ArrowDown', 'z');
+    await waitForMenu(page, 'command');
+    const boss = await page.evaluate(() => {
+      const s = (window as any).game.scene.getScene('Battle');
+      return { id: s.enemy.def.id, segments: s.enemy.segments, max: s.enemy.maxHp };
+    });
+    expect(boss).toMatchObject({ id: 'eggman', segments: 5 });
+    // een veel te sterke klap: stopt op de eerste grens (of een paar verder), maar nooit KO
+    await setup(page, 's.player.level = 45; s.player.stages.atk = 2; s.pickEnemyMove = () => window.MOVES.eggLaugh;');
+    await press(page, 'z', 'z');                 // Fight > de move onder de cursor
+    await waitForMenu(page, 'command');
+    const hp = await page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.hp);
+    expect(hp).toBeGreaterThan(0);
+    const size = boss.max / 5;
+    expect(Math.abs(hp / size - Math.round(hp / size))).toBeLessThan(0.05);   // precies op een grens
+    expect(errors).toEqual([]);
+  });
+
+  test('you can toss an item from the bag on the reward screen', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    await setup(page, "s.enemy.hp = 1; s.bag = { healthRing: 1 };");
+    await press(page, 'z', 'ArrowRight', 'z');
+    await waitForMenu(page, 'reward');
+    await press(page, 'c');                       // toss
+    await waitForMenu(page, 'choice');
+    await press(page, 'z');                       // Health Ring
+    await waitForMenu(page, 'reward');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').bag)).toEqual({});
   });
 });

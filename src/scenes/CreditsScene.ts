@@ -21,6 +21,8 @@ const CREDITS: Array<[string, string?]> = [
   ['effects and cut-in art'],
   ['Shadow Mastah - Super Shadow'],
   ['Bacon - Sonic Battle portraits'],
+  ['SkyLights, Dinoshi 64 - Eggman,'],
+  ['Death Egg'],
   ['SkyLights - Advance 3 badniks'],
   ['Fatazz (Turtle474) - Advance 2 badniks'],
   ['Paratiritis - zone backgrounds'],

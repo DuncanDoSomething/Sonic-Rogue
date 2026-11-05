@@ -1,0 +1,23 @@
+{
+ "key": "knuckles_spin",
+ "texture": "knucklesball",
+ "repeat": -1,
+ "frames": [
+  {
+   "frame": "knucklesball_0",
+   "duration": 50
+  },
+  {
+   "frame": "knucklesball_1",
+   "duration": 50
+  },
+  {
+   "frame": "knucklesball_2",
+   "duration": 50
+  },
+  {
+   "frame": "knucklesball_3",
+   "duration": 50
+  }
+ ]
+}

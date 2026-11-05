@@ -18,10 +18,11 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 | ![Knuckles' Maximum Heat](docs/maximum-heat.png) | ![Character kits (I)](docs/kits.png) |
 | ![Practice fight with Tails](docs/tutorial.png) | ![How to Play, by topic](docs/how-to-play.png) |
 | ![Shadow's Chaos Control: time stops](docs/chaos-control.png) | ![Super Shadow's Chaos Blast](docs/super-shadow.png) |
+| ![Dr. Eggman at the Death Egg, with boss shields](docs/eggman.png) | ![Shadow as the wave 40 boss](docs/shadow-boss.png) |
 
 ## Gameplay
 
-- **Team of three.** Sonic, Tails and Amy are available from the start. Knuckles, Cream and Shadow show up as rivals; beat them to unlock them, and they can join your current run.
+- **Team of three.** Sonic, Tails and Amy are available from the start. Knuckles and Cream show up as rivals and Shadow as a boss; beat them to unlock them, and they can join your current run.
 - **Boost meter instead of PP.** Spin Attack is free and builds Boost. Stronger moves cost Boost and never miss. Every character learns an ultimate at level 30 that uses the full meter.
 - **Stuns and flinches.** Some moves stop the foe from acting for a turn or more.
 - **Ultimate cut-ins.** Every ultimate opens with a Persona-style cut-in and has its own animation: Sonic turns Super Sonic, Tails calls down lightning, Knuckles hits like a meteor, Amy whips up a tornado, Cream calls in the Chao and Shadow goes Super Shadow for a Chaos Blast.
@@ -104,6 +105,7 @@ This project uses community sprite rips from [The Spriters Resource](https://www
 
 - **Characters:** Ren "Foxx" Ramos (Sonic Advance 3), Bonzai (Super Sonic), QuadFactor (Shadow, Sonic Battle), Shadow Mastah (Super Shadow, Pixeltendo Sonic Battle Project)
 - **Portraits:** Bacon (Sonic Battle story portraits)
+- **Eggman and the Death Egg:** SkyLights (rip), Dinoshi 64 (organization), QuadFactor (palette)
 - **Power type icon:** based on the POW icon ripped by Taels (Sonic Battle)
 - **Cut-in art and effects:** QuadFactor (Sonic Battle)
 - **Badniks:** SkyLights (Sonic Advance 3), Fatazz / Turtle474 (Sonic Advance 2)

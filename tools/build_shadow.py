@@ -180,6 +180,21 @@ fx('ssh_idle', [box(ss, (280, 44, 307, 86), SS_BG, False), box(ss, (307, 44, 334
 fx('ssh_dash', [box(ss, (246, 318, 280, 341), SS_BG, False), box(ss, (283, 318, 317, 341), SS_BG, False)], 14, -1)
 fx('ssh_combo', [box(ss, r, SS_BG, False) for r in [(282, 849, 317, 884), (320, 851, 348, 884), (350, 851, 385, 884),
                                              (388, 851, 418, 884), (421, 853, 452, 884), (455, 848, 485, 884)]], 18, 0, 'bottom')
+# Super Shadow: wegteleporteren (oplossen in een omtrek), aanstormen, opladen (naar voren)
+SB = lambda *r: box(ss, r, SS_BG, False)
+TP = [SB(75, 111, 101, 143), SB(105, 109, 135, 143), SB(141, 112, 170, 141), SB(176, 105, 208, 143)]
+fx('ssh_tpout', TP, 16, 0, 'bottom')
+fx('ssh_tpin', TP[::-1], 16, 0, 'bottom')
+fx('ssh_rush', [SB(282, 114, 312, 143), SB(315, 111, 345, 143), SB(348, 108, 375, 143), SB(378, 107, 410, 143)], 14, 0, 'bottom')
+fx('ssh_power', [SB(413, 107, 444, 142), SB(447, 107, 476, 142), SB(479, 107, 510, 142)], 8, -1, 'bottom')
+# Chaos Nightmare: draaiende trappen met rode sporen, en een stoot-combo
+fx('ssh_nightmare', [SB(21, 266, 59, 300), SB(62, 264, 98, 300), SB(102, 263, 134, 300), SB(137, 266, 174, 300),
+                     SB(178, 264, 214, 300), SB(217, 263, 249, 300)], 18, 0, 'bottom')
+fx('ssh_punch', [SB(22, 185, 49, 221), SB(52, 184, 81, 221), SB(84, 185, 111, 221), SB(114, 188, 142, 221),
+                 SB(22, 225, 52, 260), SB(55, 226, 84, 260), SB(87, 224, 117, 260)], 20, 0, 'bottom')
+# Chaos Blast: armen wijd, oranje bol, ring, en een rode koepel om hem heen
+fx('ssh_blast', [SB(100, 534, 127, 573), SB(130, 534, 157, 573), SB(165, 534, 193, 573), SB(200, 518, 296, 573),
+                 SB(200, 518, 296, 573), SB(299, 519, 395, 573), SB(398, 519, 494, 573)], 10, 0, 'bottom')
 # gouden chaos-speren van Super Shadow, en de Chaos Blast-explosie
 fx('ssh_spear', [box(ss, r, SS_BG, False) for r in [(55, 667, 97, 699), (100, 665, 146, 699), (150, 660, 196, 700),
                                                     (201, 660, 248, 700), (251, 660, 299, 700)]], 20, -1)

@@ -5,7 +5,7 @@
 import Phaser from 'phaser';
 import { sonicPanel } from './hud';
 import { richLine } from './richText';
-import { FIGHTERS, Fighter, MAX_BOOST, MOVES, SPEED_POWER, ULTIMATE_LEVEL, type MoveDef } from '../data/fighters';
+import { BOSS_HEROES, FIGHTERS, Fighter, MAX_BOOST, MOVES, SPEED_POWER, ULTIMATE_LEVEL, type MoveDef } from '../data/fighters';
 
 const W = 480;
 const H = 270;
@@ -66,7 +66,8 @@ export function buildCharacterInfo(scene: Phaser.Scene, id: string, o: InfoOptio
 
   if (!def || o.locked) {
     txt(bx + 14, by + 14, '???', '#e8443a');
-    txt(bx + 14, by + 32, 'Beat this character as a rival to', '#cfd6ee');
+    const asBoss = BOSS_HEROES.includes(id);
+    txt(bx + 14, by + 32, asBoss ? 'Beat this character as a boss to' : 'Beat this character as a rival to', '#cfd6ee');
     txt(bx + 14, by + 44, 'find out what they can do.', '#cfd6ee');
     txt(bx + 14, by + bh - 16, o.footer, '#9aa4c4');
     return c;

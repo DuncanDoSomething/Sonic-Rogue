@@ -3,8 +3,9 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
-  PIERCE_BONUS, SUPER_VULNERABLE, HEROES,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, shieldCap,
 } from '../src/data/fighters';
+import { mainBossFor, MAIN_BOSS_SHIELDS } from '../src/data/zones';
 
 /** Vaste "random": geeft steeds dezelfde waarde terug, zodat de uitkomst voorspelbaar is. */
 const fixed = (v: number) => () => v;
@@ -324,18 +325,18 @@ describe('Shadow', () => {
     const foe = new Fighter('beetle', 30);
     expect(sh.moves).toContain('superBarrage');
     expect(calcHit(sh, foe, MOVES.superBarrage, fixed(0.99)).crit).toBe(true);
-    expect(MOVES.superBarrage.superTurns).toBe(3);
+    expect(MOVES.superBarrage.superHits).toBe(3);
     // super: elke aanval crit, en geen dubbele power zoals bij Tornado Hammer
-    sh.superTurns = 3;
+    sh.superHits = 3;
     expect(critChance(sh)).toBe(1);
     expect(calcHit(sh, foe, MOVES.spinAttack, fixed(0.9)).crit).toBe(true);
     const a = calcHit(sh, foe, MOVES.superBarrage, fixed(0.5)).damage;
-    sh.superTurns = 0;
+    sh.superHits = 0;
     const b = calcHit(sh, foe, MOVES.superBarrage, fixed(0.5)).damage;
     expect(a).toBe(b);
     // terwijl hij super is krijgt hij zelf meer schade
     const before = calcHit(foe, sh, MOVES.bodyCheck, fixed(0.5)).damage;
-    sh.superTurns = 2;
+    sh.superHits = 2;
     expect(calcHit(foe, sh, MOVES.bodyCheck, fixed(0.5)).damage).toBeCloseTo(before * SUPER_VULNERABLE, -1);
     // gratis
     sh.boost = 0;
@@ -346,12 +347,64 @@ describe('Shadow', () => {
   });
   it('na de ultimate is hij weer gewone Shadow (alleen de Super-kracht blijft)', () => {
     const sh = new Fighter('shadow', 30);
-    sh.superTurns = 2;
+    sh.superHits = 2;
     expect(sh.anim('idle')).toBe('shadow_idle');
     expect(SUPER_VULNERABLE).toBe(2);
   });
   it('Chaos Spear is een status-move: geen power, raakt altijd', () => {
     expect(MOVES.chaosSpear.power).toBe(0);
     expect(MOVES.chaosSpear.accuracy).toBe(100);
+  });
+});
+
+describe('bosses', () => {
+  it('main bosses: Eggman op wave 20 en 60, Shadow op 40 en 80 (of Eggman als Shadow in je team zit)', () => {
+    expect([20, 40, 60, 80].map(w => mainBossFor(w))).toEqual(['eggman', 'shadow', 'eggman', 'shadow']);
+    expect(mainBossFor(40, ['sonic', 'shadow'])).toBe('eggman');
+    expect(FIGHTERS.eggman.moves).toEqual(['eggMissile', 'eggBomb', 'eggLaugh']);
+  });
+  it('Shadow is geen rival meer, alleen een boss', () => {
+    expect(HEROES).toContain('shadow');
+    expect(RIVAL_HEROES).not.toContain('shadow');
+  });
+  it('Super Barrage wordt hooguit 2x achter elkaar gratis', () => {
+    expect(ULT_CHAIN_MAX).toBe(2);
+  });
+});
+
+describe('boss-schilden (PokéRogue)', () => {
+  const boss = () => {
+    const f = new Fighter('eggman', 20);
+    f.segments = 4;
+    f.hp = f.maxHp;
+    return f;
+  };
+  it('zonder schilden verandert er niks', () => {
+    const f = new Fighter('beetle', 20);
+    expect(shieldCap(f, 9999)).toEqual({ damage: 9999, broken: 0 });
+  });
+  it('een klap binnen hetzelfde schild doet gewoon zijn schade', () => {
+    const f = boss();
+    expect(shieldCap(f, 5)).toEqual({ damage: 5, broken: 0 });
+  });
+  it('een klap over de grens stopt precies op de grens: één schild', () => {
+    const f = boss();
+    const size = f.maxHp / 4;
+    const r = shieldCap(f, Math.ceil(size * 1.5));
+    expect(r.broken).toBe(1);
+    expect(f.hp - r.damage).toBe(Math.round(size * 3));
+  });
+  it('alleen een hele harde klap breekt er twee (2x een schild over)', () => {
+    const f = boss();
+    const size = f.maxHp / 4;
+    const r = shieldCap(f, Math.ceil(size * 3.2));   // 1 schild tot de grens + 2,2 schild over
+    expect(r.broken).toBe(2);
+    expect(f.hp - r.damage).toBe(Math.round(size * 2));
+  });
+  it('het laatste stuk kan gewoon leeg', () => {
+    const f = boss();
+    f.hp = Math.round((f.maxHp / 4) * 1) - 1;          // onder de laatste grens
+    expect(shieldCap(f, 9999).damage).toBe(9999);
+    expect(MAIN_BOSS_SHIELDS).toBe(5);
   });
 });

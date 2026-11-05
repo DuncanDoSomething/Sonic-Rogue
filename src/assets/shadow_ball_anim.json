@@ -1,0 +1,23 @@
+{
+ "key": "shadow_spin",
+ "texture": "shadowball",
+ "repeat": -1,
+ "frames": [
+  {
+   "frame": "shadowball_0",
+   "duration": 50
+  },
+  {
+   "frame": "shadowball_1",
+   "duration": 50
+  },
+  {
+   "frame": "shadowball_2",
+   "duration": 50
+  },
+  {
+   "frame": "shadowball_3",
+   "duration": 50
+  }
+ ]
+}

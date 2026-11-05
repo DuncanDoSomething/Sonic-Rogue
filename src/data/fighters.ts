@@ -8,6 +8,7 @@ export type MoveAnim =
   | 'spin' | 'homing' | 'dash' | 'punch' | 'fly'   // team
   | 'glide' | 'hammer' | 'twirl' | 'heal' | 'ultimate'
   | 'spear' | 'chaos'                               // Shadow
+  | 'missile' | 'bomb' | 'laugh'                    // Eggman
   | 'shoot' | 'tackle' | 'lash' | 'slam';          // badniks
 
 // ---------------------------------------------------------------- types
@@ -80,7 +81,7 @@ export const PIERCE_BONUS = 1.5;
 /** Super Barrage: zolang de Super-kracht duurt, krijgt Shadow zelf dubbele schade. */
 export const SUPER_VULNERABLE = 2;
 /** Zo vaak achter elkaar kan Super Shadow Barrage weer gratis worden door een KO. */
-export const ULT_CHAIN_MAX = 3;
+export const ULT_CHAIN_MAX = 2;
 
 /** Sonic Speed: x1 bij gelijke snelheid, +25% per keer zo snel, max +75%. */
 export const SPEED_BONUS_CAP = 1.75;
@@ -94,7 +95,7 @@ export function speedBonus(attacker: Fighter, target: Fighter) {
 export function critChance(attacker: Fighter) {
   const bonus = attacker.def.passive?.id === 'luckySwing' ? 0.25 * Math.max(0, attacker.stage('atk')) : 0;
   // Super Shadow: 100% crit zolang hij super is
-  if (attacker.superTurns > 0) return 1;
+  if (attacker.superHits > 0) return 1;
   return Math.min(1, BASE_CRIT + bonus);
 }
 
@@ -132,8 +133,8 @@ export interface MoveDef {
   critDouble?: boolean;
   /** Chaos Spear: het doelwit krijgt n beurten lang PIERCE_BONUS extra schade. */
   pierce?: number;
-  /** Super Shadow: n beurten lang 100% crit, maar ook SUPER_VULNERABLE extra schade krijgen. */
-  superTurns?: number;
+  /** Super Shadow: 100% crit en SUPER_VULNERABLE schade krijgen, tot hij n keer geraakt is. */
+  superHits?: number;
   /** Wordt weer gratis na een KO (Chaos Control: elke KO; de ultimate: als hij zelf de KO maakt). */
   resets?: 'anyKo' | 'ownKo';
   /** Genees-move die je ook op een teamgenoot kunt gebruiken (je kiest wie). */
@@ -171,7 +172,11 @@ export const MOVES: Record<string, MoveDef> = {
   maximumHeat:  { id: 'maximumHeat', name: 'Maximum Heat', power: 100, scaling: 'stages', accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, spendStages: true, desc: 'A meteor dive. +25 power for every stat stage Knuckles has, up or down; uses them all up.' },
   chaoAttack:   { id: 'chaoAttack', name: 'Chao Blessing', power: 0, accuracy: 100, priority: 1, anim: 'heal', teamHeal: 1, clearField: true, cost: MAX_BOOST, desc: 'Cheese and friends heal the whole team to full HP and clear the zone effect. No damage.' },
   tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 120, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, critDouble: true, recoil: 0.5, desc: 'A hammer storm. Always crits; doubles at 100% crit chance. Costs Amy 50% max HP (KO if below half).' },
-  superBarrage: { id: 'superBarrage', name: 'Super Barrage', power: 100, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, superTurns: 3, resets: 'ownKo', desc: 'Goes Super and unloads a barrage. Always crits, then 100% crit for 3 turns, but he takes double damage. A KO makes it free again (max 3x).' },
+  superBarrage: { id: 'superBarrage', name: 'Super Barrage', power: 100, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, superHits: 3, resets: 'ownKo', desc: 'Goes Super and unloads a barrage. Always crits. Then 100% crit, but double damage taken, until he is hit 3 times. A KO makes it free again (max 2x).' },
+  // --- Eggman (main boss)
+  eggMissile: { id: 'eggMissile', name: 'Egg Missile', power: 40, accuracy: 95, priority: 0, anim: 'missile', desc: '' },
+  eggBomb:    { id: 'eggBomb', name: 'Egg Bomb', power: 60, accuracy: 85, priority: 0, anim: 'bomb', desc: '' },
+  eggLaugh:   { id: 'eggLaugh', name: 'Evil Laugh', power: 0, accuracy: 100, priority: 0, anim: 'laugh', selfStages: { atk: 1 }, desc: '' },
   // --- badniks
   stingShot:  { id: 'stingShot', name: 'Sting Shot', power: 38, accuracy: 92, priority: 0, anim: 'shoot', desc: '', tint: 0xffb340 },
   snowball:   { id: 'snowball', name: 'Snowball', power: 34, accuracy: 95, priority: 0, anim: 'shoot', desc: '', tint: 0xffffff },
@@ -284,12 +289,18 @@ export const FIGHTERS: Record<string, FighterDef> = {
   mine:     { type: 'power', id: 'mine', name: 'Spike Mine', atlas: 'badniks', animPrefix: 'mine', scale: 1.6, hover: 16,
     base: { hp: 14, atk: 9, def: 8, spd: 4 }, growth: { hp: 2.4, atk: 1.5, def: 1.3, spd: 0.7 }, moves: ['spikeBurst'], expYield: 10 },
   // ------------------------------------------------------------- boss
+  // ------------------------------------------------------------- main bosses (wave 20, 40, 60, 80)
+  eggman:   { type: 'power', id: 'eggman', name: 'Dr. Eggman', atlas: 'eggman', animPrefix: 'eggman', scale: 2, facesRight: true, hover: 26,
+    base: { hp: 40, atk: 10, def: 10, spd: 6 }, growth: { hp: 5.0, atk: 1.7, def: 1.4, spd: 0.9 }, moves: ['eggMissile', 'eggBomb', 'eggLaugh'], expYield: 40 },
   turtle:   { type: 'power', id: 'turtle', name: 'Shell Tank', atlas: 'badniks', animPrefix: 'turtle', scale: 2.2,
     base: { hp: 30, atk: 9, def: 9, spd: 6 }, growth: { hp: 4.2, atk: 1.6, def: 1.3, spd: 0.9 }, moves: ['shellCannon', 'tankSlam'], expYield: 25 },
 };
 
 /** Alle speelbare characters (en dus ook mogelijke rivals). */
 export const HEROES = ['sonic', 'tails', 'knuckles', 'cream', 'amy', 'shadow'];
+/** Deze characters zijn geen rival maar een main boss: verslaan = vrijspelen (zie zones.ts, MAIN_BOSSES). */
+export const BOSS_HEROES = ['shadow'];
+export const RIVAL_HEROES = HEROES.filter(h => !BOSS_HEROES.includes(h));
 
 export class Fighter {
   readonly def: FighterDef;
@@ -316,10 +327,12 @@ export class Fighter {
   ultChain = 0;
   /** Chaos Spear: beurten dat hij PIERCE_BONUS extra schade krijgt. */
   pierced = 0;
-  /** Super Barrage: beurten met 100% crit en SUPER_VULNERABLE schade krijgen (hij is dan weer gewone Shadow). */
-  superTurns = 0;
+  /** Super Barrage: 100% crit en SUPER_VULNERABLE schade krijgen, tot hij zo vaak geraakt is (hij is dan weer gewone Shadow). */
+  superHits = 0;
+  /** Boss-schilden (zoals PokéRogue): de HP-balk is in zoveel stukken verdeeld (0 = geen schilden). */
+  segments = 0;
   /** net gezet: de teller loopt pas vanaf de volgende beurt (zo krijg je echt n hele beurten) */
-  freshTurns = new Set<'pierced' | 'superTurns'>();
+  freshTurns = new Set<'pierced'>();
 
   constructor(id: string, level: number) {
     this.def = FIGHTERS[id];
@@ -330,7 +343,9 @@ export class Fighter {
   get name() { return this.def.name; }
   anim(name: string) { return `${this.def.animPrefix}_${name}`; }
   private stat(k: keyof Stats) { return Math.floor(this.def.base[k] + this.def.growth[k] * (this.level - 1)); }
-  get maxHp() { return this.stat('hp'); }
+  /** Boss-versie van een character (Shadow): meer HP. */
+  hpMult = 1;
+  get maxHp() { return Math.floor(this.stat('hp') * this.hpMult); }
   /** Totale stage (rewards + zone), begrensd op -6..+6. */
   stage(k: StageKey) { return Math.max(-MAX_STAGE, Math.min(MAX_STAGE, this.stages[k] + this.field[k])); }
   get atk() { return Math.floor(this.stat('atk') * stageMultiplier(this.stage('atk'))); }
@@ -358,10 +373,10 @@ export class Fighter {
     if (this.isFree(m)) { if (m.id === 'chaosControl') this.chaosFree = false; else this.ultFree = false; }
     this.boost = Math.max(0, Math.min(MAX_BOOST, this.boost - cost + this.gainOf(m)));
   }
-  /** Einde van een beurt: tellers van Chaos Spear en Super Shadow aflopen. Geeft terug wat er net afliep. */
-  tickTurns(): Array<'pierced' | 'superTurns'> {
-    const ended: Array<'pierced' | 'superTurns'> = [];
-    for (const k of ['pierced', 'superTurns'] as const) {
+  /** Einde van een beurt: de teller van Chaos Spear loopt af. Geeft terug wat er net afliep. */
+  tickTurns(): Array<'pierced'> {
+    const ended: Array<'pierced'> = [];
+    for (const k of ['pierced'] as const) {
       if (this.freshTurns.has(k)) { this.freshTurns.delete(k); continue; }
       if (this[k] > 0) { this[k]--; if (this[k] === 0) ended.push(k); }
     }
@@ -438,9 +453,31 @@ export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: 
   // Weak Spot (Tails): verdoofde vijanden krijgen extra schade
   const weakSpot = attacker.def.passive?.id === 'weakSpot' && target.stun > 0 ? WEAK_SPOT_BONUS : 1;
   // Chaos Spear en Super Shadow: het doelwit krijgt meer schade
-  const exposed = (target.pierced > 0 ? PIERCE_BONUS : 1) * (target.superTurns > 0 ? SUPER_VULNERABLE : 1);
+  const exposed = (target.pierced > 0 ? PIERCE_BONUS : 1) * (target.superHits > 0 ? SUPER_VULNERABLE : 1);
   const dmg = base * roll * effect * speedBonus(attacker, target) * weakSpot * exposed * (crit ? 1.5 : 1);
   return { damage: Math.max(1, Math.floor(dmg)), crit, missed: false, effect };
 }
 
 // Rewards staan in rewards.ts.
+
+/**
+ * Boss-schilden, zoals in PokéRogue: de HP-balk is verdeeld in `segments` stukken. Een klap die over een grens
+ * gaat, stopt precies op die grens: zo breek je één schild per klap. Alleen een hele harde klap breekt er meer:
+ * wat er over is moet minstens 2x een stuk zijn voor het tweede schild, 4x voor het derde, enzovoort.
+ * Geeft de echte schade terug en hoeveel schilden er braken.
+ */
+export function shieldCap(target: Fighter, damage: number): { damage: number; broken: number } {
+  const n = target.segments;
+  if (n < 2 || damage <= 0) return { damage, broken: 0 };
+  const size = target.maxHp / n;
+  const thr = (k: number) => Math.round(size * k);
+  // eerstvolgende grens onder de huidige HP
+  let k0 = 0;
+  for (let k = n - 1; k >= 1; k--) if (thr(k) < target.hp) { k0 = k; break; }
+  if (k0 === 0 || target.hp - damage > thr(k0)) return { damage, broken: 0 };
+  const extra = damage - (target.hp - thr(k0));
+  let bypass = 0;
+  while (bypass < k0 && extra >= Math.round(size * 2 ** (bypass + 1))) bypass++;
+  const landAt = bypass >= k0 ? 0 : thr(k0 - bypass);
+  return { damage: Math.min(damage, target.hp - landAt), broken: bypass + 1 };
+}

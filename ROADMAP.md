@@ -28,10 +28,11 @@
 - [x] How to Play by topic, a guided practice fight with Tails, and one-time tips (can be turned off)
 - [x] Unit tests, end-to-end tests and automatic deploys
 - [x] Shadow as a playable character (Chaos Spear, Chaos Control, Super Shadow ultimate, Rampage passive)
+- [x] Main bosses on wave 20/60 (Dr. Eggman, Death Egg) and 40/80 (Shadow, unlocks him), PokéRogue-style boss shields
+- [x] Toss items from your bag, voice lines for Shadow, spin balls for Knuckles and Shadow
 
 ## Next
-- [ ] Shadow as a boss
-- [ ] Main bosses every 20 waves (Eggman, Chaos, Shadow) with boss charms, and a super boss at wave 90 after all seven Chaos Emeralds
+- [ ] More main bosses (Chaos, more Eggman robots) with boss charms, and a super boss at wave 90 after all seven Chaos Emeralds
 - [ ] Enemies with more interaction: their own status moves, buffs and patterns
 - [ ] Team ultimates
 - [ ] More badniks from Sonic Advance 1, 2 and 3, with unique enemies per zone

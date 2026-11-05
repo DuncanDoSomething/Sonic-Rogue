@@ -17,6 +17,15 @@ import amyAnims from '../assets/amy_anims.json';
 import shadowPng from '../assets/shadow.png';
 import shadowAtlas from '../assets/shadow.json';
 import shadowAnims from '../assets/shadow_anims.json';
+import eggmanPng from '../assets/eggman.png';
+import eggmanAtlas from '../assets/eggman.json';
+import eggmanAnims from '../assets/eggman_anims.json';
+import knucklesBallPng from '../assets/knuckles_ball.png';
+import knucklesBallAtlas from '../assets/knuckles_ball.json';
+import knucklesBallAnim from '../assets/knuckles_ball_anim.json';
+import shadowBallPng from '../assets/shadow_ball.png';
+import shadowBallAtlas from '../assets/shadow_ball.json';
+import shadowBallAnim from '../assets/shadow_ball_anim.json';
 import shadowFxPng from '../assets/shadowfx.png';
 import shadowFxAtlas from '../assets/shadowfx.json';
 import shadowFxAnims from '../assets/shadowfx_anims.json';
@@ -56,6 +65,9 @@ const GIF_IDLES: Array<[string, unknown, { key: string; texture: string; repeat?
   [tailsSitPng, tailsSitAtlas, tailsSitAnim],
   [amyVictoryPng, amyVictoryAtlas, amyVictoryAnim],
   [sonicBossWinPng, sonicBossWinAtlas, sonicBossWinAnim],
+  // spin-bal voor Knuckles en Shadow (tools/build_balls.py)
+  [knucklesBallPng, knucklesBallAtlas, knucklesBallAnim],
+  [shadowBallPng, shadowBallAtlas, shadowBallAnim],
 ];
 import { EMERALDS } from '../data/zones';
 import { preloadSounds } from '../audio';
@@ -78,6 +90,8 @@ const CHARACTERS: Array<[string, string, unknown, Record<string, CharAnim>]> = [
   ['cream', creamPng, creamAtlas, creamAnims as Record<string, CharAnim>],
   ['amy', amyPng, amyAtlas, amyAnims as Record<string, CharAnim>],
   ['shadow', shadowPng, shadowAtlas, shadowAnims as Record<string, CharAnim>],
+  // Eggman (main boss): zelfde opzet als de characters
+  ['eggman', eggmanPng, eggmanAtlas, eggmanAnims as Record<string, CharAnim>],
 ];
 
 export class BootScene extends Phaser.Scene {

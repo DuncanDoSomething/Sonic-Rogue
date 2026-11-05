@@ -44,6 +44,90 @@
   "frameRate": 18,
   "repeat": 0
  },
+ "ssh_tpout": {
+  "key": "ssh_tpout",
+  "frames": [
+   "ssh_tpout_0",
+   "ssh_tpout_1",
+   "ssh_tpout_2",
+   "ssh_tpout_3"
+  ],
+  "frameRate": 16,
+  "repeat": 0
+ },
+ "ssh_tpin": {
+  "key": "ssh_tpin",
+  "frames": [
+   "ssh_tpin_0",
+   "ssh_tpin_1",
+   "ssh_tpin_2",
+   "ssh_tpin_3"
+  ],
+  "frameRate": 16,
+  "repeat": 0
+ },
+ "ssh_rush": {
+  "key": "ssh_rush",
+  "frames": [
+   "ssh_rush_0",
+   "ssh_rush_1",
+   "ssh_rush_2",
+   "ssh_rush_3"
+  ],
+  "frameRate": 14,
+  "repeat": 0
+ },
+ "ssh_power": {
+  "key": "ssh_power",
+  "frames": [
+   "ssh_power_0",
+   "ssh_power_1",
+   "ssh_power_2"
+  ],
+  "frameRate": 8,
+  "repeat": -1
+ },
+ "ssh_nightmare": {
+  "key": "ssh_nightmare",
+  "frames": [
+   "ssh_nightmare_0",
+   "ssh_nightmare_1",
+   "ssh_nightmare_2",
+   "ssh_nightmare_3",
+   "ssh_nightmare_4",
+   "ssh_nightmare_5"
+  ],
+  "frameRate": 18,
+  "repeat": 0
+ },
+ "ssh_punch": {
+  "key": "ssh_punch",
+  "frames": [
+   "ssh_punch_0",
+   "ssh_punch_1",
+   "ssh_punch_2",
+   "ssh_punch_3",
+   "ssh_punch_4",
+   "ssh_punch_5",
+   "ssh_punch_6"
+  ],
+  "frameRate": 20,
+  "repeat": 0
+ },
+ "ssh_blast": {
+  "key": "ssh_blast",
+  "frames": [
+   "ssh_blast_0",
+   "ssh_blast_1",
+   "ssh_blast_2",
+   "ssh_blast_3",
+   "ssh_blast_4",
+   "ssh_blast_5",
+   "ssh_blast_6"
+  ],
+  "frameRate": 10,
+  "repeat": 0
+ },
  "ssh_spear": {
   "key": "ssh_spear",
   "frames": [

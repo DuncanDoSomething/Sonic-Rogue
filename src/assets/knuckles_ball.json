@@ -1,0 +1,92 @@
+{
+ "frames": {
+  "knucklesball_0": {
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 74,
+    "h": 43
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 74,
+    "h": 43
+   },
+   "sourceSize": {
+    "w": 74,
+    "h": 43
+   }
+  },
+  "knucklesball_1": {
+   "frame": {
+    "x": 74,
+    "y": 0,
+    "w": 74,
+    "h": 43
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 74,
+    "h": 43
+   },
+   "sourceSize": {
+    "w": 74,
+    "h": 43
+   }
+  },
+  "knucklesball_2": {
+   "frame": {
+    "x": 148,
+    "y": 0,
+    "w": 74,
+    "h": 43
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 74,
+    "h": 43
+   },
+   "sourceSize": {
+    "w": 74,
+    "h": 43
+   }
+  },
+  "knucklesball_3": {
+   "frame": {
+    "x": 222,
+    "y": 0,
+    "w": 74,
+    "h": 43
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 74,
+    "h": 43
+   },
+   "sourceSize": {
+    "w": 74,
+    "h": 43
+   }
+  }
+ },
+ "meta": {
+  "image": "knuckles_ball.png",
+  "size": {
+   "w": 296,
+   "h": 43
+  },
+  "scale": "1"
+ }
+}

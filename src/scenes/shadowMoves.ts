@@ -122,6 +122,7 @@ export async function chaosControl(c: ShadowCtx) {
   const halo = scene.add.circle(em.x, em.y, 10, 0x7cf07c, 0.5).setDepth(s.depth).setBlendMode(ADD);
   scene.tweens.add({ targets: halo, scale: 2.4, alpha: 0, duration: 420, repeat: 1 });
   void bigText(scene, W / 2, 50, 'CHAOS CONTROL!', '#7cf07c');
+  audio.voice('shadowhah');
   await sleep(scene, 420);
 
   // 2. de tijd staat stil: alles donkerblauw, een klok-rune dijt uit, het doelwit bevriest
@@ -139,6 +140,7 @@ export async function chaosControl(c: ShadowCtx) {
   await sleep(scene, 250);
 
   // 3. wegflitsen en naast het doelwit verschijnen
+  const depth0 = s.depth;
   s.setDepth(14);
   await playDone(scene, s, c.p.anim('tpout'), 400);
   // op de hoogte van het doelwit (vliegers hangen hoger): voeten gelijk met de onderkant van het doelwit
@@ -178,7 +180,7 @@ export async function chaosControl(c: ShadowCtx) {
   await playDone(scene, s, c.p.anim('tpout'), 400);
   s.setPosition(home.x, home.y);
   await playDone(scene, s, c.p.anim('tpin'), 400);
-  s.setDepth(10).play(c.p.anim('idle'));
+  s.setDepth(depth0).play(c.p.anim('idle'));
   await sleep(scene, 150);
   scene.tweens.add({ targets: still, fillAlpha: 0, duration: 220, onComplete: () => still.destroy() });
   target.clearTint();
@@ -201,31 +203,20 @@ export async function chaosControl(c: ShadowCtx) {
 }
 
 // ---------------------------------------------------------------- Super Barrage (ultimate)
-/** Rode Chaos Blast-koepel die uitdijt vanaf (x, y). */
-function chaosDome(scene: Phaser.Scene, x: number, y: number) {
-  const g = scene.add.graphics().setDepth(16).setBlendMode(ADD);
-  const st = { r: 6, a: 0.85 };
-  return tween(scene, {
-    targets: st, r: 150, a: 0, duration: 650, ease: 'Cubic.easeOut',
-    onUpdate: () => {
-      g.clear();
-      g.fillStyle(0xff5a3a, st.a * 0.55).slice(x, y, st.r, Math.PI, 0, false).fillPath();
-      g.lineStyle(6, 0xffa060, st.a).beginPath().arc(x, y, st.r, Math.PI, 0, false).strokePath();
-    },
-  }).then(() => g.destroy());
-}
-
 export async function superShadow(c: ShadowCtx) {
   const { scene, s, target, home, dir } = c;
   const tc = c.center(target);
   const cam = scene.cameras.main;
   const scale = s.scaleX;
+  const depth0 = s.depth;
+  const face = (right: boolean) => s.setFlipX(right);   // Super Shadow-frames kijken naar links
+  const groundY = target.y + 2;                          // voeten op de hoogte van het doelwit
 
+  // ------------------------------------------------ 1. transformatie
   if (!c.quick) {
-    // 1. de zeven Chaos Emeralds draaien om hem heen en schieten in hem
     s.play(c.p.anim('charge'));
     const ems = EMERALDS.map(col => scene.add.sprite(s.x, s.y, 'emeralds', `emerald_${col}_0`).setDepth(16).play(`emerald_${col}`));
-    const orbit = { a: 0, r: 80 };
+    const orbit = { a: 0, r: 90 };
     audio.sfx('ringchime');
     await tween(scene, {
       targets: orbit, a: Math.PI * 4, r: 0, duration: 1200, ease: 'Sine.easeIn',
@@ -235,13 +226,12 @@ export async function superShadow(c: ShadowCtx) {
       }),
     });
     ems.forEach(e => e.destroy());
-    // 2. transformatie: wit licht, dan goud
     cam.flash(350, 255, 255, 255);
     audio.sfx('explosion2', { volume: 0.6 });
-    shockwave(scene, s.x, s.y - 22, 0xffe14a, 120, 600);
+    shockwave(scene, s.x, s.y - 22, 0xffe14a, 130, 600);
     await playDone(scene, s, 'ssh_transform', 1000);
   } else {
-    // gratis vervolg: geen emeralds, een gouden flits en een snelle transformatie
+    // gratis vervolg (na een KO): geen emeralds, een gouden flits en een snelle transformatie
     cam.flash(160, 255, 240, 160);
     audio.sfx('ringchime', { volume: 0.7 });
     shockwave(scene, s.x, s.y - 22, 0xffe14a, 80, 400);
@@ -249,80 +239,114 @@ export async function superShadow(c: ShadowCtx) {
     await playDone(scene, s, 'ssh_transform', 600);
     s.anims.timeScale = 1;
   }
-  s.play('ssh_idle');
-  const sparks = scene.time.addEvent({ delay: 50, loop: true, callback: () => {
-    const p = scene.add.image(s.x + rnd(-14, 14), s.y - rnd(0, 40), 'px').setTint(0xfff6a0).setDepth(17).setBlendMode(ADD);
-    scene.tweens.add({ targets: p, y: p.y - 26, alpha: 0, duration: 400, onComplete: () => p.destroy() });
+  // opladen naar voren: gouden aura en vonken
+  face(dir > 0);
+  s.play('ssh_power');
+  const aura = scene.add.circle(s.x, s.y - 22, 26, 0xffd23a, 0.3).setDepth(s.depth - 1).setBlendMode(ADD);
+  scene.tweens.add({ targets: aura, scale: 1.3, alpha: 0.1, duration: 260, yoyo: true, repeat: -1 });
+  const sparks = scene.time.addEvent({ delay: 45, loop: true, callback: () => {
+    const p = scene.add.image(s.x + rnd(-16, 16), s.y - rnd(0, 44), 'px').setTint(0xfff6a0).setDepth(17).setBlendMode(ADD);
+    scene.tweens.add({ targets: p, y: p.y - 28, alpha: 0, duration: 420, onComplete: () => p.destroy() });
   } });
-  await tween(scene, { targets: s, y: home.y - 34, duration: 280, ease: 'Sine.easeOut' });
+  cam.shake(300, 0.005);
+  await sleep(scene, c.quick ? 250 : 500);
+  aura.destroy();
 
-  // 3. spervuur van gouden chaos-speren
   const dark = scene.add.rectangle(0, 0, W, H, 0x1a0608, 0).setOrigin(0).setDepth(11);
-  scene.tweens.add({ targets: dark, fillAlpha: 0.45, duration: 200 });
+  scene.tweens.add({ targets: dark, fillAlpha: 0.5, duration: 200 });
+  const flick = (x: number, y: number) => { c.burst(x, y, 0xffe14a, 6); shockwave(scene, x, y, 0xffe14a, 30, 200); };
+
+  // ------------------------------------------------ 2. wegflitsen en vlak voor de vijand verschijnen
+  await playDone(scene, s, 'ssh_tpout', 300);
+  flick(s.x, s.y - 20);
+  s.setPosition(tc.x - dir * 36, groundY);
+  face(dir > 0);
+  audio.sfx('spindash', { volume: 0.5 });
+  await playDone(scene, s, 'ssh_tpin', 300);
+  flick(s.x, s.y - 20);
+
+  // ------------------------------------------------ 3. Chaos Nightmare: draaiende trappen met rode sporen
+  const hitOnce = (big = 1) => {
+    chaosHit(c, tc.x + rnd(-10, 10), tc.y + rnd(-14, 10), 0.8 * big);
+    target.setTintFill(0xffffff);
+    scene.time.delayedCall(50, () => target.clearTint());
+    cam.shake(70, 0.006);
+    audio.sfx('enemyhit', { volume: 0.4, throttle: 60 });
+  };
+  const trail = scene.time.addEvent({ delay: 30, loop: true, callback: () => c.ghost(s, 0xfff0a0) });
+  const kicks = new Promise<void>(r => {
+    s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => r());
+    s.on(Phaser.Animations.Events.ANIMATION_UPDATE, (_a: unknown, f: Phaser.Animations.AnimationFrame) => {
+      if (s.anims.currentAnim?.key === 'ssh_nightmare' && f.index % 2 === 0) hitOnce();
+    });
+    s.play('ssh_nightmare');
+    scene.time.delayedCall(1200, () => r());
+  });
+  scene.tweens.add({ targets: s, x: tc.x - dir * 22, duration: 300, ease: 'Sine.easeOut' });
+  await kicks;
+  s.off(Phaser.Animations.Events.ANIMATION_UPDATE);
+  // stoten, snel achter elkaar
+  await playDone(scene, s, 'ssh_punch', 600);
+  hitOnce(1.3);
+  trail.remove();
+
+  // ------------------------------------------------ 4. omhoog flitsen: een regen van gouden chaos-speren
+  await playDone(scene, s, 'ssh_tpout', 300);
+  s.setPosition(tc.x - dir * 90, Math.max(70, tc.y - 70));
+  await playDone(scene, s, 'ssh_tpin', 300);
+  s.play('ssh_power');
   const shots: Promise<void>[] = [];
-  const n = c.quick ? 6 : 10;
+  const n = c.quick ? 6 : 12;
   for (let i = 0; i < n; i++) {
-    shots.push(sleep(scene, i * 55).then(async () => {
-      audio.sfx('cursormove', { volume: 0.5 });
-      const tx = tc.x + rnd(-16, 16), ty = tc.y + rnd(-20, 16);
-      await spear(scene, s.x + dir * 16, s.y - 30 + rnd(-10, 10), tx, ty, 'ssh_spear', 170, 0.9);
-      chaosHit(c, tx, ty, 0.7);
-      target.setTintFill(i % 2 ? 0xffe14a : 0xffffff);
-      scene.time.delayedCall(40, () => target.clearTint());
-      cam.shake(60, 0.004);
-      audio.sfx('enemyhit', { volume: 0.35, throttle: 80 });
+    shots.push(sleep(scene, i * 50).then(async () => {
+      audio.sfx('cursormove', { volume: 0.5, throttle: 40 });
+      const tx = tc.x + rnd(-18, 18), ty = tc.y + rnd(-20, 16);
+      await spear(scene, s.x + dir * 14, s.y - 26 + rnd(-8, 8), tx, ty, 'ssh_spear', 160, 0.9);
+      hitOnce(0.8);
     }));
   }
   await Promise.all(shots);
 
-  // 4. erop af: twee keer erdoorheen, dan een combo
-  s.play('ssh_dash');
-  for (const [x1, x2, y] of [[home.x, W + 60, tc.y + 6], [W + 60, -60, tc.y - 12]] as const) {
-    s.setPosition(x1, y + 20).setFlipX(x2 > x1);
-    const trail = scene.time.addEvent({ delay: 16, loop: true, callback: () => c.ghost(s, 0xffd23a) });
-    let hit = false;
-    audio.sfx('spindash', { volume: 0.5 });
-    await tween(scene, { targets: s, x: x2, duration: 200, ease: 'Linear', onUpdate: () => {
-      if (!hit && Math.abs(s.x - tc.x) < 24) {
-        hit = true;
-        chaosHit(c, tc.x, tc.y, 1.2);
-        cam.shake(90, 0.008);
-        audio.sfx('enemyhit', { volume: 0.7 });
-      }
-    } });
-    trail.remove();
-  }
-  s.setFlipX(dir > 0).setPosition(tc.x - dir * 30, target.y + 2);
-  await playDone(scene, s, 'ssh_combo', 700);
-
-  // 5. Chaos... BLAST: omhoog, en een rode koepel die alles wegvaagt
-  await tween(scene, { targets: s, x: tc.x - dir * 70, y: home.y - 70, duration: 200, ease: 'Quad.easeOut' });
-  s.play('ssh_idle');
-  void bigText(scene, W / 2, 46, 'CHAOS BLAST!', '#ff5a3a');
+  // ------------------------------------------------ 5. Chaos... BLAST! vlak naast de vijand
+  await playDone(scene, s, 'ssh_tpout', 300);
+  s.setPosition(tc.x + dir * 4, groundY).setDepth(17);
+  await playDone(scene, s, 'ssh_tpin', 300);
+  void bigText(scene, W / 2, 46, 'CHAOS... BLAST!', '#ff5a3a');
   audio.sfx('spindash');
-  const glow = scene.add.circle(s.x, s.y - 20, 8, 0xff5a3a, 0.8).setDepth(s.depth - 1).setBlendMode(ADD);
-  await tween(scene, { targets: glow, scale: 4, duration: 380, ease: 'Quad.easeIn' });
-  glow.destroy();
-  c.strike();
-  cam.flash(320, 255, 140, 90);
-  cam.shake(600, 0.022);
-  audio.sfx('bigexplosion');
-  void chaosDome(scene, tc.x, target.y);
-  const boom = scene.add.sprite(tc.x, target.y + 10, 'shadowfx').setOrigin(0.5, 1).setScale(2.6).setDepth(18).play('ssh_boom');
-  boom.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => boom.destroy());
-  shockwave(scene, tc.x, tc.y, 0xff5a3a, 160, 600);
-  await sleep(scene, 700);
+  const blast = new Promise<void>(r => {
+    let fired = false;
+    s.on(Phaser.Animations.Events.ANIMATION_UPDATE, (_a: unknown, f: Phaser.Animations.AnimationFrame) => {
+      // de koepel klapt open: dan pas de schade
+      if (!fired && s.anims.currentAnim?.key === 'ssh_blast' && f.index >= 4) {
+        fired = true;
+        c.strike();
+        cam.flash(320, 255, 140, 90);
+        cam.shake(650, 0.024);
+        audio.sfx('bigexplosion');
+        shockwave(scene, tc.x, tc.y, 0xff5a3a, 180, 650);
+        const boom = scene.add.sprite(tc.x, groundY + 8, 'shadowfx').setOrigin(0.5, 1).setScale(2.4).setDepth(16).play('ssh_boom');
+        boom.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => boom.destroy());
+      }
+    });
+    s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => r());
+    s.anims.timeScale = 0.8;
+    s.play('ssh_blast');
+    scene.time.delayedCall(2000, () => r());
+  });
+  await blast;
+  s.off(Phaser.Animations.Events.ANIMATION_UPDATE);
+  s.anims.timeScale = 1;
+  await sleep(scene, 250);
 
-  // 6. terug naar huis en weer gewone Shadow (de Super-kracht blijft nog een paar beurten, zie de BattleScene)
+  // ------------------------------------------------ 6. terug naar huis en weer gewone Shadow
   scene.tweens.add({ targets: dark, fillAlpha: 0, duration: 250, onComplete: () => dark.destroy() });
   c.restoreTarget();
-  s.setFlipX(dir > 0);
-  await tween(scene, { targets: s, x: home.x, y: home.y - 20, duration: 300, ease: 'Quad.easeInOut' });
+  await playDone(scene, s, 'ssh_tpout', 300);
+  s.setPosition(home.x, home.y).setDepth(depth0);
   sparks.remove();
+  face(dir > 0);
   cam.flash(200, 255, 255, 255);
   audio.sfx('confirm2', { volume: 0.5 });
-  s.play(c.p.anim('spin'));
-  await tween(scene, { targets: s, y: home.y, duration: 180, ease: 'Quad.easeIn' });
   s.play(c.p.anim('idle'));
   s.setScale(scale);
 }

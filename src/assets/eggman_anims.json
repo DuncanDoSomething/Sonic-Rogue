@@ -1,0 +1,86 @@
+{
+ "idle": {
+  "key": "eggman_idle",
+  "frames": [
+   "eggman_idle_0"
+  ],
+  "frameRate": 1,
+  "repeat": -1
+ },
+ "attack": {
+  "key": "eggman_attack",
+  "frames": [
+   "eggman_attack_0",
+   "eggman_attack_1",
+   "eggman_attack_2",
+   "eggman_attack_3"
+  ],
+  "frameRate": 8,
+  "repeat": 0
+ },
+ "turn": {
+  "key": "eggman_turn",
+  "frames": [
+   "eggman_turn_0",
+   "eggman_turn_1",
+   "eggman_turn_2"
+  ],
+  "frameRate": 10,
+  "repeat": 0
+ },
+ "hurt": {
+  "key": "eggman_hurt",
+  "frames": [
+   "eggman_hurt_0"
+  ],
+  "frameRate": 1,
+  "repeat": 0
+ },
+ "spin": {
+  "key": "eggman_spin",
+  "frames": [
+   "eggman_spin_0",
+   "eggman_spin_1",
+   "eggman_spin_2",
+   "eggman_spin_3"
+  ],
+  "frameRate": 14,
+  "repeat": -1
+ },
+ "missile": {
+  "key": "eggman_missile",
+  "frames": [
+   "eggman_missile_0"
+  ],
+  "frameRate": 1,
+  "repeat": -1
+ },
+ "puff": {
+  "key": "eggman_puff",
+  "frames": [
+   "eggman_puff_0",
+   "eggman_puff_1",
+   "eggman_puff_2",
+   "eggman_puff_3",
+   "eggman_puff_4",
+   "eggman_puff_5"
+  ],
+  "frameRate": 18,
+  "repeat": 0
+ },
+ "bomb": {
+  "key": "eggman_bomb",
+  "frames": [
+   "eggman_bomb_0",
+   "eggman_bomb_1",
+   "eggman_bomb_2",
+   "eggman_bomb_3",
+   "eggman_bomb_4",
+   "eggman_bomb_5",
+   "eggman_bomb_6",
+   "eggman_bomb_7"
+  ],
+  "frameRate": 16,
+  "repeat": -1
+ }
+}

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, PIERCE_BONUS, ULT_CHAIN_MAX, FIGHTERS, Fighter, HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
-import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, ZONE_BOSS_HEAL, ZONES, isBossWave, isEliteWave, isMainBossWave, canHaveRival, RIVAL_CHANCE, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
+import { BOOST_ON_HIT, PIERCE_BONUS, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, isBossWave, isEliteWave, isMainBossWave, canHaveRival, RIVAL_CHANCE, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
 import type { ZoneEffect } from '../data/zones';
@@ -35,7 +35,7 @@ const SHOP_TILE_Y = 63;
 
 const PLAYER_POS = { x: 118, y: 208 };
 /** textures van de speelbare characters (zie bodyHeight) */
-const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'shadow', 'shadowfx', 'sonicidle', 'amyidle', 'tailssit', 'amyvictory', 'sonicbosswin']);
+const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'shadow', 'shadowfx', 'knucklesball', 'shadowball', 'sonicidle', 'amyidle', 'tailssit', 'amyvictory', 'sonicbosswin']);
 /** lichaamshoogte van een character in sprite-pixels */
 const CHARACTER_BODY = 38;
 const ENEMY_POS = { x: 352, y: 132 };
@@ -218,7 +218,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private updateIdle(dt: number) {
     const waiting = this.menu === 'command' || this.menu === 'fight' || this.menu === 'bag';
     const pairs: Array<[Phaser.GameObjects.Sprite, Fighter | undefined]> = [[this.hero, this.player]];
-    if (this.rival) pairs.push([this.foe, this.enemy]);
+    if (this.charFoe) pairs.push([this.foe, this.enemy]);
     for (const [spr, f] of pairs) {
       if (!f || f.fainted) continue;
       const st = this.idleState.get(spr) ?? { t: 0, stage: 0 };
@@ -401,7 +401,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (this.alarmWave) out.push({ key: 'alarm', icon: 'mon_alert', name: 'Eggman Alarm', desc: 'This foe is an elite. Beat it for uncommon-or-better rewards.' });
     if (b.eliteNext) out.push({ key: 'alarmN', icon: 'mon_alert', name: 'Eggman Alarm', desc: 'The next foe is an elite. Beat it for uncommon-or-better rewards.' });
     const p = this.player;
-    if (p?.superTurns > 0) out.push({ key: 'super', icon: 'shadowfx:ssh_idle_0', name: 'Super power', desc: `100% crit, but ${p.name} takes double damage. ${n(p.superTurns, 'turn')} left.`, count: p.superTurns });
+    if (p?.superHits > 0) out.push({ key: 'super', icon: 'shadowfx:ssh_idle_0', name: 'Super power', desc: `100% crit, but ${p.name} takes double damage. Ends after ${n(p.superHits, 'more hit')}.`, count: p.superHits });
     if (p?.chaosFree && p.moves.includes('chaosControl')) out.push({ key: 'chaosFree', icon: 'emeralds:emerald_green_0', name: 'Chaos Control', desc: 'Free to use: costs no Boost.' });
     if (p?.ultFree && p.def.ultimate && p.moves.includes(p.def.ultimate)) out.push({ key: 'ultFree', icon: 'shadowfx:ssh_spear_2', name: MOVES[p.def.ultimate].name, desc: `Free to use: costs no Boost (${p.ultChain}/${ULT_CHAIN_MAX} in a row).` });
     if (this.enemy?.pierced > 0) out.push({ key: 'pierced', icon: 'shadowfx:sh_rune_pink_0', name: 'Pierced', desc: `The foe takes ${Math.round((PIERCE_BONUS - 1) * 100)}% more damage. ${n(this.enemy.pierced, 'turn')} left.`, count: this.enemy.pierced });
@@ -442,6 +442,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       y += Math.max(14, text(32, ITEMS[id].desc).height) + 6;
     }
     if (items.length) y += text(8, used ? 'You already used an item this fight.' : `Free action, ${ITEMS_PER_FIGHT} per fight.`, HUD.muted).height + 4;
+    if (items.length && this.menu === 'reward') y += text(8, 'Click or press C to toss one.', HUD.muted).height + 4;
     const h = y + 4;
     c.add([sonicPanel(this.add.graphics(), 0, 0, w, h, 'blue', 0.97), ...parts]);
     c.x = Math.max(2, rx - w);
@@ -509,6 +510,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     hit.on('pointerout', () => this.hideHudTip());
     hit.on('pointerdown', () => {
       if (this.menu === 'command') { this.hideHudTip(); audio.sfx('confirm'); this.openBag(); }
+      else if (this.menu === 'reward' && items.length) { this.hideHudTip(); void this.tossItem(); }
       else if (this.hudTip) this.hideHudTip(); else show();
     });
     this.bagTray = tray;
@@ -656,7 +658,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     sonicPanel(bg, 4, PANEL_Y + 8, 330, H - PANEL_Y - 10, 'cream');
     sonicPanel(bg, 338, PANEL_Y + 8, 136, H - PANEL_Y - 10, 'blue');
     this.bagInfo = this.add.text(346, PANEL_Y + 13, '', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', lineSpacing: 3, wordWrap: { width: 124 } });
-    this.bagLayer.add([bg, this.bagInfo]);
+    // weggooien: C, of klik op "C toss"
+    const toss = this.add.text(324, PANEL_Y + 25, 'Z use  C toss', { fontFamily: FONT, fontSize: '8px', color: HUD.inkMuted })
+      .setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    toss.on('pointerdown', () => { if (this.menu === 'bag') void this.tossItem(); });
+    this.bagLayer.add([bg, this.bagInfo, toss]);
 
     // cursor: een draaiend ringetje
     this.pointer = this.add.sprite(0, 0, 'ui', 'ring_0').setOrigin(0, 0).setScale(0.5).setDepth(35).play('ring_spin');
@@ -824,6 +830,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       else if (['x', 'escape', 'backspace'].includes(k)) this.back();
       else if (k === 'c' && this.menu === 'fight') this.toggleMoveInfo();
       else if (k === 'c' && this.menu === 'command') this.toggleStats();
+      else if (k === 'c' && (this.menu === 'bag' || this.menu === 'reward')) void this.tossItem();
       else if (k === 'i' && (this.menu === 'command' || this.menu === 'reward')) this.openTeam();
       else if (k === 'v' && (this.menu === 'command' || this.menu === 'fight')) this.toggleField();
       else if (k === 'h') this.openHelp();
@@ -992,6 +999,40 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
    * Item uit je tas: kost geen beurt (zoals potions in Slay the Spire), maar je mag er maar
    * ITEMS_PER_FIGHT per gevecht gebruiken. Heals kies je zelf voor wie.
    */
+  /**
+   * Een item weggooien (C in de tas, of in het reward-scherm). In de tas het item onder de cursor,
+   * in het reward-scherm kies je welk. Daarna terug naar waar je was.
+   */
+  private async tossItem() {
+    const from = this.menu;
+    const ids = Object.keys(ITEMS).filter(id => (this.bag[id] ?? 0) > 0);
+    if (!ids.length) { audio.sfx('errorclick'); return; }
+    if (from === 'bag') this.bagLayer.setVisible(false);
+    let id: string | undefined;
+    if (from === 'bag') {
+      const cur = this.bagIds[this.cursor];
+      const yes = await this.choose(`Toss the ${ITEMS[cur].name}?`, [{ label: 'Toss it' }, { label: 'Keep it' }], true);
+      if (yes === 0) id = cur;
+    } else {
+      const rows = ids.map(i => ({ label: ITEMS[i].name, right: this.bag[i] > 1 ? `x${this.bag[i]}` : '' }));
+      const pick = await this.choose('Toss which item?', [...rows, { label: 'Keep them' }], true);
+      if (pick >= 0 && pick < ids.length) id = ids[pick];
+    }
+    if (id) {
+      this.bag[id]--;
+      if (this.bag[id] <= 0) delete this.bag[id];
+      audio.sfx('back');
+    }
+    if (from === 'bag') {
+      this.openBag();
+      if (id) this.bagInfo.setText(`Tossed the ${ITEMS[id].name}.`);
+    } else {
+      this.menu = 'reward';
+      this.refreshCursor();
+      if (id) this.msg.setText(`Tossed the ${ITEMS[id].name}.\n(${bagCount(this.bag)}/${BAG_SIZE} in bag)`);
+    }
+  }
+
   private async useItem(id: string) {
     if (!this.tutOk(`item:${id}`)) return;
     const item = ITEMS[id];
@@ -1132,11 +1173,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
         box.badgeBg!.fillStyle(HUD.blueBottom, 0.95).fillRect(box.badge.x - bw + 5, box.badge.y - 1, bw - 2, 10);
         box.badgeBg!.lineStyle(1, Phaser.Display.Color.HexStringToColor(colors[kind]).color).strokeRect(box.badge.x - bw + 5.5, box.badge.y - 0.5, bw - 3, 9);
       }
-      // boss-balk in 4 stukken
+      // boss-balk in stukken: elk stuk is een schild (zie shieldCap)
       box.segments!.clear();
-      if (kind === 'BOSS') {
+      if (f.segments > 1) {
         box.segments!.fillStyle(HUD.outline);
-        for (let i = 1; i < 4; i++) box.segments!.fillRect(34 + (box.barW * i) / 4 - 1, BOX_BAR_Y, 2, 4);
+        for (let i = 1; i < f.segments; i++) box.segments!.fillRect(34 + (box.barW * i) / f.segments - 1, BOX_BAR_Y, 2, 4);
       }
     }
     box.boostPips?.forEach((pip, i) => pip.setFillStyle(i < f.boost ? (f.boost >= MAX_BOOST ? HUD.pipFull : HUD.pip) : HUD.pipEmpty));
@@ -1270,18 +1311,25 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.rival = !!rivalId;
     const elite = (isEliteWave(this.wave) || this.alarmWave) && !this.rival && !boss;
     this.elite = elite;
-    const id = this.tutorialMode ? 'beetle' : rivalId ?? (boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
+    // main boss (wave 20, 40, ...): Eggman of Shadow; zone-boss: die van de zone
+    const mainBoss = boss && isMainBossWave(this.wave) && !this.tutorialMode;
+    const id = this.tutorialMode ? 'beetle' : rivalId ?? (mainBoss ? mainBossFor(this.wave, this.party.map(f => f.def.id)) : boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
     // vijanden stijgen ~0,65 level per wave; jij blijft dan net iets voor (bosses/elites +2, rivals op gelijk niveau)
     this.enemy = new Fighter(id, this.tutorialMode ? 3 : 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || elite ? 2 : 0));
+    this.charFoe = HEROES.includes(id);
+    this.foeUltUsed = false;
+    // boss-Shadow: meer HP; bosses krijgen schilden (stukken HP-balk)
+    if (this.charFoe && boss) { this.enemy.hpMult = SHADOW_BOSS_HP; this.enemy.hp = this.enemy.maxHp; }
+    if (boss && !this.tutorialMode) this.enemy.segments = mainBoss ? MAIN_BOSS_SHIELDS : ZONE_BOSS_SHIELDS;
     if (rivalId) this.rivalsMet.push(rivalId);
     // zone-bosses zijn type-neutraal zolang je maar 1 character hebt (anders is een boss voor sommigen onmogelijk)
     if (boss && BOSS_TYPE_NEUTRAL) this.enemy.typeOverride = this.player.type;
 
     // nieuwe zone: achtergrond wisselen + zone-titel; boss-wave: Chaos Angel
     const firstOfZone = waveInZone(this.wave) === 1;
-    this.setBackdrop(boss ? 'chaosangel' : zone.backdrop, this.wave === 1 ? 0 : 600);
+    this.setBackdrop(id === 'eggman' ? 'deathegg' : boss ? 'chaosangel' : zone.backdrop, this.wave === 1 ? 0 : 600);
     this.applyZoneEffect(this.fieldCleared ? undefined : zone.effect);
-    audio.playMusic(boss || this.rival ? 'boss' : (zone.backdrop as MusicKey));
+    audio.playMusic(id === 'eggman' ? 'eggman' : boss || this.rival ? 'boss' : (zone.backdrop as MusicKey));
     this.waveText.setText(`${zone.name} - Wave ${this.wave}`);
     this.hero.play(this.player.anim('idle'));
     if (firstOfZone) await this.zoneBanner(zone.name, Math.floor((this.wave - 1) / 10) + 1);
@@ -1308,7 +1356,12 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.tweens.add({ targets: this.eBox.root, alpha: 1, duration: 250 });
     if (boss) this.cameras.main.shake(300, 0.006);
     if (this.rival) await this.rivalBanner();
-    await this.say(this.rival ? `Rival ${this.enemy.name} wants to battle!` : boss ? `Watch out! ${this.enemy.name} appeared!` : elite ? `A strong ${this.enemy.name} appeared!` : `A wild ${this.enemy.name} appeared!`, 500);
+    else if (mainBoss) await this.rivalBanner('BOSS!');
+    if (id === 'shadow' && boss) audio.voice('shadowlaugh');
+    await this.say(this.rival ? `Rival ${this.enemy.name} wants to battle!`
+      : id === 'shadow' && boss ? 'Shadow blocks the way! "Show me what you\'ve got."'
+      : id === 'eggman' ? 'Dr. Eggman appeared! "Hohoho! You won\'t get past me!"'
+      : boss ? `Watch out! ${this.enemy.name} appeared!` : elite ? `A strong ${this.enemy.name} appeared!` : `A wild ${this.enemy.name} appeared!`, 500);
     // Battle Style "Switch": voor elke wave (behalve de eerste) gratis wisselen
     if (this.rival) await this.tip('rival');
     else if (boss) await this.tip('boss');
@@ -1390,7 +1443,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
           .setAlpha(0.6 + 0.25 * Math.sin(this.statusClock / 200));
       }
       // Super Shadow: gouden schimmen en vonkjes
-      if (f && f.superTurns > 0 && !f.fainted && spr.visible && Math.floor(this.statusClock / 160) !== Math.floor((this.statusClock - dt) / 160)) {
+      if (f && f.superHits > 0 && !f.fainted && spr.visible && Math.floor(this.statusClock / 160) !== Math.floor((this.statusClock - dt) / 160)) {
         const p = this.add.image(spr.x + Phaser.Math.Between(-14, 14), spr.y - Phaser.Math.Between(4, 40), 'px').setTint(0xfff6a0).setDepth(17).setBlendMode(Phaser.BlendModes.ADD);
         this.tweens.add({ targets: p, y: p.y - 22, alpha: 0, duration: 420, onComplete: () => p.destroy() });
       }
@@ -1449,7 +1502,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   }
 
   /** Naam zoals hij in berichten staat: "Tails", "Foe Buzz Beetle", "Rival Knuckles". */
-  private who(f: Fighter) { return `${f === this.player ? '' : this.rival ? 'Rival ' : 'Foe '}${f.name}`; }
+  private who(f: Fighter) { return `${f === this.player ? '' : this.rival ? 'Rival ' : this.charFoe || f.def.id === 'eggman' ? '' : 'Foe '}${f.name}`; }
 
   /** Eén actie: eerst kijken of hij verdoofd is of flinchte, anders aanvallen. */
   private async act(att: Fighter, tgt: Fighter, move: MoveDef, ally?: Fighter) {
@@ -1471,6 +1524,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.critBonus = hammer ? HAMMER_CRIT : 0;
     await this.doAttack(att, tgt, move, ally);
   }
+
+  /** De vijand is een character (rival, of Shadow als boss): KO-pose, character-aanvallen, idles. */
+  private charFoe = false;
+  /** Boss-Shadow heeft zijn ultimate deze wave al gebruikt. */
+  private foeUltUsed = false;
 
   /** De move die nu bezig is was gratis (Shadow). */
   private freeUse = false;
@@ -1528,11 +1586,18 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // Light Speed Attack: de volgende aanvallen op Sonic missen gegarandeerd
     if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; }
     let struck = false;
+    let shieldsBroken = 0;
+    let superEnded = false;
     const strike = () => {
       if (hit.missed || struck) return;
       struck = true;
       if (status) { this.hitFlash(isPlayer ? this.foe : this.hero); return; }
+      // boss-schilden: één schild per klap (tenzij de klap heel hard is)
+      const cap = shieldCap(tgt, hit.damage);
+      if (cap.damage !== hit.damage || cap.broken) { hit = { ...hit, damage: cap.damage }; shieldsBroken = cap.broken; }
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
+      // Super Barrage: de Super-kracht houdt op na zoveel klappen
+      if (tgt.superHits > 0 && hit.damage > 0 && --tgt.superHits === 0) superEnded = true;
       if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
       // tutorial: niemand van je team gaat neer, en de vijand pas bij de laatste stap
       if (this.tutorialMode && tgt.hp === 0 && (this.party.includes(tgt) || this.tutGuard)) tgt.hp = 1;
@@ -1549,23 +1614,25 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       this.popNumber(spr.x, spr.y - this.bodyHeight(spr) - 4, `-${hit.damage}`, hit.crit ? '#f2c230' : '#ffffff');
       this.cameras.main.shake(hit.crit ? 220 : 120, hit.crit ? 0.008 : 0.004);
       if (isPlayer) audio.sfx(isBossWave(this.wave) ? 'bosshit' : 'enemyhit', { volume: 0.8 });
+      if (isPlayer && tgt.def.id === 'eggman' && Math.random() < 0.4) audio.voice('eggmanow', 0.8);
       else { audio.sfx('hurtrings', { volume: 0.7 }); this.player.gainBoost(BOOST_ON_HIT); }
       this.hitFlash(spr);
+      if (shieldsBroken) this.shieldBreakFx(isPlayer ? this.eBox : this.pBox, tgt, shieldsBroken);
       if (!isPlayer) this.hero.play(this.player.anim('hurt'));
-      else if (this.rival) this.foe.play(this.enemy.anim('hurt'));
+      else if (this.charFoe || this.anims.exists(this.enemy.anim('hurt'))) this.foe.play(this.enemy.anim('hurt'));
       this.setBox(isPlayer ? this.eBox : this.pBox, tgt, true);
       if (guard) { this.burst(c.x, c.y, 0x7cf07c, 12); this.updateShield(); }
     };
 
     this.setActionSpeed(isPlayer ? this.hero : this.foe);
     // Super Barrage die gratis is na een KO: geen cut-in, hij is nog super en gaat meteen door
-    if (isPlayer && move.id === att.def.ultimate && !(this.freeUse && move.resets)) await cutIn(this, att.def.id, move.name);
+    if (move.id === att.def.ultimate && (isPlayer || this.charFoe) && !(this.freeUse && move.resets)) await cutIn(this, att.def.id, move.name);
     if (isPlayer) await this.charAttack(this.hero, this.player, this.foe, PLAYER_POS, 1, move, strike, hit.missed);
-    else if (this.rival) await this.charAttack(this.foe, this.enemy, this.hero, this.foeHome, -1, move, strike, hit.missed);
+    else if (this.charFoe) await this.charAttack(this.foe, this.enemy, this.hero, this.foeHome, -1, move, strike, hit.missed);
     else await this.foeAttack(move, strike, hit.missed);
 
     if (!isPlayer && !hit.missed) { await this.wait(350); if (!this.player.fainted) this.hero.play(this.player.anim('idle')); }
-    if (isPlayer && this.rival && !hit.missed) { await this.wait(350); if (!this.enemy.fainted) this.foe.play(this.enemy.anim('idle')); }
+    if (isPlayer && (this.charFoe || this.anims.exists(this.enemy.anim('hurt'))) && !hit.missed) { await this.wait(350); if (!this.enemy.fainted) this.foe.play(this.enemy.anim('idle')); }
     this.setActionSpeed(null);
     if (hit.missed) {
       // MISS naast het doelwit, in plaats van een geluid
@@ -1573,6 +1640,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       this.popMiss(spr.x + (isPlayer ? -30 : 34), spr.y - this.bodyHeight(spr) * 0.7);
       await this.say(guard ? `${guard} ${tgt.name} avoided the attack!` : `${tgt.name} avoided the attack!`, 400);
     }
+    if (shieldsBroken) {
+      audio.sfx('monitorbreak', { volume: 0.7 });
+      await this.say(shieldsBroken > 1 ? `${shieldsBroken} of ${this.who(tgt)}'s shields broke at once!` : `${this.who(tgt)}'s shield broke!`, 400);
+    }
+    if (superEnded) await this.say(`${this.who(tgt)}'s Super power wore off.`, 350);
     if (move.spendStages && Object.values(att.stages).some(v => v !== 0)) {
       att.stages = { atk: 0, def: 0, spd: 0, acc: 0 };
       this.statArrows(isPlayer ? this.hero : this.foe, false);
@@ -1649,10 +1721,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       }
     }
     // Super Barrage: Shadow blijft een paar beurten super (ook als hij mist)
-    if (move.superTurns && !att.fainted) {
-      att.superTurns = move.superTurns;
-      att.freshTurns.add('superTurns');
-      await this.say(`${att.name} has Super power! 100% crit, but he takes double damage for ${move.superTurns} turns.`, 450);
+    if (move.superHits && !att.fainted) {
+      att.superHits = move.superHits;
+      await this.say(`${att.name} has Super power! 100% crit, but double damage taken until he is hit ${move.superHits} times.`, 450);
     }
     await this.shadowAfter(att, tgt, move, isPlayer);
   }
@@ -1698,6 +1769,20 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
           : rose.length ? `Rampage! ${this.who(att)}'s ${rose[0] === 'atk' ? 'attack' : 'speed'} rose!`
           : `Rampage! ${this.who(att)}'s stats won't go any higher!`, 350);
       }
+    }
+  }
+
+  /** Boss-schild breekt: scherfjes uit de HP-balk bij de grens waar de klap stopte. */
+  private shieldBreakFx(box: InfoBox, f: Fighter, n: number) {
+    const x = box.root.x + 34 + (box.barW * Math.max(0, f.hp)) / f.maxHp;
+    const y = box.root.y + BOX_BAR_Y + 2;
+    const flash = this.add.rectangle(x, y, 10, 10, 0xffffff, 0.9).setDepth(45).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: flash, scaleX: 4, scaleY: 2, alpha: 0, duration: 260, onComplete: () => flash.destroy() });
+    for (let i = 0; i < 8 + n * 4; i++) {
+      const sh = this.add.rectangle(x, y, Phaser.Math.Between(2, 4), Phaser.Math.Between(2, 4), Phaser.Utils.Array.GetRandom([0x8ad8ff, 0xffffff, 0x50f8f8]))
+        .setDepth(45).setAngle(Phaser.Math.Between(0, 90));
+      this.tweens.add({ targets: sh, x: x + Phaser.Math.Between(-30, 30), y: y + Phaser.Math.Between(-24, 18), angle: sh.angle + 180, alpha: 0,
+        duration: Phaser.Math.Between(300, 520), ease: 'Quad.easeOut', onComplete: () => sh.destroy() });
     }
   }
 
@@ -2072,6 +2157,73 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
   }
 
+  /** Eggman: raketten uit de Egg Mobile, bommen van boven, of lachen (ATK +1). */
+  private async eggmanAttack(move: MoveDef, strike: () => void, missed: boolean) {
+    const b = this.foe;
+    const heroC = this.center(this.hero);
+    if (move.anim === 'laugh') {
+      this.playOnce(b, 'eggman_attack');
+      void bigText(this, b.x, b.y - b.displayHeight - 10, 'HOHOHO!', '#ff6a5a');
+      await this.tween({ targets: b, y: b.y - 6, duration: 120, yoyo: true, repeat: 2 });
+      strike();
+      return;
+    }
+    if (move.anim === 'missile') {
+      // even naar voren draaien (koplamp), dan drie raketten in een boog
+      await this.playOnce(b, 'eggman_turn');
+      const sx = b.x - 20, sy = b.y - b.displayHeight * 0.45;
+      const flights: Promise<void>[] = [];
+      for (let i = 0; i < 3; i++) {
+        flights.push(new Promise<void>(done => this.time.delayedCall(i * 140, () => {
+          const m = this.add.sprite(sx, sy, 'eggman', 'eggman_missile_0').setScale(2).setDepth(15);
+          audio.sfx('jump', { volume: 0.4 });
+          const tx = missed ? heroC.x - 70 : heroC.x + Phaser.Math.Between(-8, 8);
+          const ty = missed ? heroC.y - 50 : heroC.y + Phaser.Math.Between(-10, 10);
+          const arc = { t: 0 };
+          const lift = 40 + i * 14;
+          this.tweens.add({
+            targets: arc, t: 1, duration: 420, ease: 'Sine.easeIn',
+            onUpdate: () => {
+              const x = sx + (tx - sx) * arc.t, y = sy + (ty - sy) * arc.t - Math.sin(arc.t * Math.PI) * lift;
+              m.setRotation(Math.atan2(y - m.y, x - m.x)).setPosition(x, y);
+            },
+            onComplete: () => {
+              m.destroy();
+              const puff = this.add.sprite(tx, ty, 'eggman').setScale(2).setDepth(16).play('eggman_puff');
+              puff.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => puff.destroy());
+              if (i === 0) strike(); else if (!missed) this.burst(tx, ty, 0xffa040, 6);
+              done();
+            },
+          });
+        })));
+      }
+      if (missed) this.tween({ targets: this.hero, y: PLAYER_POS.y - 34, duration: 180, yoyo: true, ease: 'Quad.easeOut' });
+      await Promise.all(flights);
+      await this.wait(200);
+      return;
+    }
+    // bommen: over de held vliegen en drie bommen laten vallen
+    b.play('eggman_idle');
+    await this.tween({ targets: b, x: heroC.x + 20, y: 96, duration: 520, ease: 'Sine.easeInOut' });
+    for (let i = 0; i < 3; i++) {
+      const bomb = this.add.sprite(b.x + (i - 1) * 16, b.y - 4, 'eggman').setScale(2).setDepth(15).play('eggman_bomb');
+      const tx = missed ? heroC.x + 60 + i * 10 : heroC.x + (i - 1) * 12;
+      audio.sfx('cursormove', { volume: 0.5 });
+      this.tweens.add({ targets: bomb, x: tx, y: PLAYER_POS.y - 6, duration: 360, ease: 'Quad.easeIn', onComplete: () => {
+        bomb.destroy();
+        const boom = this.add.sprite(tx, PLAYER_POS.y + 4, 'badniks').setOrigin(0.5, 1).setScale(1.4).setDepth(16).play('explosion');
+        boom.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => boom.destroy());
+        audio.sfx('explosion', { volume: 0.5 });
+        this.cameras.main.shake(120, 0.006);
+        if (i === 1) strike();
+      } });
+      await this.wait(150);
+    }
+    if (missed) this.tween({ targets: this.hero, x: PLAYER_POS.x - 30, duration: 160, yoyo: true });
+    await this.wait(420);
+    await this.tween({ targets: b, x: this.foeHome.x, y: this.foeHome.y, duration: 480, ease: 'Sine.easeInOut' });
+  }
+
   /** Aanvallen van badniks. De stijl staat in de move (shoot / tackle / lash / slam). */
   private async foeAttack(move: MoveDef, strike: () => void, missed: boolean) {
     const b = this.foe;
@@ -2081,7 +2233,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const attackAnim = e.anim('attack');
     await this.anticipate(b, e.def.scale); // ook badniks nemen even aanloop
 
-    if (move.anim === 'shoot') {
+    if (move.anim === 'missile' || move.anim === 'bomb' || move.anim === 'laugh') {
+      await this.eggmanAttack(move, strike, missed);
+    } else if (move.anim === 'shoot') {
       const anim = this.playOnce(b, attackAnim);
       await this.wait(this.anims.exists(attackAnim) ? 250 : 0);
       await this.tween({ targets: b, x: b.x + 6, duration: 90, yoyo: true });
@@ -2135,7 +2289,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async winWave() {
     this.tut?.event('win');
     this.foeHover?.stop();
-    if (this.rival) return this.winRival();
+    if (this.charFoe) return this.winRival();
+    if (this.enemy.def.id === 'eggman') return this.winEggman();
     const c = this.center(this.foe);
     const boom = this.add.sprite(c.x, c.y + 10, 'badniks').setOrigin(0.5, 1).setScale(this.enemy.def.scale * 1.1).setDepth(16);
     boom.play('explosion');
@@ -2149,6 +2304,28 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     await this.finishWin(c);
   }
 
+  /** Eggman verslagen: explosies op de Egg Mobile, en dan tolt hij het scherm uit. */
+  private async winEggman() {
+    const c = this.center(this.foe);
+    this.foe.play('eggman_spin');
+    audio.voice('eggmanow');
+    for (let i = 0; i < 5; i++) {
+      this.time.delayedCall(i * 120, () => {
+        const boom = this.add.sprite(c.x + Phaser.Math.Between(-30, 30), c.y + Phaser.Math.Between(-20, 30), 'badniks').setOrigin(0.5, 1).setScale(1.6).setDepth(16).play('explosion');
+        boom.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => boom.destroy());
+        audio.sfx('explosion', { volume: 0.5 });
+      });
+    }
+    this.cameras.main.shake(500, 0.01);
+    this.tween({ targets: this.eBox.root, alpha: 0, duration: 300 });
+    await this.wait(650);
+    audio.sfx('bigexplosion');
+    await this.tween({ targets: this.foe, x: W + 80, y: -60, angle: 540, duration: 700, ease: 'Quad.easeIn' });
+    this.foe.setVisible(false).setAngle(0);
+    await this.say('Dr. Eggman fled! "I\'ll get you next time!"', 500);
+    await this.finishWin(c);
+  }
+
   /** Rival verslagen: geen explosie maar de KO-pose, en daarna wordt het character vrijgespeeld. */
   private async winRival() {
     const c = this.center(this.foe);
@@ -2157,7 +2334,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     audio.sfx('bosshit', { volume: 0.7 });
     this.tween({ targets: this.eBox.root, alpha: 0, duration: 300 });
     await this.wait(600);
-    await this.say(`Rival ${this.enemy.name} was defeated!`, 300);
+    await this.say(this.rival ? `Rival ${this.enemy.name} was defeated!` : `${this.enemy.name} was defeated!`, 300);
     await this.tween({ targets: this.foe, alpha: 0, x: this.foe.x + 40, duration: 400 });
     this.foe.setVisible(false).setAlpha(1);
     await this.finishWin(c);
@@ -2209,8 +2386,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       await this.bossRecovery();
     }
     if (isBossWave(this.wave) && this.emeralds < EMERALDS.length) await this.awardEmerald(c.x, c.y);
-    if (this.rival && unlock(this.enemy.def.id)) await this.unlockBanner(this.enemy.def.id, this.enemy.name);
-    if (this.rival) await this.offerRivalJoin(this.enemy.def.id, this.enemy.level);
+    // rival of boss-Shadow verslagen: vrijgespeeld, en hij wil meteen meedoen
+    const recruit = this.charFoe && !this.party.some(f => f.def.id === this.enemy.def.id);
+    if (this.charFoe && unlock(this.enemy.def.id)) await this.unlockBanner(this.enemy.def.id, this.enemy.name);
+    if (recruit) await this.offerRivalJoin(this.enemy.def.id, this.enemy.level);
     const share = expShareAfter(this.wave);
     if (share > this.expShare) {
       this.expShare = share;
@@ -2706,8 +2885,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     for (const f of [this.player, this.enemy]) {
       if (!f || f.fainted) continue;
       for (const k of f.tickTurns()) {
-        if (k === 'superTurns') await this.say(`${this.who(f)}'s Super power wore off.`, 350);
-        else await this.say(`${this.who(f)} is no longer pierced.`, 350);
+        if (k === 'pierced') await this.say(`${this.who(f)} is no longer pierced.`, 350);
       }
     }
     const burn = this.fieldEffect?.burn;
@@ -2723,7 +2901,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /** Kies een rival: liefst iemand die nog op slot zit en die je deze run nog niet tegenkwam. */
   private pickRival(): string | undefined {
-    const others = HEROES.filter(h => !this.party.some(f => f.def.id === h) && FIGHTERS[h]);
+    const others = RIVAL_HEROES.filter(h => !this.party.some(f => f.def.id === h) && FIGHTERS[h]);
     if (!others.length) return undefined;
     const fresh = others.filter(h => !this.rivalsMet.includes(h));
     const locked = fresh.filter(h => !isUnlocked(h));
@@ -2732,14 +2910,23 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /** Vijand kiest een move. Een genees-move alleen als hij echt geraakt is. */
   private pickEnemyMove(): MoveDef {
-    const moves = this.enemy.def.moves.map(m => MOVES[m]);
+    const e = this.enemy;
+    // boss-Shadow: één keer per gevecht Super Barrage, zodra hij onder de helft zit
+    if (this.charFoe && isBossWave(this.wave) && e.def.ultimate && !this.foeUltUsed && e.hp < e.maxHp * 0.5) {
+      this.foeUltUsed = true;
+      return MOVES[e.def.ultimate];
+    }
+    // geen Chaos Spear als je al pierced bent; Eggman lacht alleen tot zijn ATK +2 is
+    const all = e.def.moves.map(m => MOVES[m]);
+    const sensible = all.filter(m => !(m.pierce && this.player.pierced > 0) && !(m.id === 'eggLaugh' && e.stage('atk') >= 2));
+    const moves = sensible.length ? sensible : all;
     const hurt = this.enemy.hp < this.enemy.maxHp * 0.5;
     const usable = moves.filter(m => !m.heal || hurt);
     return Phaser.Utils.Array.GetRandom(usable.length ? usable : moves);
   }
 
   /** "RIVAL!"-balk met het hoofdje van de rival (schuift van rechts in beeld). */
-  private async rivalBanner() {
+  private async rivalBanner(label = 'RIVAL!') {
     const c = this.add.container(W + 10, 84).setDepth(45);
     const g = this.add.graphics();
     g.fillGradientStyle(0x9a1830, 0x9a1830, 0x3a0818, 0x3a0818, 0.95).fillRect(0, 0, 250, 46);
@@ -2747,7 +2934,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     checkerBand(g, 0, 42, 250, 1, 4);
     g.fillStyle(HUD.outline).fillRect(0, 4, 250, 1).fillRect(0, 41, 250, 1);
     const head = this.add.image(18, 23, 'ui', `head_${this.enemy.def.id}`).setScale(2).setOrigin(0, 0.5);
-    const t1 = this.add.text(62, 10, 'RIVAL!', { fontFamily: FONT, fontSize: '8px', color: '#e8443a' }).setScale(2);
+    const t1 = this.add.text(62, 10, label, { fontFamily: FONT, fontSize: '8px', color: '#e8443a' }).setScale(2);
     const t2 = this.add.text(62, 30, this.enemy.name.toUpperCase(), { fontFamily: FONT, fontSize: '8px', color: '#ffffff' });
     c.add([g, head, t1, t2]);
     audio.sfx('confirm', { volume: 0.7 });
@@ -2769,7 +2956,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     await this.tween({ targets: c, scale: 1, duration: 350, ease: 'Back.easeOut' });
     this.burst(W / 2, 100, 0xf2c230, 16);
     audio.sfx('ringchime');
-    const lines: Record<string, string> = { sonic: 'sonicalright', tails: 'tailsalright', knuckles: 'knucklesalright', cream: 'creamalright', amy: 'amywohoo' };
+    const lines: Record<string, string> = { sonic: 'sonicalright', tails: 'tailsalright', knuckles: 'knucklesalright', cream: 'creamalright', amy: 'amywohoo', shadow: 'shadowhuh' };
     if (lines[id]) this.time.delayedCall(250, () => audio.voice(lines[id] as Parameters<typeof audio.voice>[0]));
     await this.say(`${name} is now unlocked!`, 900);
     await this.tween({ targets: c, scale: 0, duration: 250, ease: 'Back.easeIn' });
@@ -2799,6 +2986,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const lines: Record<string, string[]> = {
       sonic: ['sonicalright', 'sonicyeah'], tails: ['tailsalright', 'tailsyeah'],
       knuckles: ['knucklesalright', 'knucklescool'], cream: ['creamalright', 'creamyeah'], amy: ['amywohoo', 'amyyeah'],
+      // na een boss: "Didn't even break a sweat."
+      shadow: isBossWave(this.wave) ? ['shadowsweat'] : ['shadowhmph', 'shadowhuh'],
     };
     const opts = lines[this.player.def.id];
     if (opts) audio.voice(Phaser.Utils.Array.GetRandom(opts) as Parameters<typeof audio.voice>[0]);

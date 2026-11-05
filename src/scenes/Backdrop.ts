@@ -140,6 +140,17 @@ export const BACKDROPS: Record<string, { build: Builder; platform: PlatformStyle
       return { container: scene.add.container(0, 0, parts), stop: () => tweens.forEach(t => t.stop()) };
     },
   },
+  // Eggman: de Death Egg-arena uit Sonic Battle (tools/build_eggman.py), iets donkerder zodat de sprites eruit springen
+  deathegg: {
+    platform: { top: 0xd8d8e8, side: 0x7a7a98, shadow: 0x101040 },
+    build: (scene) => {
+      const img = scene.add.image(W / 2, -70 * S, 'deathegg_back').setOrigin(0.5, 0).setScale(S).setTint(0xb8b8d8);
+      // de lampjes in de gang knipperen zacht
+      const glow = scene.add.rectangle(0, 0, W, 300, 0x2010a0, 0).setOrigin(0).setBlendMode(Phaser.BlendModes.MULTIPLY);
+      const tw = scene.tweens.add({ targets: glow, fillAlpha: 0.25, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      return { container: scene.add.container(0, 0, [img, glow]), stop: () => tw.stop() };
+    },
+  },
   chaosangel: {
     platform: { top: 0xf2e8ff, side: 0xa58ad8, shadow: 0x3a2a6a },
     build: (scene) => {

@@ -86,6 +86,20 @@ export function isBossWave(wave: number) { return waveInZone(wave) === WAVES_PER
 export function isEliteWave(wave: number) { return waveInZone(wave) === Math.ceil(WAVES_PER_ZONE / 2); }
 /** Elke tweede boss (wave 20, 40, 60, 80) is een main boss: daarna is het hele team weer fit. */
 export function isMainBossWave(wave: number) { return isBossWave(wave) && wave % (WAVES_PER_ZONE * 2) === 0; }
+/**
+ * Main bosses: wave 20 en 60 Eggman, wave 40 en 80 Shadow (zit Shadow al in je team, dan Eggman).
+ * Shadow verslaan speelt hem vrij.
+ */
+export const MAIN_BOSSES = ['eggman', 'shadow'];
+export function mainBossFor(wave: number, party: string[] = []): string {
+  const id = MAIN_BOSSES[(Math.round(wave / (WAVES_PER_ZONE * 2)) - 1) % MAIN_BOSSES.length];
+  return party.includes(id) ? MAIN_BOSSES[0] : id;
+}
+/** Boss-Shadow heeft zoveel keer zijn normale HP. */
+export const SHADOW_BOSS_HP = 2;
+/** Boss-schilden (stukken HP-balk): zone-bosses en main bosses. */
+export const ZONE_BOSS_SHIELDS = 4;
+export const MAIN_BOSS_SHIELDS = 5;
 /** Na een zone-boss (wave 10, 30, 50, 70) gaat iedereen onder deze HP er naartoe. */
 export const ZONE_BOSS_HEAL = 0.5;
 /** Na een main boss staat iedereen op minstens zoveel Boost. */

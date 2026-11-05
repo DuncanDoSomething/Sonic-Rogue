@@ -116,8 +116,8 @@ const CUTIN: Record<string, { color: number; focus: [number, number]; voice: str
   knuckles: { color: 0xe8243a, focus: [0.55, 0.3], voice: 'knucklescool' },
   amy:      { color: 0xff5fa8, focus: [0.6, 0.42], voice: 'amyyeah' },
   cream:    { color: 0xf29a3a, focus: [0.56, 0.42], voice: 'creamyeah' },
-  // Shadow: Super Shadow-artwork (geen stem-clip)
-  shadow:   { color: 0xd81c2c, focus: [0.5, 0.45], voice: '' },
+  // Shadow: Super Shadow-artwork, "I'll show you my ultimate power!"
+  shadow:   { color: 0xd81c2c, focus: [0.5, 0.45], voice: 'shadowult' },
 };
 
 /**

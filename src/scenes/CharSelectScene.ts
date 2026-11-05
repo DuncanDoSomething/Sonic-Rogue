@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { FIGHTERS, Fighter, MAX_PARTY, MOVES } from '../data/fighters';
+import { BOSS_HEROES, FIGHTERS, Fighter, MAX_PARTY, MOVES } from '../data/fighters';
 import { buildCharacterInfo } from './characterInfo';
 import { addMenuButton } from './ui';
 import { HUD, sonicPanel } from './hud';
@@ -136,7 +136,9 @@ export class CharSelectScene extends Phaser.Scene {
     this.info.add(g);
     if (!open) {
       this.info.add(this.add.text(10, 10, 'LOCKED', { fontFamily: FONT, fontSize: '8px', color: '#e8443a' }));
-      this.info.add(this.add.text(10, 24, 'Beat them as a rival\n(wave 15, 25, 35...)\nto recruit them!', { fontFamily: FONT, fontSize: '8px', color: '#cfd6ee', lineSpacing: 4 }));
+      // Shadow is geen rival maar een boss (wave 40 en 80)
+      const how = BOSS_HEROES.includes(id) ? 'Beat him as a boss\n(wave 40 or 80)\nto recruit him!' : 'Beat them as a rival\n(wave 15, 25, 35...)\nto recruit them!';
+      this.info.add(this.add.text(10, 24, how, { fontFamily: FONT, fontSize: '8px', color: '#cfd6ee', lineSpacing: 4 }));
       return;
     }
     const f = new Fighter(id, 5);
@@ -187,7 +189,7 @@ export class CharSelectScene extends Phaser.Scene {
     this.refreshTeam();
     if (this.picked.length < this.teamSize) {
       audio.sfx('confirm');
-      const lines: Record<string, string> = { sonic: 'sonicalright', tails: 'tailsalright', knuckles: 'knucklesalright', cream: 'creamalright', amy: 'amywohoo' };
+      const lines: Record<string, string> = { sonic: 'sonicalright', tails: 'tailsalright', knuckles: 'knucklesalright', cream: 'creamalright', amy: 'amywohoo', shadow: 'shadowhuh' };
       if (lines[id]) audio.voice(lines[id] as Parameters<typeof audio.voice>[0]);
       this.tweens.add({ targets: this.art, y: ART.y - 12, duration: 120, yoyo: true, ease: 'Quad.easeOut' });
       return;
@@ -195,7 +197,7 @@ export class CharSelectScene extends Phaser.Scene {
     this.leaving = true;
     audio.sfx('confirm2');
     // "Alright!" (Amy: "Woohoo!") zoals in Advance 2
-    const lines: Record<string, string> = { sonic: 'sonicalright', tails: 'tailsalright', knuckles: 'knucklesalright', cream: 'creamalright', amy: 'amywohoo' };
+    const lines: Record<string, string> = { sonic: 'sonicalright', tails: 'tailsalright', knuckles: 'knucklesalright', cream: 'creamalright', amy: 'amywohoo', shadow: 'shadowhah' };
     if (lines[id]) this.time.delayedCall(120, () => audio.voice(lines[id] as Parameters<typeof audio.voice>[0]));
     // ring wordt "OK" en draait snel, portret springt
     this.ring.setTexture('cs_ring_ok');
