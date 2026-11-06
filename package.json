@@ -8,7 +8,7 @@
     "build:single": "tsc && vite build --mode single",
     "preview": "vite preview",
     "test": "vitest run tests",
-    "sim": "vitest run tools/bosssim.test.ts",
+    "sim": "vite-node sim/run.ts --",
     "e2e": "playwright test"
   },
   "dependencies": {

@@ -59,7 +59,7 @@ Mouse and touch work too.
 - **Vitest** unit tests for the battle rules: damage, stat stages, types, Boost, shop prices, zones, passives, saves and unlocks.
 - **Playwright** end-to-end tests that start the real build in Chromium and play it with the keyboard: picking a team, taking turns, winning a wave, switching, KOs, saving and continuing, menus, plus regression tests for bugs found during development. The game is drawn on a canvas, so the tests check the game state instead of pixels; that keeps them stable while the UI changes.
 - **GitHub Actions** runs both test suites on every push to `main`, then builds the game and deploys it to GitHub Pages. A failing test blocks the deploy, and the Playwright report (screenshots and traces) is uploaded when something breaks.
-- A **balance simulation** (`npm run sim`) plays 2000 boss fights per character to check difficulty after a change.
+- A **balance simulation** (`npm run sim`) plays whole runs without graphics, with the same rules as the game: every team of 3, a few hundred runs each, and writes the results to `sim/results.json`. `npm run sim -- --exp gloveOnce` tries a balance change first (see `sim/run.ts`).
 - An **asset pipeline in Python** (Pillow, NumPy, SciPy) that cuts sprites out of ripped sprite sheets, aligns animation frames on the character's body and builds Phaser texture atlases. Idles that need pixel-perfect alignment are rebuilt from upscaled reference GIFs by sampling the pixel grid back to sprite resolution.
 - Layered idles like the Advance games (stand, get impatient, then sit or nap), run-ups, anticipation, knockback and landing dust on attacks, upgraded move animations (lock-on Homing Attack, flaming Spin Dash, fire-blast Knuckle Punch, spinning discs), ultimates and hit effects are built from sprite animations plus code-drawn effects (lightning, flames, shockwaves, masked cut-in bands), with a short hit-stop on every hit.
 - The intro recreates the Mode 7 ocean from Sonic Advance 2 by drawing the water line by line on a canvas, with perspective and distance blending.
@@ -74,7 +74,7 @@ npm install
 npm run dev      # dev server with hot reload at http://localhost:5173
 npm test         # unit tests
 npm run e2e      # end-to-end tests (builds the game first)
-npm run sim      # boss balance simulation
+npm run sim      # balance simulation (whole runs, every team)
 npm run build    # production build in dist/
 ```
 
