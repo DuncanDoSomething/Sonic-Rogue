@@ -637,6 +637,21 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').player.boost)).toBe(2);
   });
 
+  test('Chao Care also works from the bench, but weaker (5%)', async ({ page }) => {
+    await openGame(page);
+    await startBattleWith(page, ['sonic', 'cream']);
+    await setup(page, 's.enemy.hp = 1; s.runTurn(window.MOVES.homingAttack);');
+    await waitForMenu(page, 'reward');
+    await fixReward(page);
+    await press(page, 'z');
+    await waitForMenu(page, 'choice');          // "Will you switch characters?"
+    await setup(page, 's.party[0].hp = 10; s.party[1].hp = 10;');
+    await press(page, 'ArrowDown', 'z');        // No: Sonic blijft, Cream zit op de bank
+    await waitForMenu(page, 'command');
+    const team = await page.evaluate(() => (window as any).game.scene.getScene('Battle').party.map((f: any) => ({ hp: f.hp, max: f.maxHp })));
+    for (const f of team) expect(f.hp).toBe(10 + Math.ceil(f.max * 0.05));
+  });
+
   test('everyone who fought in a wave gets the full EXP', async ({ page }) => {
     await openGame(page);
     await startRun(page);

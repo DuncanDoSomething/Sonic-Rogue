@@ -3,7 +3,7 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
-  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, RAMPAGE_CHANCE, shieldCap, benchExpRate, BLESS_BONUS,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, RAMPAGE_CHANCE, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH,
 } from '../src/data/fighters';
 import { mainBossFor, MAIN_BOSS_SHIELDS, SHADOW_BOSS_CHANCE, enemyScaling, rivalChance, rivalLevelBonus } from '../src/data/zones';
 
@@ -450,5 +450,12 @@ describe('Cream: Chao Blessing', () => {
     expect(MOVES.chaoCheer.cost).toBe(2);
     expect(MOVES.chaoCheer.allyBoost).toBe(1);
     expect(FIGHTERS.cream.moves).toContain('cheeseAttack');
+  });
+});
+
+describe('Cream: Chao Care', () => {
+  it('werkt ook vanaf de bank, maar half zo sterk', () => {
+    expect(CHAO_CARE_HEAL).toBe(0.1);
+    expect(CHAO_CARE_BENCH).toBe(0.05);
   });
 });

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, RAMPAGE_CHANCE, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, RAMPAGE_CHANCE, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -1408,16 +1408,29 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.openCommand();
   }
 
-  /** Chao Care (Cream): staat ze in het veld als de wave begint, dan geneest het hele team 10%. */
+  /** Chao Care (Cream): als de wave begint geneest het hele team 10% (Cream in het veld) of 5% (Cream op de bank). */
   private async chaoCare() {
-    if (this.player.def.passive?.id !== 'chaoCare' || this.player.fainted) return;
+    const cream = this.party.find(f => f.def.passive?.id === 'chaoCare' && !f.fainted);
+    if (!cream) return;
+    const onField = cream === this.player;
     const hurt = this.party.filter(f => !f.fainted && f.hp < f.maxHp);
     if (!hurt.length) return;
-    for (const f of hurt) f.hp = Math.min(f.maxHp, f.hp + Math.ceil(f.maxHp * CHAO_CARE_HEAL));
+    const heal = onField ? CHAO_CARE_HEAL : CHAO_CARE_BENCH;
+    for (const f of hurt) f.hp = Math.min(f.maxHp, f.hp + Math.ceil(f.maxHp * heal));
     audio.sfx('heal1');
     this.sparkles(this.hero);
+    this.refreshPartyHeads();
+    if (!onField) {
+      // vanaf de bank: Cream's hoofdje in de HUD licht groen op
+      const icon = this.partyHeads[this.party.indexOf(cream)];
+      if (icon) {
+        icon.setTintFill(0x7cf07c);
+        hearts(this, icon.x + 8, icon.y + 4, 3, 0x7cf07c);
+        this.time.delayedCall(260, () => icon.clearTint());
+      }
+    }
     await this.setBox(this.pBox, this.player, true);
-    await this.say(`Chao Care! The team healed a little.`, 400);
+    await this.say(onField ? 'Chao Care! The team healed a little.' : `Chao Care! Cream cheered from the bench: the team healed ${Math.round(heal * 100)}%.`, 400);
   }
 
   private startHover() {

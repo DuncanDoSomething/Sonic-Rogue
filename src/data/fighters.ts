@@ -72,7 +72,7 @@ export const PASSIVES: Record<PassiveId, PassiveDef> = {
   weakSpot:   { id: 'weakSpot', name: 'Weak Spot', desc: 'Stunned foes take 2x damage from Tails.' },
   flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP.' },
   luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance per ATK stage. Crits cost her 5% max HP (not with Hammer Twirl).' },
-  chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'If Cream is on the field when a wave starts, the whole team heals 10% HP.' },
+  chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'When a wave starts, the whole team heals 10% HP if Cream is on the field, or 5% if she is on the bench.' },
   rampage:    { id: 'rampage', name: 'Rampage', desc: 'Every time one of his moves becomes free again: 80% chance his ATK and SPD rise by 1.' },
 };
 export const FLINCH_CHANCE = 0.2;
@@ -80,6 +80,8 @@ export const WEAK_SPOT_BONUS = 2;
 /** Lucky Swing: elke crit kost Amy zoveel van haar max-HP (zoals een Life Orb). Ze houdt altijd 1 HP over. */
 export const CRIT_RECOIL = 0.05;
 export const CHAO_CARE_HEAL = 0.1;
+/** Chao Care vanaf de bank: zwakker dan in het veld. */
+export const CHAO_CARE_BENCH = 0.05;
 export const BASE_CRIT = 0.0625;
 
 // ---------------------------------------------------------------- Shadow
