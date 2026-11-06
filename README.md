@@ -103,7 +103,7 @@ See [ROADMAP.md](ROADMAP.md).
 Sonic the Hedgehog and all related characters, sprites and music are owned by SEGA and Sonic Team.
 This project uses community sprite rips from [The Spriters Resource](https://www.spriters-resource.com/):
 
-- **Characters:** Ren "Foxx" Ramos (Sonic Advance 3), Bonzai (Super Sonic), QuadFactor (Shadow and the team's big moves, Sonic Battle), Shadow Mastah (Super Shadow, Pixeltendo Sonic Battle Project)
+- **Characters:** Ren "Foxx" Ramos (Sonic Advance 3, Cheese and the Chao), Bonzai (Super Sonic), QuadFactor (Shadow and the team's big moves, Sonic Battle), Shadow Mastah (Super Shadow, Pixeltendo Sonic Battle Project)
 - **Portraits:** Bacon (Sonic Battle story portraits)
 - **Eggman:** SkyLights (rip), Dinoshi 64 (organization), QuadFactor (palette)
 - **X-Zone and XX backgrounds:** Παρατηρητής

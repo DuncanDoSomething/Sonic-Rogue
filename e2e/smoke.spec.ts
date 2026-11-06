@@ -161,9 +161,11 @@ test.describe('Sonic Rogue smoke tests', () => {
   test('Chao Cheer heals the teammate you pick', async ({ page }) => {
     await openGame(page);
     await startRun(page);
-    await setup(page, 's.party[2].hp = 1; s.enemy.hp = 9999; s.player.boost = 6; s.runTurn(window.MOVES.chaoCheer, s.party[2]);');
+    await setup(page, 's.party[2].hp = 1; s.party[2].boost = 0; s.enemy.hp = 9999; s.player.boost = 6; s.runTurn(window.MOVES.chaoCheer, s.party[2]);');
     await waitForMenu(page, 'command');
-    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').party[2].hp)).toBeGreaterThan(1);
+    const mate = await page.evaluate(() => { const m = (window as any).game.scene.getScene('Battle').party[2]; return { hp: m.hp, boost: m.boost }; });
+    expect(mate.hp).toBeGreaterThan(1);
+    expect(mate.boost).toBe(1);   // Chao Cheer geeft ook 1 Boost
   });
 
   test('character select: C shows what a character can do', async ({ page }) => {
@@ -602,6 +604,27 @@ test.describe('Sonic Rogue smoke tests', () => {
       await waitForMenu(page, 'command');
       expect(await superTurns()).toBe(left);
     }
+  });
+
+  test('Cream: Chao Attack lowers the foe ATK; Chao Blessing revives and powers up the team for 5 turns', async ({ page }) => {
+    await openGame(page);
+    await startBattleWith(page, ['cream', 'sonic', 'tails']);
+    await setup(page, 's.enemy.hp = 9999; s.player.boost = 6; s.runTurn(window.MOVES.cheeseAttack);');
+    await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
+    await waitForMenu(page, 'command');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.stages.atk)).toBe(-1);
+    // Sonic is gevallen: de ultimate zet hem weer op 50% HP en geeft het team 5 beurten extra schade
+    await setup(page, 's.party[1].hp = 0; s.player.boost = 6; s.player.evade = 5; s.runTurn(window.MOVES.chaoAttack);');
+    await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
+    await waitForMenu(page, 'command');
+    const after = await page.evaluate(() => { const s = (window as any).game.scene.getScene('Battle'); return { hp: s.party[1].hp, max: s.party[1].maxHp, bless: s.buffs.blessTurns }; });
+    expect(after.hp).toBe(Math.ceil(after.max * 0.5));
+    expect(after.bless).toBe(5);
+    // elke beurt van je team telt er één af
+    await setup(page, 's.player.evade = 5; s.runTurn(window.MOVES.spinAttack);');
+    await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
+    await waitForMenu(page, 'command');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').buffs.blessTurns)).toBe(4);
   });
 
   test('hitting the foe does not give your character Boost (only getting hit does)', async ({ page }) => {

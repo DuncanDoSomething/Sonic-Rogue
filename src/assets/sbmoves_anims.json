@@ -303,6 +303,155 @@
   "frameRate": 1000,
   "repeat": 0
  },
+ "sonic_ballet": {
+  "key": "sonic_ballet",
+  "frames": [
+   "sb_sonic_9_0",
+   "sb_sonic_9_1",
+   "sb_sonic_9_2"
+  ],
+  "frameRate": 20,
+  "repeat": -1
+ },
+ "sonic_balletout": {
+  "key": "sonic_balletout",
+  "frames": [
+   {
+    "frame": "sb_sonic_9_3",
+    "duration": 70
+   },
+   {
+    "frame": "sb_sonic_9_4",
+    "duration": 80
+   },
+   {
+    "frame": "sb_sonic_9_5",
+    "duration": 90
+   },
+   {
+    "frame": "sb_sonic_9_6",
+    "duration": 160
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "knuckles_sbjump": {
+  "key": "knuckles_sbjump",
+  "frames": [
+   {
+    "frame": "sb_knuckles_6_0",
+    "duration": 60
+   },
+   {
+    "frame": "sb_knuckles_6_1",
+    "duration": 60
+   },
+   {
+    "frame": "sb_knuckles_6_2",
+    "duration": 60
+   },
+   {
+    "frame": "sb_knuckles_6_3",
+    "duration": 60
+   },
+   {
+    "frame": "sb_knuckles_6_4",
+    "duration": 60
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "knuckles_grind": {
+  "key": "knuckles_grind",
+  "frames": [
+   "sb_knuckles_9_3",
+   "sb_knuckles_9_4"
+  ],
+  "frameRate": 12,
+  "repeat": -1
+ },
+ "knuckles_grindend": {
+  "key": "knuckles_grindend",
+  "frames": [
+   {
+    "frame": "sb_knuckles_9_6",
+    "duration": 90
+   },
+   {
+    "frame": "sb_knuckles_9_7",
+    "duration": 200
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
+ "tails_sbfly": {
+  "key": "tails_sbfly",
+  "frames": [
+   "sb_tails_9_1",
+   "sb_tails_9_2",
+   "sb_tails_9_3",
+   "sb_tails_9_4"
+  ],
+  "frameRate": 18,
+  "repeat": -1
+ },
+ "amy_sbdash": {
+  "key": "amy_sbdash",
+  "frames": [
+   "sb_amy_19_1",
+   "sb_amy_19_2",
+   "sb_amy_19_3",
+   "sb_amy_19_4"
+  ],
+  "frameRate": 16,
+  "repeat": -1
+ },
+ "amy_aircrush": {
+  "key": "amy_aircrush",
+  "frames": [
+   {
+    "frame": "sb_amy_18_0",
+    "duration": 70
+   },
+   {
+    "frame": "sb_amy_18_1",
+    "duration": 70
+   },
+   {
+    "frame": "sb_amy_18_2",
+    "duration": 70
+   },
+   {
+    "frame": "sb_amy_18_3",
+    "duration": 110
+   },
+   {
+    "frame": "sb_amy_18_4",
+    "duration": 60
+   },
+   {
+    "frame": "sb_amy_18_5",
+    "duration": 60
+   },
+   {
+    "frame": "sb_amy_18_6",
+    "duration": 160
+   },
+   {
+    "frame": "sb_amy_18_7",
+    "duration": 90
+   },
+   {
+    "frame": "sb_amy_18_8",
+    "duration": 200
+   }
+  ],
+  "frameRate": 1000,
+  "repeat": 0
+ },
  "sbfx_kboom": {
   "key": "sbfx_kboom",
   "frames": [
@@ -383,5 +532,182 @@
   ],
   "frameRate": 16,
   "repeat": 0
+ },
+ "sbfx_airslash": {
+  "key": "sbfx_airslash",
+  "frames": [
+   "sbfx_airslash_0",
+   "sbfx_airslash_1",
+   "sbfx_airslash_2",
+   "sbfx_airslash_3",
+   "sbfx_airslash_4",
+   "sbfx_airslash_5"
+  ],
+  "frameRate": 22,
+  "repeat": 0
+ },
+ "sbfx_cheeseorb": {
+  "key": "sbfx_cheeseorb",
+  "frames": [
+   "sbfx_cheeseorb_0"
+  ],
+  "frameRate": 1,
+  "repeat": 0
+ },
+ "sbfx_cheeseball": {
+  "key": "sbfx_cheeseball",
+  "frames": [
+   "sbfx_cheeseball_0",
+   "sbfx_cheeseball_1",
+   "sbfx_cheeseball_2",
+   "sbfx_cheeseball_3",
+   "sbfx_cheeseball_4",
+   "sbfx_cheeseball_5",
+   "sbfx_cheeseball_6"
+  ],
+  "frameRate": 22,
+  "repeat": -1
+ },
+ "sbfx_cheeseland": {
+  "key": "sbfx_cheeseland",
+  "frames": [
+   "sbfx_cheeseland_0",
+   "sbfx_cheeseland_1",
+   "sbfx_cheeseland_2",
+   "sbfx_cheeseland_3",
+   "sbfx_cheeseland_4",
+   "sbfx_cheeseland_5",
+   "sbfx_cheeseland_6",
+   "sbfx_cheeseland_7"
+  ],
+  "frameRate": 14,
+  "repeat": 0
+ },
+ "sbfx_cheesedance": {
+  "key": "sbfx_cheesedance",
+  "frames": [
+   "sbfx_cheesedance_0",
+   "sbfx_cheesedance_1",
+   "sbfx_cheesedance_2",
+   "sbfx_cheesedance_3",
+   "sbfx_cheesedance_4",
+   "sbfx_cheesedance_5",
+   "sbfx_cheesedance_6",
+   "sbfx_cheesedance_7",
+   "sbfx_cheesedance_8"
+  ],
+  "frameRate": 12,
+  "repeat": -1
+ },
+ "sbfx_chaosplash": {
+  "key": "sbfx_chaosplash",
+  "frames": [
+   "sbfx_chaosplash_0",
+   "sbfx_chaosplash_1",
+   "sbfx_chaosplash_2",
+   "sbfx_chaosplash_3"
+  ],
+  "frameRate": 14,
+  "repeat": 0
+ },
+ "sbfx_chao_pink_run": {
+  "key": "sbfx_chao_pink_run",
+  "frames": [
+   "sbfx_chao_pink_run_0",
+   "sbfx_chao_pink_run_1",
+   "sbfx_chao_pink_run_2",
+   "sbfx_chao_pink_run_3",
+   "sbfx_chao_pink_run_4"
+  ],
+  "frameRate": 14,
+  "repeat": -1
+ },
+ "sbfx_chao_pink_hop": {
+  "key": "sbfx_chao_pink_hop",
+  "frames": [
+   "sbfx_chao_pink_hop_0",
+   "sbfx_chao_pink_hop_1",
+   "sbfx_chao_pink_hop_2",
+   "sbfx_chao_pink_hop_3",
+   "sbfx_chao_pink_hop_4",
+   "sbfx_chao_pink_hop_5"
+  ],
+  "frameRate": 12,
+  "repeat": -1
+ },
+ "sbfx_chao_red_run": {
+  "key": "sbfx_chao_red_run",
+  "frames": [
+   "sbfx_chao_red_run_0",
+   "sbfx_chao_red_run_1",
+   "sbfx_chao_red_run_2",
+   "sbfx_chao_red_run_3",
+   "sbfx_chao_red_run_4"
+  ],
+  "frameRate": 14,
+  "repeat": -1
+ },
+ "sbfx_chao_red_hop": {
+  "key": "sbfx_chao_red_hop",
+  "frames": [
+   "sbfx_chao_red_hop_0",
+   "sbfx_chao_red_hop_1",
+   "sbfx_chao_red_hop_2",
+   "sbfx_chao_red_hop_3",
+   "sbfx_chao_red_hop_4",
+   "sbfx_chao_red_hop_5"
+  ],
+  "frameRate": 12,
+  "repeat": -1
+ },
+ "sbfx_chao_blue_run": {
+  "key": "sbfx_chao_blue_run",
+  "frames": [
+   "sbfx_chao_blue_run_0",
+   "sbfx_chao_blue_run_1",
+   "sbfx_chao_blue_run_2",
+   "sbfx_chao_blue_run_3",
+   "sbfx_chao_blue_run_4"
+  ],
+  "frameRate": 14,
+  "repeat": -1
+ },
+ "sbfx_chao_blue_hop": {
+  "key": "sbfx_chao_blue_hop",
+  "frames": [
+   "sbfx_chao_blue_hop_0",
+   "sbfx_chao_blue_hop_1",
+   "sbfx_chao_blue_hop_2",
+   "sbfx_chao_blue_hop_3",
+   "sbfx_chao_blue_hop_4",
+   "sbfx_chao_blue_hop_5",
+   "sbfx_chao_blue_hop_6"
+  ],
+  "frameRate": 12,
+  "repeat": -1
+ },
+ "sbfx_chao_orange_run": {
+  "key": "sbfx_chao_orange_run",
+  "frames": [
+   "sbfx_chao_orange_run_0",
+   "sbfx_chao_orange_run_1",
+   "sbfx_chao_orange_run_2",
+   "sbfx_chao_orange_run_3",
+   "sbfx_chao_orange_run_4"
+  ],
+  "frameRate": 14,
+  "repeat": -1
+ },
+ "sbfx_chao_orange_hop": {
+  "key": "sbfx_chao_orange_hop",
+  "frames": [
+   "sbfx_chao_orange_hop_0",
+   "sbfx_chao_orange_hop_1",
+   "sbfx_chao_orange_hop_2",
+   "sbfx_chao_orange_hop_3",
+   "sbfx_chao_orange_hop_4"
+  ],
+  "frameRate": 12,
+  "repeat": -1
  }
 }

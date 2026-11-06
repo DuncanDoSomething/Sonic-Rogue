@@ -6,7 +6,7 @@
 /** Hoe een move er in beeld uitziet. Player-moves en badnik-moves hebben eigen stijlen. */
 export type MoveAnim =
   | 'spin' | 'homing' | 'dash' | 'punch' | 'fly'   // team
-  | 'glide' | 'hammer' | 'twirl' | 'heal' | 'ultimate'
+  | 'glide' | 'hammer' | 'twirl' | 'heal' | 'chao' | 'ultimate'
   | 'spear' | 'chaos'                               // Shadow
   | 'missile' | 'bomb' | 'laugh'                    // Eggman
   | 'shoot' | 'tackle' | 'lash' | 'slam';          // badniks
@@ -85,6 +85,10 @@ export const BASE_CRIT = 0.0625;
 // ---------------------------------------------------------------- Shadow
 /** Chaos Spear: het doelwit krijgt zoveel extra schade, een paar beurten lang. */
 export const PIERCE_BONUS = 1.5;
+/** Chao Blessing (Cream's ultimate): +50% schade voor het hele team, de volgende 5 beurten. Gevallen teamgenoten staan op met 50% HP. */
+export const BLESS_BONUS = 0.5;
+export const BLESS_TURNS = 5;
+export const BLESS_REVIVE = 0.5;
 /** Super Barrage: zolang de Super-kracht duurt, krijgt Shadow zelf dubbele schade. */
 export const SUPER_VULNERABLE = 2;
 /** Zo vaak achter elkaar kan Super Shadow Barrage weer gratis worden door een KO. */
@@ -152,6 +156,14 @@ export interface MoveDef {
   teamHeal?: number;
   /** Haalt het zone-effect weg tot de zone-boss verslagen is. */
   clearField?: boolean;
+  /** Chao Blessing: gevallen teamgenoten staan weer op met dit deel van hun max-HP. */
+  revive?: number;
+  /** Chao Blessing: je team doet de volgende BLESS_TURNS beurten BLESS_BONUS meer schade. */
+  blessing?: boolean;
+  /** Chao Cheer: wie er geneest wordt krijgt ook zoveel Boost. */
+  allyBoost?: number;
+  /** Stat stages die het doelwit krijgt als de move raakt (Chao Attack: ATK -1). */
+  targetStages?: Partial<Record<StageKey, number>>;
   /** Na gebruik verliest de gebruiker dit deel van zijn max-HP (kan hem KO slaan). */
   recoil?: number;
   /** Na gebruik zijn alle stat stages van de gebruiker weer 0 (Maximum Heat). */
@@ -168,8 +180,8 @@ export const MOVES: Record<string, MoveDef> = {
   glovePunch:   { id: 'glovePunch', name: 'Glove Punch', power: 70, accuracy: 100, priority: 0, anim: 'punch', cost: 3, stun: [2, 2], desc: 'Pulls a boxing glove out of thin air, swings it on its chain and lets it fly. Stuns the foe for 2 turns.' },
   glideAttack:  { id: 'glideAttack', name: 'Glide Attack', power: 45, accuracy: 100, priority: 0, anim: 'glide', cost: 1, selfStages: { atk: 1, def: -1 }, desc: 'Glides in fists first. Raises ATK by 1, lowers DEF by 1.' },
   drillPunch:   { id: 'drillPunch', name: 'Knuckle Punch', power: 80, accuracy: 100, priority: 1, anim: 'punch', cost: 3, desc: 'Rushes in and throws a burning Megaton Hook, the strongest fist on Angel Island. Always strikes first.' },
-  flutterDive:  { id: 'flutterDive', name: 'Flutter Dive', power: 30, accuracy: 100, priority: 1, anim: 'fly', cost: 1, desc: 'Flaps her ears, flies up and dives. Always strikes first.' },
-  chaoCheer:    { id: 'chaoCheer', name: 'Chao Cheer', power: 0, accuracy: 100, priority: 0, anim: 'heal', heal: 0.3, ally: true, cost: 3, desc: 'Heals 30% max HP. Use it on Cream or on a teammate.' },
+  cheeseAttack: { id: 'cheeseAttack', name: 'Chao Attack', power: 45, accuracy: 100, priority: 0, anim: 'chao', cost: 1, targetStages: { atk: -1 }, desc: 'Cream sends Cheese flying into the foe as a ball of energy. Lowers the foe\'s ATK by 1.' },
+  chaoCheer:    { id: 'chaoCheer', name: 'Chao Cheer', power: 0, accuracy: 100, priority: 0, anim: 'heal', heal: 0.3, allyBoost: 1, ally: true, cost: 2, desc: 'Heals 30% max HP and gives 1 Boost. Use it on Cream or on a teammate.' },
   hammerSmash:  { id: 'hammerSmash', name: 'Piko Hammer', power: 60, accuracy: 100, priority: 0, anim: 'hammer', cost: 1, selfStages: { atk: 1 }, desc: 'Swings her Piko Piko Hammer down on the foe. Raises ATK by 1.' },
   hammerTwirl:  { id: 'hammerTwirl', name: 'Hammer Twirl', power: 80, accuracy: 100, priority: 0, anim: 'twirl', cost: 2, selfHeal: 0.25, desc: 'Spins around with her hammer out and heals 25% of her max HP.' },
   chaosSpear:   { id: 'chaosSpear', name: 'Chaos Spear', power: 0, accuracy: 100, priority: 0, anim: 'spear', cost: 3, pierce: 3, desc: 'Status move: chaos spears mark the foe. It takes 50% more damage from your team for 3 turns.' },
@@ -179,7 +191,8 @@ export const MOVES: Record<string, MoveDef> = {
   lightSpeed:   { id: 'lightSpeed', name: 'Light Speed Atk', power: 150, accuracy: 100, priority: 1, anim: 'ultimate', cost: MAX_BOOST, evade: 2, selfStages: { spd: 3 }, desc: 'Homing attacks faster than light. Raises SPD by 3, and the foe misses its next 2 attacks on Sonic.' },
   thunderShoot: { id: 'thunderShoot', name: 'Thunder Shoot', power: 80, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, stun: [3, 3], desc: 'Fires himself like a lightning bolt and stuns the foe for 3 turns.' },
   maximumHeat:  { id: 'maximumHeat', name: 'Maximum Heat', power: 100, scaling: 'stages', accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, spendStages: true, desc: 'A meteor dive. +25 power for every stat stage Knuckles has, up or down; uses them all up.' },
-  chaoAttack:   { id: 'chaoAttack', name: 'Chao Blessing', power: 0, accuracy: 100, priority: 1, anim: 'heal', teamHeal: 1, clearField: true, cost: MAX_BOOST, desc: 'Cheese and friends heal the whole team to full HP and clear the zone effect. No damage.' },
+  chaoAttack:   { id: 'chaoAttack', name: 'Chao Blessing', power: 0, accuracy: 100, priority: 1, anim: 'heal', teamHeal: 1, revive: BLESS_REVIVE, blessing: true, clearField: true, cost: MAX_BOOST,
+    desc: 'Cheese and friends heal the team to full HP, revive fallen teammates with 50% HP and clear the zone effect. Your team then does 50% more damage for 5 turns.' },
   tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 120, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, critDouble: true, recoil: 0.5, desc: 'A hammer storm. Always crits; doubles at 100% crit chance. Costs Amy 50% max HP (KO if below half).' },
   superBarrage: { id: 'superBarrage', name: 'Super Barrage', power: 100, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, superTurns: 3, resets: 'ownKo', desc: 'Goes Super and unloads a barrage. Always crits. For 3 turns: 100% crit, but he takes double damage (a chain does not refresh it). A KO makes it free again (max 2x).' },
   // --- Eggman (main boss)
@@ -256,7 +269,7 @@ export const FIGHTERS: Record<string, FighterDef> = {
     id: 'cream', name: 'Cream', atlas: 'cream', animPrefix: 'cream', scale: 2,
     base: { hp: 25, atk: 9, def: 8, spd: 15 },
     growth: { hp: 3.3, atk: 1.7, def: 1.2, spd: 1.8 },
-    moves: ['spinAttack', 'flutterDive', 'chaoCheer'],
+    moves: ['spinAttack', 'cheeseAttack', 'chaoCheer'],
     expYield: 20, // alleen als rival
   },
   amy: {
@@ -453,7 +466,7 @@ export function movePower(m: MoveDef, user: Fighter, target?: Fighter) {
 export interface HitResult { damage: number; crit: boolean; missed: boolean; effect: number; }
 
 /** Pokémon-achtige damage-formule, versimpeld. */
-export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: () => number = Math.random, bonusCrit = 0): HitResult {
+export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: () => number = Math.random, bonusCrit = 0, dmgMult = 1): HitResult {
   const effect = typeMultiplier(attacker.type, target.type);
   // ultimates (hele Boost-meter) raken altijd, ook met een ACC-verlaging; andere moves niet
   const ultimate = (move.cost ?? 0) >= MAX_BOOST;
@@ -469,7 +482,7 @@ export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: 
   const weakSpot = attacker.def.passive?.id === 'weakSpot' && target.stun > 0 ? WEAK_SPOT_BONUS : 1;
   // Chaos Spear en Super Shadow: het doelwit krijgt meer schade
   const exposed = (target.pierced > 0 ? PIERCE_BONUS : 1) * (target.superTurns > 0 ? SUPER_VULNERABLE : 1);
-  const dmg = base * roll * effect * speedBonus(attacker, target) * weakSpot * exposed * (crit ? 1.5 : 1);
+  const dmg = base * roll * effect * speedBonus(attacker, target) * weakSpot * exposed * dmgMult * (crit ? 1.5 : 1);
   return { damage: Math.max(1, Math.floor(dmg)), crit, missed: false, effect };
 }
 

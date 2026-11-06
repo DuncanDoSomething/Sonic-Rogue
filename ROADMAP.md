@@ -32,13 +32,13 @@
 - [x] Balance pass: enemies scale per zone, more (and later stronger) rivals, full EXP for everyone who fought, Shadow nerfs
 - [x] Toss items from your bag, voice lines for Shadow, spin balls for Knuckles and Shadow
 - [x] Chaos Emeralds give the bench +5% EXP each; Eggman's Egg Mobile gets a random type
-- [x] New animations for the big team moves (Spin Dash, Glove Punch, Knuckle Punch, Hammer Twirl, Chao Cheer), Amy and Shadow buffs
+- [x] New animations for every team move (1 Boost and 2-3 Boost), Amy and Shadow buffs
+- [x] Cream rework: Chao Attack (Cheese as a weapon), cheaper Chao Cheer with +1 Boost, Chao Blessing revives and powers up the team
 
 ## Next
 - [ ] More main bosses (Chaos, more Eggman robots) with boss charms, and a super boss at wave 90 after all seven Chaos Emeralds
 - [ ] Enemies with more interaction: their own status moves, buffs and patterns
 - [ ] Team ultimates
-- [ ] Cream rework (Cheese as a weapon, revive on her ultimate)
 - [ ] Rouge as a second legendary
 - [ ] More badniks from Sonic Advance 1, 2 and 3, with unique enemies per zone
 - [ ] Minibosses and a unique boss per zone

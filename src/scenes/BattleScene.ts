@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, RAMPAGE_CHANCE, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, RAMPAGE_CHANCE, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -15,7 +15,7 @@ import { addHelpButton, addMenuButton } from './ui';
 import { HUD, RingCounter, checkerBand, sonicPanel, tooltip } from './hud';
 import { richText } from './richText';
 import { audio, MusicKey } from '../audio';
-import { chaoCheer, glovePunch, hammerTwirl, knucklePunch, spinDash, type HeroCtx } from './heroMoves';
+import { chaoAttack, chaoCheer, chaoFriends, copterDive, glideAttack, glovePunch, hammerTwirl, homingAttack, knucklePunch, pikoHammer, spinDash, type HeroCtx } from './heroMoves';
 import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
 import { chaosControl, chaosSpear, superShadow } from './shadowMoves';
 import { TEST_KEYS, TEST_MODE } from '../data/testMode';
@@ -41,6 +41,11 @@ const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream'
 const CHARACTER_BODY = 38;
 /** Moves met een eigen animatie (heroMoves.ts): move-id -> [van wie, animatie]. */
 const HERO_MOVES: Record<string, [string, (c: HeroCtx) => Promise<void>]> = {
+  homingAttack: ['sonic', homingAttack],
+  copterDive: ['tails', copterDive],
+  glideAttack: ['knuckles', glideAttack],
+  hammerSmash: ['amy', pikoHammer],
+  cheeseAttack: ['cream', chaoAttack],
   spinDash: ['sonic', spinDash],
   glovePunch: ['tails', glovePunch],
   drillPunch: ['knuckles', knucklePunch],
@@ -413,6 +418,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (p?.chaosFree && p.moves.includes('chaosControl')) out.push({ key: 'chaosFree', icon: 'emeralds:emerald_green_0', name: 'Chaos Control', desc: 'Free to use: costs no Boost.' });
     if (p?.ultFree && p.def.ultimate && p.moves.includes(p.def.ultimate)) out.push({ key: 'ultFree', icon: 'shadowfx:ssh_spear_2', name: MOVES[p.def.ultimate].name, desc: `Free to use: costs no Boost (${p.ultChain}/${ULT_CHAIN_MAX} in a row).` });
     if (this.enemy?.pierced > 0) out.push({ key: 'pierced', icon: 'shadowfx:sh_rune_pink_0', name: 'Pierced', desc: `The foe takes ${Math.round((PIERCE_BONUS - 1) * 100)}% more damage. ${n(this.enemy.pierced, 'turn')} left.`, count: this.enemy.pierced });
+    if (b.blessTurns) out.push({ key: 'blessing', icon: 'sbmoves:sbfx_cheese_fly_0', name: 'Chao Blessing', desc: `Your team does ${Math.round(BLESS_BONUS * 100)}% more damage for ${n(b.blessTurns, 'more turn')}.`, count: b.blessTurns });
+    if (this.foeBless) out.push({ key: 'foeBless', icon: 'sbmoves:sbfx_cheese_fly_0', name: 'Chao Blessing (foe)', desc: `The foe does ${Math.round(BLESS_BONUS * 100)}% more damage for ${n(this.foeBless, 'more turn')}.`, count: this.foeBless });
     if (this.fieldCleared && zoneForWave(this.wave, this.zoneOrder).effect) out.push({ key: 'bless', icon: 'head_cream', name: 'Chao Blessing', desc: 'The zone effect is gone until the zone boss.' });
     return out;
   }
@@ -1336,6 +1343,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // wie deze wave meevecht, krijgt de volle EXP
     this.waveFighters = new Set([this.player]);
     this.foeUltUsed = false;
+    this.foeBless = 0;
     // boss-Shadow: meer HP; bosses krijgen schilden (stukken HP-balk)
     if (this.charFoe && boss) { this.enemy.hpMult = SHADOW_BOSS_HP; this.enemy.hp = this.enemy.maxHp; }
     if (boss && !this.tutorialMode) this.enemy.segments = mainBoss ? MAIN_BOSS_SHIELDS : ZONE_BOSS_SHIELDS;
@@ -1545,6 +1553,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const hammer = att === this.player && this.buffs.critTurns > 0;
     if (hammer) this.buffs.critTurns--;
     this.critBonus = hammer ? HAMMER_CRIT : 0;
+    // Chao Blessing: elke beurt van die kant telt (ook de move die het niet gebruikt)
+    const blessed = att === this.player ? this.buffs.blessTurns > 0 : this.foeBless > 0;
+    if (att === this.player && blessed) this.buffs.blessTurns--;
+    else if (blessed) this.foeBless--;
+    this.dmgBonus = blessed ? 1 + BLESS_BONUS : 1;
     await this.doAttack(att, tgt, move, ally);
   }
 
@@ -1552,6 +1565,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private charFoe = false;
   /** Boss-Shadow heeft zijn ultimate deze wave al gebruikt. */
   private foeUltUsed = false;
+
+  /** Chao Blessing van een rival-Cream: zoveel beurten doet de vijand meer schade. */
+  private foeBless = 0;
+  /** Schade-vermenigvuldiger voor de aanval van deze beurt (Chao Blessing). */
+  private dmgBonus = 1;
 
   /** Dobbelsteen voor Rampage en de keuze van de main boss (de tests zetten ze vast). */
   private rampageRoll = () => Math.random();
@@ -1596,7 +1614,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const isPlayer = att === this.player;
     await this.say(`${this.who(att)} used ${move.name}!`, 150);
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
-    let hit = calcHit(att, tgt, move, Math.random, isPlayer ? this.critBonus : 0);
+    let hit = calcHit(att, tgt, move, Math.random, isPlayer ? this.critBonus : 0, this.dmgBonus);
     // status-move (Chaos Spear): raakt altijd en doet geen schade, alleen het effect
     const status = move.power === 0;
     if (status) hit = { damage: 0, crit: false, missed: false, effect: 1 };
@@ -1716,6 +1734,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       // moves die je eigen stats verhogen (Homing Attack: SPD +1)
       for (const [k, v] of Object.entries(move.selfStages ?? {})) {
         if (!att.fainted) await this.changeStage(att, k as StageKey, v);
+      }
+      // moves die de stats van het doelwit verlagen (Chao Attack: ATK -1)
+      for (const [k, v] of Object.entries(move.targetStages ?? {})) {
+        if (!tgt.fainted) await this.changeStage(tgt, k as StageKey, v);
       }
       if (guard) await this.say(guard, 350);
       if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (Iron Fists)`, 500);
@@ -1839,7 +1861,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.setActionSpeed(spr);
     if (isPlayer && move.teamHeal) {
       await cutIn(this, att.def.id, move.name);
+      // Cheese' vriendjes rennen erbij (en weer weg als de zegen klaar is)
+      const leave = chaoFriends(this, spr);
       await chaoBlessing({ ...this.ultCtx(spr, att, this.foe, PLAYER_POS, 1, () => undefined), clearsField: !!(move.clearField && this.fieldEffect) });
+      await leave();
     } else if (att.def.id === 'cream') {
       // Chao Cheer: Cheese cirkelt om wie er geneest wordt (op de bank: om zijn hoofdje in de HUD)
       const icon = isPlayer && target !== att ? this.partyHeads[this.party.indexOf(target)] : undefined;
@@ -1868,15 +1893,26 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
     if (move.teamHeal) {
       const team = isPlayer ? this.party.filter(f => !f.fainted) : [att];
+      // eerst de gevallen teamgenoten weer op de been (Chao Blessing)
+      const down = isPlayer && move.revive ? this.party.filter(f => f.fainted) : [];
       let total = 0;
       for (const f of team) {
         const h = Math.min(f.maxHp - f.hp, Math.ceil(f.maxHp * move.teamHeal));
         f.hp += h;
         total += h;
       }
+      for (const f of down) f.hp = Math.max(1, Math.ceil(f.maxHp * move.revive!));
       if (total > 0) this.popNumber(spr.x, spr.y - this.bodyHeight(spr) - 4, `+${total}`, '#7cf07c');
       await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
       await this.say(isPlayer ? 'The whole team is back to full HP!' : `${this.who(att)} is back to full HP!`, 500);
+      if (down.length) {
+        this.refreshPartyHeads();
+        await this.say(`${down.map(f => f.name).join(' and ')} ${down.length > 1 ? 'are' : 'is'} back on ${down.length > 1 ? 'their' : 'the'} feet with ${Math.round(move.revive! * 100)}% HP!`, 500);
+      }
+      if (move.blessing) {
+        if (isPlayer) this.buffs.blessTurns = BLESS_TURNS; else this.foeBless = BLESS_TURNS;
+        await this.say(`The Chao cheer ${isPlayer ? 'your team' : this.who(att)} on: ${Math.round(BLESS_BONUS * 100)}% more damage for ${BLESS_TURNS} turns!`, 500);
+      }
       if (move.clearField && isPlayer && this.fieldEffect) {
         const name = this.fieldEffect.name;
         this.applyZoneEffect(undefined);
@@ -1891,6 +1927,12 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (h > 0 && target === att) this.popNumber(spr.x, spr.y - this.bodyHeight(spr) - 4, `+${h}`, '#7cf07c');
     if (target === att) await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
     await this.say(h > 0 ? `${target.name} healed ${h} HP!` : `${target.name}'s HP is already full!`, 400);
+    // Chao Cheer: ook een beetje Boost (zit hij al vol, dan niets)
+    if (move.allyBoost && target.boost < MAX_BOOST) {
+      target.gainBoost(move.allyBoost);
+      if (target === this.player) this.setBox(this.pBox, this.player, false);
+      await this.say(`${target.name} gained ${move.allyBoost} Boost!`, 350);
+    }
   }
 
   /** Speelt een animatie en roept `onFrame` aan zodra een bepaald frame in beeld komt (bijv. de klap van de hamer). */
@@ -1923,7 +1965,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // de grote moves van het team hebben hun eigen animatie (heroMoves.ts); die zetten de sprite zelf weer thuis
     const signature = HERO_MOVES[move.id];
     if (signature && p.def.id === signature[0]) {
-      await signature[1]({ ...this.ultCtx(s, p, target, home, dir, strike), missed, dust: (x, y, n) => this.dust(x, y, n), bodyHeight: spr => this.bodyHeight(spr) });
+      await signature[1]({ ...this.ultCtx(s, p, target, home, dir, strike), missed, dust: (x, y, n) => this.dust(x, y, n), bodyHeight: spr => this.bodyHeight(spr),
+        lockOn: t => this.lockOn(t), rotorWash: (x, y) => this.rotorWash(x, y) });
       s.play(p.anim('idle'));
       return;
     }
@@ -3115,6 +3158,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (b.dodgeWaves || b.dodgeNext) out.push(`Invincible x${b.dodgeWaves || 1}`);
     if (this.waveMagnet || b.magnetWaves) out.push(`Magnet x${b.magnetWaves + (this.waveMagnet ? 1 : 0)}`);
     if (b.critTurns) out.push(`Crit x${b.critTurns}`);
+    if (b.blessTurns) out.push(`Blessing x${b.blessTurns}`);
     if (this.alarmWave || b.eliteNext) out.push('Alarm');
     return out.join(', ');
   }

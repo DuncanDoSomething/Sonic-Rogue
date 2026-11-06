@@ -1,5 +1,7 @@
 // ---------------------------------------------------------------------------
-// De grote moves van het team (2-3 Boost): Spin Dash, Glove Punch, Knuckle Punch, Hammer Twirl en Chao Cheer.
+// De eigen moves van het team, zonder Shadow (die staat in shadowMoves.ts):
+// 1 Boost: Homing Attack, Copter Dive, Glide Attack, Chao Attack, Piko Hammer.
+// 2-3 Boost: Spin Dash, Glove Punch, Knuckle Punch, Hammer Twirl en Chao Cheer.
 // Net als shadowMoves.ts alleen beeld en geluid; de schade gaat via `strike()` uit de BattleScene.
 // Sprites: de eigen atlas van elk character, plus 'sbmoves' (Sonic Battle-frames en effecten, tools/build_sb_moves.py).
 // Elke animatie doet wat de naam van de move zegt: Knuckle Punch is een vuist, Glove Punch een boxhandschoen, enz.
@@ -20,6 +22,10 @@ export interface HeroCtx extends UltCtx {
   missed: boolean;
   dust: (x: number, y: number, n: number) => void;
   bodyHeight: (s: Sprite) => number;
+  /** Vizier dat zich vastklikt op het doelwit (Homing Attack). */
+  lockOn: (target: Sprite) => Promise<void>;
+  /** Windringetje onder iemand die vliegt (Copter Dive). */
+  rotorWash: (x: number, y: number) => void;
 }
 
 const tween = (scene: Phaser.Scene, cfg: Phaser.Types.Tweens.TweenBuilderConfig) =>
@@ -370,4 +376,244 @@ export async function chaoCheer(c: Pick<HeroCtx, 'scene' | 's' | 'dir' | 'burst'
   await tween(scene, { targets: cheese, x: s.x + dir * 10, y: s.y - 50, duration: 340, ease: 'Sine.easeInOut' });
   scene.tweens.add({ targets: cheese, alpha: 0, scale: 0.6, duration: 200, onComplete: () => cheese.destroy() });
   await sleep(scene, 120);
+}
+
+// ================================================================ 1 Boost
+
+/** Kleine opkikker na een stat-boost: gekleurde gloed en pijltjes omhoog rond de sprite. */
+function powerUp(scene: Phaser.Scene, s: Sprite, color: number) {
+  const glow = scene.add.circle(s.x, s.y - 22, 18, color, 0.35).setDepth(s.depth - 1).setBlendMode(ADD);
+  scene.tweens.add({ targets: glow, scale: 2.2, alpha: 0, duration: 380, onComplete: () => glow.destroy() });
+  for (let i = 0; i < 6; i++) {
+    const l = scene.add.rectangle(s.x + rnd(-16, 16), s.y - rnd(0, 20), 2, rnd(6, 12), color, 0.9).setDepth(s.depth + 1).setBlendMode(ADD);
+    scene.tweens.add({ targets: l, y: l.y - rnd(24, 40), alpha: 0, duration: rnd(300, 460), delay: i * 30, onComplete: () => l.destroy() });
+  }
+}
+
+// ---------------------------------------------------------------- Sonic: Homing Attack
+/** Opspringen, het vizier klikt vast, en als blauwe draaikolk in een rechte lijn op het doelwit. */
+export async function homingAttack(c: HeroCtx) {
+  const { scene, s, home, dir } = c;
+  const tc = c.center(c.target);
+  // 1. omhoog als bal
+  s.play(c.p.anim('spin'));
+  audio.sfx('jump', { volume: 0.8 });
+  await tween(scene, { targets: s, y: home.y - 74, x: home.x + dir * 18, duration: 220, ease: 'Quad.easeOut' });
+  // 2. vizier
+  await c.lockOn(c.target);
+  // 3. de Sonic Ballet-draaikolk, een lichtstreep erachter
+  s.play('sonic_ballet');
+  audio.sfx('whoosh', { volume: 0.8 });
+  const from = { x: s.x, y: s.y - 16 };
+  const hit = { x: tc.x - dir * (c.missed ? -30 : 10), y: tc.y + 16 };
+  const trail = scene.time.addEvent({ delay: 14, loop: true, callback: () => c.ghost(s, 0x5aa8ff) });
+  await tween(scene, { targets: s, x: hit.x, y: hit.y, duration: 120, ease: 'Linear' });
+  trail.remove();
+  const beam = scene.add.line(0, 0, from.x, from.y, s.x, s.y - 16, 0x9ad8ff, 0.9).setOrigin(0).setLineWidth(3).setDepth(s.depth - 1).setBlendMode(ADD);
+  scene.tweens.add({ targets: beam, alpha: 0, duration: 260, onComplete: () => beam.destroy() });
+  // 4. raak: blauwe zwaai-slash en een kringetje
+  c.strike();
+  if (!c.missed) {
+    sbfx(scene, tc.x, tc.y, 'sbfx_airslash', 1.8, 19, dir > 0);
+    shockwave(scene, tc.x, tc.y, 0x5aa8ff, 44, 240);
+  }
+  // 5. afketsen: uitrollen en een salto naar achteren, met SPD-gloed
+  s.play('sonic_balletout');
+  await tween(scene, { targets: s, x: s.x - dir * 50, y: Math.max(s.y - 46, c.bodyHeight(s) + 10), duration: 260, ease: 'Quad.easeOut' });
+  if (!c.missed) powerUp(scene, s, 0x5aa8ff);
+  s.play(c.p.anim('spin'));
+  await tween(scene, { targets: s, x: home.x, y: home.y, duration: 300, ease: 'Quad.easeIn' });
+  s.play(c.p.anim('idle'));
+  c.dust(s.x, s.y, 4);
+}
+
+// ---------------------------------------------------------------- Tails: Copter Dive
+/** Met de staarten als propeller omhoog, boven het doelwit omklappen en als boor naar beneden. */
+export async function copterDive(c: HeroCtx) {
+  const { scene, s, home, dir } = c;
+  const tc = c.center(c.target);
+  // 1. opstijgen met windringen onder hem
+  s.play('tails_sbfly');
+  audio.sfx('spindash', { volume: 0.5 });
+  const wash = scene.time.addEvent({ delay: 60, loop: true, callback: () => c.rotorWash(s.x, s.y) });
+  await tween(scene, { targets: s, x: home.x + dir * 20, y: home.y - 90, duration: 300, ease: 'Quad.easeOut' });
+  const top = Math.max(tc.y - 74, c.bodyHeight(s) + 24);
+  await tween(scene, { targets: s, x: tc.x - dir * 6, y: top, duration: 320, ease: 'Sine.easeInOut' });
+  wash.remove();
+  // 2. omklappen: een rondje en dan de boor
+  s.play(scene.anims.exists(c.p.anim('drill')) ? c.p.anim('drill') : c.p.anim('spin'));
+  audio.sfx('whoosh', { volume: 0.8 });
+  await tween(scene, { targets: s, y: Math.max(s.y - 10, c.bodyHeight(s) + 14), duration: 110, ease: 'Quad.easeOut' });
+  // 3. naar beneden als boor, met een wervel van windstreepjes eromheen
+  let a = 0;
+  const swirl = scene.time.addEvent({
+    delay: 16, loop: true, callback: () => {
+      a += 0.9;
+      const l = scene.add.rectangle(s.x + Math.cos(a) * 14, s.y - 18 + Math.sin(a) * 4, 8, 1, 0xffffff, 0.9).setDepth(s.depth + (Math.sin(a) > 0 ? 1 : -1)).setBlendMode(ADD);
+      scene.tweens.add({ targets: l, y: l.y - 16, alpha: 0, duration: 200, onComplete: () => l.destroy() });
+    },
+  });
+  const trail = scene.time.addEvent({ delay: 24, loop: true, callback: () => c.ghost(s, 0xffd060) });
+  await tween(scene, { targets: s, y: tc.y + c.bodyHeight(s) * 0.45 - (c.missed ? -10 : 6), x: tc.x - dir * (c.missed ? -24 : 4), duration: 170, ease: 'Quad.easeIn' });
+  swirl.remove();
+  trail.remove();
+  // 4. raak: windring en een klap
+  c.strike();
+  if (!c.missed) {
+    audio.sfx('punch', { volume: 0.7 });
+    const ring = scene.add.ellipse(tc.x, tc.y + 10, 30, 10).setStrokeStyle(2, 0xffffff, 0.9).setDepth(18);
+    scene.tweens.add({ targets: ring, scaleX: 3, scaleY: 2, alpha: 0, duration: 320, onComplete: () => ring.destroy() });
+    shockwave(scene, tc.x, tc.y, 0xffd060, 40, 240);
+  }
+  await hopHome(c);
+}
+
+// ---------------------------------------------------------------- Knuckles: Glide Attack
+/** Opspringen en met de vuisten vooruit het doelwit in glijden (ATK omhoog, DEF omlaag: hij gooit alles erin). */
+export async function glideAttack(c: HeroCtx) {
+  const { scene, s, home, dir } = c;
+  const tc = c.center(c.target);
+  // 1. sprong
+  audio.sfx('jump', { volume: 0.8 });
+  const jump = playDone(scene, s, 'knuckles_sbjump', 400);
+  await tween(scene, { targets: s, y: home.y - 64, x: home.x + dir * 12, duration: 260, ease: 'Quad.easeOut' });
+  await jump;
+  // 2. glijden: licht dalend, met windstreepjes langs zijn lijf
+  s.play('knuckles_grind');
+  audio.sfx('whoosh', { volume: 0.7 });
+  const wind = scene.time.addEvent({
+    delay: 26, loop: true, callback: () => {
+      const l = scene.add.rectangle(s.x - dir * 10, s.y - rnd(8, 30), rnd(14, 28), 1, 0xffffff, 0.85).setDepth(s.depth - 1);
+      scene.tweens.add({ targets: l, x: l.x - dir * 36, alpha: 0, duration: 200, onComplete: () => l.destroy() });
+    },
+  });
+  const hitX = tc.x - dir * (c.missed ? -30 : 24);
+  await tween(scene, { targets: s, x: hitX, y: tc.y + c.bodyHeight(s) * 0.3, duration: 340, ease: 'Sine.easeIn' });
+  wind.remove();
+  // 3. vuisten erin
+  c.strike();
+  if (!c.missed) {
+    audio.sfx('punch');
+    const fist = { x: s.x + dir * 22, y: s.y - c.bodyHeight(s) * 0.45 };
+    const pow = scene.add.star(fist.x, fist.y, 6, 5, 16, 0xffffff).setDepth(19).setStrokeStyle(2, 0xff4a2a).setScale(0.3);
+    scene.tweens.add({ targets: pow, scale: 1.3, alpha: 0, angle: 40, duration: 260, ease: 'Back.easeOut', onComplete: () => pow.destroy() });
+    shockwave(scene, fist.x, fist.y, 0xff6a3a, 40, 220);
+  }
+  // 4. landen, ATK-gloed, terug
+  await playDone(scene, s, 'knuckles_grindend', 400);
+  if (!c.missed) powerUp(scene, s, 0xff5a3a);
+  await hopHome(c);
+}
+
+// ---------------------------------------------------------------- Amy: Piko Hammer
+/** Aanrennen, opspringen en de Piko Piko Hammer met volle kracht neer laten klappen. */
+export async function pikoHammer(c: HeroCtx) {
+  const { scene, s, dir } = c;
+  const cam = scene.cameras.main;
+  const pos = closeIn(c, 38);
+  // 1. aanrennen
+  s.play('amy_sbdash');
+  const dustRun = scene.time.addEvent({ delay: 70, repeat: 4, callback: () => c.dust(s.x - dir * 8, s.y, 1) });
+  await tween(scene, { targets: s, x: pos.x, y: pos.y, duration: 280, ease: 'Sine.easeIn' });
+  dustRun.remove();
+  // 2. hamer omhoog, sprongetje, en BONK
+  audio.sfx('jump', { volume: 0.7 });
+  const fall = playUntil(scene, s, 'amy_aircrush', '18_6', 700);
+  await tween(scene, { targets: s, y: pos.y - 26, duration: 220, ease: 'Quad.easeOut' });
+  audio.sfx('whoosh', { volume: 0.8 });
+  await tween(scene, { targets: s, y: pos.y, duration: 120, ease: 'Quad.easeIn' });
+  await fall;
+  const head = { x: pos.tc.x - dir * 4, y: pos.tc.y - 6 };
+  c.strike();
+  if (!c.missed) {
+    audio.sfx('punch');
+    cam.shake(180, 0.01);
+    shockwave(scene, head.x, head.y, 0xff8fc8, 56, 280);
+    // sterretjes rond de kop van het doelwit, en een hartje dat ervan af springt
+    for (let i = 0; i < 6; i++) {
+      const st = scene.add.image(head.x, head.y, 'star').setTint(0xfff27a).setDepth(19).setScale(1.3);
+      const a = (i / 6) * Math.PI * 2;
+      scene.tweens.add({ targets: st, x: head.x + Math.cos(a) * 30, y: head.y + Math.sin(a) * 18 - 8, angle: 200, alpha: 0, duration: 480, ease: 'Quad.easeOut', onComplete: () => st.destroy() });
+    }
+    hearts(scene, head.x, head.y - 10, 3);
+  }
+  c.dust(s.x + dir * 22, s.y, 6);
+  await new Promise<void>(r => { s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => r()); scene.time.delayedCall(500, () => r()); });
+  if (!c.missed) powerUp(scene, s, 0xff5a8a);
+  await hopHome(c);
+}
+
+// ---------------------------------------------------------------- Cream: Chao Attack
+/** Cream wijst, Cheese rolt zich op tot een energiebal en knalt op het doelwit (ATK van het doelwit omlaag). */
+export async function chaoAttack(c: HeroCtx) {
+  const { scene, s, dir } = c;
+  const tc = c.center(c.target);
+  // 1. Cream wijst; Cheese verschijnt in een gloeiende bol naast haar
+  s.play('cream_point');
+  audio.sfx('ringchime', { volume: 0.5 });
+  const start = { x: s.x + dir * 26, y: s.y - 40 };
+  const orb = scene.add.sprite(start.x, start.y, 'sbmoves', 'sbfx_cheeseorb_0').setDepth(18).setScale(0.3).setAlpha(0.9).setBlendMode(ADD);
+  await tween(scene, { targets: orb, scale: 1.4, duration: 160, ease: 'Back.easeOut' });
+  const ball = scene.add.sprite(start.x, start.y, 'sbmoves').setDepth(19).setScale(2).setFlipX(dir > 0).play('sbfx_cheeseball');
+  scene.tweens.add({ targets: orb, scale: 0.2, alpha: 0, duration: 180, onComplete: () => orb.destroy() });
+  await sleep(scene, 160);
+  // 2. de bal schiet in een boogje naar het doelwit, met een spoor van lichtblauwe glinsters
+  audio.sfx('whoosh', { volume: 0.8 });
+  const end = { x: tc.x - dir * (c.missed ? -40 : 6), y: tc.y };
+  const arc = { t: 0 };
+  let last = 0;
+  await tween(scene, {
+    targets: arc, t: 1, duration: 300, ease: 'Sine.easeIn',
+    onUpdate: () => {
+      const t = arc.t;
+      ball.setPosition(start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t - Math.sin(t * Math.PI) * 30);
+      if (scene.time.now - last > 18) {
+        last = scene.time.now;
+        const g = scene.add.image(ball.x, ball.y, 'star').setTint(0x8af0ff).setDepth(18).setBlendMode(ADD).setScale(1.1);
+        scene.tweens.add({ targets: g, scale: 0.2, alpha: 0, duration: 300, onComplete: () => g.destroy() });
+      }
+    },
+  });
+  // 3. raak: een plens energie
+  c.strike();
+  if (!c.missed) {
+    audio.sfx('punch', { volume: 0.7 });
+    sbfx(scene, tc.x, tc.y, 'sbfx_chaosplash', 2, 20, dir < 0);
+    shockwave(scene, tc.x, tc.y, 0x8af0ff, 44, 260);
+  }
+  // 4. Cheese komt bij, stuitert terug naar Cream en verdwijnt met een glinstering
+  ball.play('sbfx_cheeseland').setFlipX(dir < 0);
+  await tween(scene, { targets: ball, x: (ball.x + s.x) / 2, y: ball.y - 40, duration: 220, ease: 'Quad.easeOut' });
+  await tween(scene, { targets: ball, x: s.x + dir * 16, y: s.y - 46, duration: 220, ease: 'Quad.easeIn' });
+  c.burst(ball.x, ball.y, 0x8af0ff, 6);
+  scene.tweens.add({ targets: ball, alpha: 0, scale: 1, duration: 200, onComplete: () => ball.destroy() });
+  await sleep(scene, 120);
+  s.play(c.p.anim('idle'));
+}
+
+// ---------------------------------------------------------------- Cream: de Chao-vriendjes van Chao Blessing
+const CHAO_FRIENDS = ['blue', 'orange', 'red', 'pink'];
+/** De Chao rennen van links het beeld in, springen blij rond Cream en rennen weer weg. Geeft een functie die ze laat vertrekken. */
+export function chaoFriends(scene: Phaser.Scene, s: Sprite): () => Promise<void> {
+  const chao = CHAO_FRIENDS.map((col, i) => {
+    const spot = { x: s.x + (i - 1.5) * 26 + (i < 2 ? -18 : 18), y: s.y + (i % 2 ? 4 : -2) };
+    const ch = scene.add.sprite(-20 - i * 18, spot.y, 'sbmoves').setOrigin(0.5, 1).setDepth(s.depth + (i % 2 ? 1 : -1)).setScale(2).setFlipX(true)
+      .play(`sbfx_chao_${col}_run`);
+    scene.tweens.add({
+      targets: ch, x: spot.x, duration: 520 + i * 90, ease: 'Sine.easeOut',
+      onComplete: () => {
+        ch.play(`sbfx_chao_${col}_hop`);
+        scene.tweens.add({ targets: ch, y: spot.y - 8, duration: 180, yoyo: true, repeat: 3, ease: 'Sine.easeOut' });
+        hearts(scene, ch.x, ch.y - 20, 2);
+      },
+    });
+    return ch;
+  });
+  return async () => {
+    chao.forEach((ch, i) => {
+      ch.play(`sbfx_chao_${CHAO_FRIENDS[i]}_run`).setFlipX(false);
+      scene.tweens.add({ targets: ch, x: -30, duration: 600 + i * 60, ease: 'Sine.easeIn', onComplete: () => ch.destroy() });
+    });
+    await sleep(scene, 300);
+  };
 }

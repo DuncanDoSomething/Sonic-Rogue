@@ -3,7 +3,7 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
-  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, RAMPAGE_CHANCE, shieldCap, benchExpRate,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, RAMPAGE_CHANCE, shieldCap, benchExpRate, BLESS_BONUS,
 } from '../src/data/fighters';
 import { mainBossFor, MAIN_BOSS_SHIELDS, SHADOW_BOSS_CHANCE, enemyScaling, rivalChance, rivalLevelBonus } from '../src/data/zones';
 
@@ -435,5 +435,20 @@ describe('Chaos Emeralds: EXP voor de bank', () => {
     expect(benchExpRate(0.3, 1)).toBeCloseTo(0.35);
     expect(benchExpRate(0.5, 7)).toBeCloseTo(0.85);
     expect(benchExpRate(0.9, 7)).toBe(1);
+  });
+});
+
+describe('Cream: Chao Blessing', () => {
+  it('maakt de schade van je team 50% hoger', () => {
+    const fixed = () => 0.5;
+    const plain = calcHit(new Fighter('knuckles', 20), new Fighter('frog', 20), MOVES.drillPunch, fixed);
+    const blessed = calcHit(new Fighter('knuckles', 20), new Fighter('frog', 20), MOVES.drillPunch, fixed, 0, 1 + BLESS_BONUS);
+    expect(blessed.damage / plain.damage).toBeCloseTo(1.5, 1);
+  });
+  it('Chao Attack verlaagt de ATK van het doelwit, Chao Cheer kost 2 en geeft 1 Boost', () => {
+    expect(MOVES.cheeseAttack.targetStages).toEqual({ atk: -1 });
+    expect(MOVES.chaoCheer.cost).toBe(2);
+    expect(MOVES.chaoCheer.allyBoost).toBe(1);
+    expect(FIGHTERS.cream.moves).toContain('cheeseAttack');
   });
 });

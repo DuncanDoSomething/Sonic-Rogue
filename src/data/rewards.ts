@@ -30,9 +30,11 @@ export interface RunBuffs {
   critTurns: number;
   /** Eggman Alarm: de volgende vijand is een elite, en daarna krijg je minstens uncommon rewards */
   eliteNext: boolean;
+  /** Chao Blessing (Cream's ultimate): je team doet meer schade, nog zoveel beurten */
+  blessTurns: number;
 }
 export const emptyBuffs = (): RunBuffs => ({
-  shieldHit: false, shieldWaves: 0, dodgeNext: false, dodgeWaves: 0, magnetWaves: 0, critTurns: 0, eliteNext: false,
+  shieldHit: false, shieldWaves: 0, dodgeNext: false, dodgeWaves: 0, magnetWaves: 0, critTurns: 0, eliteNext: false, blessTurns: 0,
 });
 export const HAMMER_CRIT = 0.2;
 export const MAGNET_BONUS = 1;

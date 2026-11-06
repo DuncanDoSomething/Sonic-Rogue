@@ -1,4 +1,7 @@
-"""Sonic Battle-moves voor het team: Knuckle Punch, Glove Punch, Hammer Twirl en Chao Cheer (en hun effecten).
+"""De eigen moves van het team (en hun effecten), vooral uit Sonic Battle.
+
+1 Boost: Homing Attack, Copter Dive, Glide Attack, Chao Attack, Piko Hammer.
+2-3 Boost: Knuckle Punch, Glove Punch, Hammer Twirl, Chao Cheer. En de Chao uit Chao Blessing.
 
 Gebruik: python3 tools/build_sb_moves.py "<map 'Sonic rogue sprites'>" src/assets
 
@@ -7,6 +10,12 @@ Bronnen (allemaal "from Sonic Battle, ripped by QuadFactor"):
 - character sprites/Tails/10040.png: Magic Hook (boxhandschoen aan een ketting), Dashing toward opponent
 - character sprites/Amy/10042.png: Girl Tornado (Pink Typhoon) en de roze tornado
 - character sprites/Cream/10043.png: Cream die Cheese roept, en Cheese zelf (verschijnen, vliegen, Chao Cannon)
+- character sprites/Sonic/10039.png: Sonic Ballet (bal met blauwe draaikolk) en het Air action-effect
+- character sprites/Knuckles/10041.png: Jumping en Grinder Attack (glijden met de vuisten vooruit)
+- character sprites/Tails/10040.png: Tails Fly (staarten als propeller)
+- character sprites/Amy/10042.png: Air Girl Crush (springen en de hamer neer laten klappen), Dashing toward opponent
+- character sprites/Cream/7164.png: Cheese the Chao, ripped by Ren "Foxx" Ramos (Cheese als energiebal, en
+  de gekleurde Chao-vriendjes); dit sheet heeft een witte achtergrond en onderaan een tekstvak
 
 De Sonic Battle-sprites zijn net zo groot als de Advance 3-sprites (Knuckles staat 35 px hoog, in Advance 3 33 px),
 dus de hero-sprite kan halverwege een aanval gewoon deze frames afspelen.
@@ -27,10 +36,16 @@ BG = [(0, 72, 72), (0, 72, 74), (0, 91, 91), (0, 192, 192), (0, 184, 184), (76, 
 class Sheet:
     """Vindt de sprites op een Sonic Battle-sheet en zet ze in rijen (zelfde aanpak als build_shadow.py)."""
 
-    def __init__(self, path):
+    def __init__(self, path, white_bg_rows=0):
         a = np.array(Image.open(path).convert('RGBA'))
+        if white_bg_rows:
+            # witte achtergrond: alleen het wit dat aan de rand vastzit weghalen (het wit van de ogen blijft)
+            a = a[:white_bg_rows].copy()
+            white, _ = ndimage.label(np.all(a[:, :, :3] == 255, axis=2))
+            edge = set(np.unique(np.concatenate([white[0], white[-1], white[:, 0], white[:, -1]]))) - {0}
+            a[np.isin(white, list(edge))] = 0
         cnt = Counter(map(tuple, a[:, :, :3].reshape(-1, 3)[::7]))
-        for c in [cnt.most_common(1)[0][0]] + BG:
+        for c in ([] if white_bg_rows else [cnt.most_common(1)[0][0]]) + BG:
             a[np.all(a[:, :, :3] == c, axis=2)] = 0
         a[a[:, :, 3] < 10] = 0
         alpha = a[:, :, 3] > 0
@@ -84,7 +99,9 @@ def head_x(img, frac=0.4):
 
 
 sheets = {k: Sheet(os.path.join(CS, p)) for k, p in
-          {'knuckles': 'Knuckles/10041.png', 'tails': 'Tails/10040.png', 'amy': 'Amy/10042.png', 'cream': 'Cream/10043.png'}.items()}
+          {'sonic': 'Sonic/10039.png', 'knuckles': 'Knuckles/10041.png', 'tails': 'Tails/10040.png', 'amy': 'Amy/10042.png',
+           'cream': 'Cream/10043.png'}.items()}
+sheets['chao'] = Sheet(os.path.join(CS, 'Cream', '7164.png'), white_bg_rows=400)
 
 # (rij, kolom[, ms]) op de sheet. Kolommen tellen zoals tools-overzicht (losse sprites van links naar rechts).
 CHAR_ANIMS = {
@@ -107,6 +124,20 @@ CHAR_ANIMS = {
     'cream_call':         ('cream', [(15, 1, 60), (15, 2, 100), (15, 3, 80), (15, 4, 80), (15, 5, 80), (15, 6, 80), (15, 7, 80),
                                      (15, 8, 80), (15, 9, 80), (15, 10, 80), (15, 11, 80)], None, 0),
     'cream_point':        ('cream', [(15, 12, 90), (15, 13, 300)], None, 0),
+    # ---- 1 Boost
+    # Homing Attack: oprollen tot een bal met een blauwe draaikolk, en weer uitrollen
+    'sonic_ballet':       ('sonic', [(9, c) for c in (0, 1, 2)], 20, -1),
+    'sonic_balletout':    ('sonic', [(9, 3, 70), (9, 4, 80), (9, 5, 90), (9, 6, 160)], None, 0),
+    # Glide Attack: springen en glijden met de vuisten vooruit
+    'knuckles_sbjump':    ('knuckles', [(6, c, 60) for c in range(0, 5)], None, 0),
+    'knuckles_grind':     ('knuckles', [(9, 3), (9, 4)], 12, -1),
+    'knuckles_grindend':  ('knuckles', [(9, 6, 90), (9, 7, 200)], None, 0),
+    # Copter Dive: met de staarten als propeller omhoog
+    'tails_sbfly':        ('tails', [(9, c) for c in (1, 2, 3, 4)], 18, -1),
+    # Piko Hammer: aanrennen, springen en de hamer neer laten klappen
+    'amy_sbdash':         ('amy', [(19, c) for c in (1, 2, 3, 4)], 16, -1),
+    'amy_aircrush':       ('amy', [(18, 0, 70), (18, 1, 70), (18, 2, 70), (18, 3, 110), (18, 4, 60), (18, 5, 60), (18, 6, 160),
+                                   (18, 7, 90), (18, 8, 200)], None, 0),
 }
 FX_ANIMS = {
     'sbfx_kboom':        ('knuckles', [(31, c) for c in range(0, 12)], 22, 0, False),
@@ -114,6 +145,22 @@ FX_ANIMS = {
     'sbfx_cheese_in':    ('cream', [(34, c) for c in range(0, 4)], 14, 0, True),
     'sbfx_cheese_fly':   ('cream', [(41, c) for c in range(0, 7)], 12, -1, True),
     'sbfx_chaocannon':   ('cream', [(42, c) for c in range(1, 9)], 16, 0, True),
+    'sbfx_airslash':     ('sonic', [(10, c) for c in range(0, 6)], 22, 0, True),
+    # Chao Attack: Cheese draait als een bal in zijn energieschil, de gloed ervoor, en weer bijkomen
+    'sbfx_cheeseorb':    ('chao', [(3, 0)], 1, 0, True),
+    'sbfx_cheeseball':   ('chao', [(3, c) for c in range(1, 8)], 22, -1, True),
+    'sbfx_cheeseland':   ('chao', [(3, c) for c in range(8, 16)], 14, 0, True),
+    'sbfx_cheesedance':  ('chao', [(2, c) for c in range(0, 9)], 12, -1, True),
+    'sbfx_chaosplash':   ('chao', [(9, c) for c in range(0, 4)], 14, 0, True),
+    # Chao Blessing: Cheese' vriendjes (roze, rood, blauw, oranje) rennen erheen en springen blij
+    'sbfx_chao_pink_run':   ('chao', [(10, c) for c in range(0, 5)], 14, -1, True),
+    'sbfx_chao_pink_hop':   ('chao', [(10, c) for c in range(5, 11)], 12, -1, True),
+    'sbfx_chao_red_run':    ('chao', [(11, c) for c in range(0, 5)], 14, -1, True),
+    'sbfx_chao_red_hop':    ('chao', [(11, c) for c in range(5, 11)], 12, -1, True),
+    'sbfx_chao_blue_run':   ('chao', [(12, c) for c in range(0, 5)], 14, -1, True),
+    'sbfx_chao_blue_hop':   ('chao', [(12, c) for c in range(5, 12)], 12, -1, True),
+    'sbfx_chao_orange_run': ('chao', [(13, c) for c in range(0, 5)], 14, -1, True),
+    'sbfx_chao_orange_hop': ('chao', [(13, c) for c in range(5, 10)], 12, -1, True),
 }
 # handmatige correctie van het anker (pixels, + = naar rechts in de gespiegelde frames)
 OFFSETS = {}
@@ -165,7 +212,8 @@ for name, img, x, y, cw, ch, ox, oy in placed:
                     'spriteSourceSize': {'x': 0, 'y': 0, 'w': cw, 'h': ch}, 'sourceSize': {'w': cw, 'h': ch}}
 atlas.save(os.path.join(OUT, 'sbmoves.png'))
 json.dump({'frames': frames, 'meta': {'image': 'sbmoves.png', 'size': {'w': atlas.width, 'h': atlas.height}, 'scale': '1',
-           'credits': 'Knuckles, Tails, Amy, Cream and Cheese from Sonic Battle, ripped by QuadFactor'}},
+           'credits': 'Sonic, Knuckles, Tails, Amy, Cream and Cheese from Sonic Battle, ripped by QuadFactor; '
+                      'Cheese and the Chao from Sonic Advance, ripped by Ren "Foxx" Ramos'}},
           open(os.path.join(OUT, 'sbmoves.json'), 'w'), indent=1)
 
 anims = {}
