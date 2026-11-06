@@ -111,7 +111,7 @@ export class Battle {
   log: RunLog;
 
   /** Experimenten met regels die niet in src/data staan (zie run.ts --exp). */
-  static opts: { bossRandomType?: boolean; eggmanLevel?: number } = {};
+  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean } = {};
 
   constructor(partyIds: string[], private policy: Policy, seed: number, private maxWave = 200) {
     this.rng = seeded(seed);
@@ -348,7 +348,7 @@ export class Battle {
       hit = { ...hit, damage: cap.damage };
       const before = tgt.hp;
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
-      if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed) { tgt.hp = 1; tgt.sashUsed = true; }
+      if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed && !Battle.opts.noSash) { tgt.hp = 1; tgt.sashUsed = true; }
       if (isPlayer) {
         this.stat(att).dmg += before - tgt.hp;
         if (tgt.fainted) this.stat(att).kos++;

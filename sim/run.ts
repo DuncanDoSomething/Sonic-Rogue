@@ -29,6 +29,12 @@ const EXPERIMENTS: Record<string, () => void> = {
     Object.assign(FIGHTERS.amy.base, { hp: 25, def: 8 }); Object.assign(FIGHTERS.amy.growth, { hp: 3.3, def: 1.3 });
     Object.assign(FIGHTERS.shadow.base, { hp: 22 }); Object.assign(FIGHTERS.shadow.growth, { hp: 2.9 });
   },
+  // Knuckles overleeft geen KO meer met 1 HP
+  noSash: () => { Battle.opts.noSash = true; },
+  // alleen Amy steviger
+  amyBulk: () => { Object.assign(FIGHTERS.amy.base, { hp: 25, def: 8 }); Object.assign(FIGHTERS.amy.growth, { hp: 3.3, def: 1.3 }); },
+  // Tornado Hammer kost een kwart in plaats van de helft van haar HP
+  amyRecoil: () => { MOVES.tornadoHammer.recoil = 0.25; },
   // Glove Punch verdooft maar één keer per gevecht (Thunder Shoot blijft altijd verdoven)
   gloveOnce: () => { MOVES.glovePunch.stunOnce = true; },
   // Knuckles iets minder tanky

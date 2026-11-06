@@ -182,10 +182,10 @@ describe('nieuwe moves en ultimates', () => {
     expect(MOVES.glideAttack.selfStages).toEqual({ atk: 1, def: -1 });
     expect(MOVES.hammerSmash.selfStages).toEqual({ atk: 1 });
   });
-  it('Glove Punch kost 3 en verdooft altijd 2 beurten (geen limiet); Thunder Shoot 3 beurten', () => {
+  it('Glove Punch kost 3 en verdooft 2 beurten, één keer per gevecht; Thunder Shoot 3 beurten', () => {
     expect(MOVES.glovePunch.cost).toBe(3);
     expect(MOVES.glovePunch.stun).toEqual([2, 2]);
-    expect(MOVES.glovePunch.stunOnce).toBeFalsy();
+    expect(MOVES.glovePunch.stunOnce).toBe(true);   // een boss elke keer opnieuw verdoven was te sterk
     expect(MOVES.thunderShoot.stun).toEqual([3, 3]);
   });
   it('Knuckle Punch gaat eerst; Maximum Heat maakt de stages op', () => {
