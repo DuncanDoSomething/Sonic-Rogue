@@ -65,17 +65,21 @@ export function expShareAfter(cleared: number) {
 }
 
 // ---------------------------------------------------------------- passives
-export type PassiveId = 'speedster' | 'weakSpot' | 'flinch' | 'luckySwing' | 'chaoCare' | 'rampage';
+export type PassiveId = 'speedster' | 'weakSpot' | 'flinch' | 'luckySwing' | 'chaoCare' | 'lifeform';
 export interface PassiveDef { id: PassiveId; name: string; desc: string; }
 export const PASSIVES: Record<PassiveId, PassiveDef> = {
-  speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. Hits harder the faster he is than the foe (up to +75%).' },
+  speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. The faster he is than the foe, the harder he hits (up to +75%) and the more attacks he dodges (up to 35%).' },
   weakSpot:   { id: 'weakSpot', name: 'Weak Spot', desc: 'Stunned foes take 2x damage from Tails.' },
-  flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP.' },
-  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance per ATK stage. Crits cost her 5% max HP (not with Hammer Twirl).' },
+  flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP, if he had more than half his HP.' },
+  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance per ATK stage, and she keeps her ATK raises when she switches out. Crits cost her 5% max HP (not with Hammer Twirl).' },
   chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'When a wave starts, the whole team heals 10% HP if Cream is on the field, or 5% if she is on the bench.' },
-  rampage:    { id: 'rampage', name: 'Rampage', desc: 'Every time one of his moves becomes free again: 80% chance his ATK and SPD rise by 1.' },
+  lifeform:   { id: 'lifeform', name: 'Ultimate Lifeform', desc: 'Zone effects and stat drops don\'t affect him. Every KO he lands gives him 1 Boost.' },
 };
 export const FLINCH_CHANCE = 0.2;
+/** Iron Fists: met 1 HP blijven staan werkt alleen als hij vóór de klap meer dan dit deel van zijn HP had. */
+export const SASH_MIN_HP = 0.5;
+/** Ultimate Lifeform (Shadow): zoveel Boost per KO die hij maakt. */
+export const LIFEFORM_KO_BOOST = 1;
 export const WEAK_SPOT_BONUS = 2;
 /** Lucky Swing: elke crit kost Amy zoveel van haar max-HP (zoals een Life Orb). Ze houdt altijd 1 HP over. */
 export const CRIT_RECOIL = 0.05;
@@ -95,8 +99,6 @@ export const BLESS_REVIVE = 0.5;
 export const SUPER_VULNERABLE = 2;
 /** Zo vaak achter elkaar kan Super Shadow Barrage weer gratis worden door een KO. */
 export const ULT_CHAIN_MAX = 2;
-/** Rampage: kans per gratis geworden move op ATK en SPD +1. */
-export const RAMPAGE_CHANCE = 0.8;
 
 /** Sonic Speed: x1 bij gelijke snelheid, +25% per keer zo snel, max +75%. */
 export const SPEED_BONUS_CAP = 1.75;
@@ -104,6 +106,18 @@ export function speedBonus(attacker: Fighter, target: Fighter) {
   if (attacker.def.passive?.id !== 'speedster') return 1;
   const ratio = attacker.spd / Math.max(1, target.spd);
   return Math.min(SPEED_BONUS_CAP, Math.max(1, 1 + 0.25 * (ratio - 1)));
+}
+
+/**
+ * Sonic Speed: hoe sneller Sonic is dan de aanvaller, hoe vaker hij ontwijkt.
+ * 0% bij gelijke snelheid, +15% per keer zo snel, max 35% (dus 2x zo snel = 15%, 3x = 30%).
+ */
+export const DODGE_PER_RATIO = 0.15;
+export const DODGE_CAP = 0.35;
+export function dodgeChance(target: Fighter, attacker: Fighter) {
+  if (target.def.passive?.id !== 'speedster') return 0;
+  const ratio = target.spd / Math.max(1, attacker.spd);
+  return Math.min(DODGE_CAP, Math.max(0, DODGE_PER_RATIO * (ratio - 1)));
 }
 
 /** Critical-kans: 1/16, plus Lucky Swing (Amy). */
@@ -164,6 +178,10 @@ export interface MoveDef {
   blessing?: boolean;
   /** Chao Cheer: wie er geneest wordt krijgt ook zoveel Boost. */
   allyBoost?: number;
+  /** Homing Attack: gratis (de Boost komt terug) als hij een gewone vijand KO slaat, niet een boss of rival. */
+  refundOnKo?: boolean;
+  /** Copter Dive: een verdoofd doelwit blijft zoveel beurten langer verdoofd (één keer per gevecht); anders SPD -1. */
+  extendStun?: number;
   /** Stat stages die het doelwit krijgt als de move raakt (Chao Attack: ATK -1). */
   targetStages?: Partial<Record<StageKey, number>>;
   /** Na gebruik verliest de gebruiker dit deel van zijn max-HP (kan hem KO slaan). */
@@ -177,7 +195,7 @@ export interface MoveDef {
 export const MOVES: Record<string, MoveDef> = {
   // --- team
   spinAttack:   { id: 'spinAttack', name: 'Spin Attack', power: 40, accuracy: 95, priority: 0, anim: 'spin', boostGain: 1, desc: 'Curls into a ball and rolls into the foe.' },
-  homingAttack: { id: 'homingAttack', name: 'Homing Attack', power: 30, accuracy: 100, priority: 1, anim: 'homing', cost: 1, selfStages: { spd: 1 }, desc: 'Locks on and strikes first. Raises SPD by 1.' },
+  homingAttack: { id: 'homingAttack', name: 'Homing Attack', power: 50, accuracy: 100, priority: 1, anim: 'homing', cost: 1, selfStages: { spd: 1 }, refundOnKo: true, desc: 'Locks on and strikes first. Raises SPD by 1. Free if it KOs the foe (not bosses or rivals).' },
   spinDash:     { id: 'spinDash', name: 'Spin Dash', power: 70, scaling: 'speed', accuracy: 100, priority: 0, anim: 'dash', cost: 2, desc: 'Revs up and launches. The faster Sonic is than the foe, the harder it hits (50-150).' },
   glovePunch:   { id: 'glovePunch', name: 'Glove Punch', power: 70, accuracy: 100, priority: 0, anim: 'punch', cost: 3, stun: [2, 2], stunOnce: true, desc: 'Pulls a boxing glove out of thin air, swings it on its chain and lets it fly. Stuns the foe for 2 turns (once per fight).' },
   glideAttack:  { id: 'glideAttack', name: 'Glide Attack', power: 45, accuracy: 100, priority: 0, anim: 'glide', cost: 1, selfStages: { atk: 1, def: -1 }, desc: 'Glides in fists first. Raises ATK by 1, lowers DEF by 1.' },
@@ -186,9 +204,9 @@ export const MOVES: Record<string, MoveDef> = {
   chaoCheer:    { id: 'chaoCheer', name: 'Chao Cheer', power: 0, accuracy: 100, priority: 0, anim: 'heal', heal: 0.3, allyBoost: 1, ally: true, cost: 2, desc: 'Heals 30% max HP and gives 1 Boost. Use it on Cream or on a teammate.' },
   hammerSmash:  { id: 'hammerSmash', name: 'Piko Hammer', power: 60, accuracy: 100, priority: 0, anim: 'hammer', cost: 1, selfStages: { atk: 1 }, desc: 'Swings her Piko Piko Hammer down on the foe. Raises ATK by 1.' },
   hammerTwirl:  { id: 'hammerTwirl', name: 'Hammer Twirl', power: 80, accuracy: 100, priority: 0, anim: 'twirl', cost: 2, selfHeal: 0.25, desc: 'Spins around with her hammer out and heals 25% of her max HP.' },
-  chaosSpear:   { id: 'chaosSpear', name: 'Chaos Spear', power: 0, accuracy: 100, priority: 0, anim: 'spear', cost: 3, pierce: 3, desc: 'Status move: chaos spears mark the foe. It takes 50% more damage from your team for 3 turns.' },
-  chaosControl: { id: 'chaosControl', name: 'Chaos Control', power: 100, accuracy: 100, priority: 0, anim: 'chaos', cost: 4, resets: 'anyKo', desc: 'Stops time and strikes freely. Becomes free once after every KO Shadow lands.' },
-  copterDive:   { id: 'copterDive', name: 'Copter Dive', power: 50, accuracy: 100, priority: 1, anim: 'fly', cost: 1, desc: 'Rises on spinning tails, flips over and drills down on the foe. Always strikes first.' },
+  chaosSpear:   { id: 'chaosSpear', name: 'Chaos Spear', power: 50, accuracy: 100, priority: 0, anim: 'spear', cost: 2, pierce: 3, desc: 'Chaos spears hit and mark the foe: it takes 50% more damage from your team for 3 turns.' },
+  chaosControl: { id: 'chaosControl', name: 'Chaos Control', power: 100, accuracy: 100, priority: 0, anim: 'chaos', cost: 4, resets: 'anyKo', selfStages: { atk: 1, spd: 1 }, desc: 'Stops time and strikes freely. Raises ATK and SPD by 1. Becomes free once after every KO Shadow lands.' },
+  copterDive:   { id: 'copterDive', name: 'Copter Dive', power: 50, accuracy: 100, priority: 1, anim: 'fly', cost: 1, extendStun: 1, desc: 'Drills down on the foe and always strikes first. A stunned foe stays stunned 1 turn longer (once per fight); otherwise lowers its SPD by 1.' },
   // --- ultimates (kosten de hele Boost-meter, geleerd op ULTIMATE_LEVEL)
   lightSpeed:   { id: 'lightSpeed', name: 'Light Speed Atk', power: 150, accuracy: 100, priority: 1, anim: 'ultimate', cost: MAX_BOOST, evade: 2, selfStages: { spd: 3 }, desc: 'Homing attacks faster than light. Raises SPD by 3, and the foe misses its next 2 attacks on Sonic.' },
   thunderShoot: { id: 'thunderShoot', name: 'Thunder Shoot', power: 80, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, stun: [3, 3], desc: 'Fires himself like a lightning bolt and stuns the foe for 3 turns.' },
@@ -245,8 +263,8 @@ export const FIGHTERS: Record<string, FighterDef> = {
     type: 'speed', ultimate: 'lightSpeed', passive: PASSIVES.speedster,
     id: 'sonic', name: 'Sonic', atlas: 'sonic', animPrefix: 'sonic', scale: 2,
     // HP en SPD omgedraaid: Sonic is veruit de snelste, ook als basis-stat
-    base: { hp: 18, atk: 12, def: 7, spd: 21 },
-    growth: { hp: 2.3, atk: 2.0, def: 1.1, spd: 2.8 },
+    base: { hp: 21, atk: 12, def: 7, spd: 21 },
+    growth: { hp: 2.7, atk: 2.0, def: 1.2, spd: 2.8 },
     moves: ['spinAttack', 'homingAttack', 'spinDash'],
     expYield: 20, // alleen als rival
   },
@@ -278,13 +296,13 @@ export const FIGHTERS: Record<string, FighterDef> = {
     type: 'power', ultimate: 'tornadoHammer', passive: PASSIVES.luckySwing,
     id: 'amy', name: 'Amy', atlas: 'amy', animPrefix: 'amy', scale: 2,
     // de harde hitter van het team: veel ATK, iets minder HP en SPD
-    base: { hp: 23, atk: 15, def: 7, spd: 11 },
-    growth: { hp: 3.0, atk: 2.5, def: 1.1, spd: 1.5 },
+    base: { hp: 25, atk: 15, def: 8, spd: 11 },
+    growth: { hp: 3.3, atk: 2.5, def: 1.3, spd: 1.5 },
     moves: ['spinAttack', 'hammerSmash', 'hammerTwirl'],
     expYield: 20, // alleen als rival
   },
   shadow: {
-    type: 'speed', ultimate: 'superBarrage', passive: PASSIVES.rampage, spinGain: 2,
+    type: 'speed', ultimate: 'superBarrage', passive: PASSIVES.lifeform, spinGain: 2,
     id: 'shadow', name: 'Shadow', atlas: 'shadow', animPrefix: 'shadow', scale: 2,
     // net iets trager dan Sonic, en harder
     base: { hp: 20, atk: 14, def: 8, spd: 17 },
@@ -377,7 +395,11 @@ export class Fighter {
   hpMult = 1;
   get maxHp() { return Math.floor(this.stat('hp') * this.hpMult); }
   /** Totale stage (rewards + zone), begrensd op -6..+6. */
-  stage(k: StageKey) { return Math.max(-MAX_STAGE, Math.min(MAX_STAGE, this.stages[k] + this.field[k])); }
+  stage(k: StageKey) {
+    // Ultimate Lifeform (Shadow): zone-effecten werken niet op hem
+    const field = this.def.passive?.id === 'lifeform' ? 0 : this.field[k];
+    return Math.max(-MAX_STAGE, Math.min(MAX_STAGE, this.stages[k] + field));
+  }
   get atk() { return Math.floor(this.stat('atk') * stageMultiplier(this.stage('atk'))); }
   get dfn() { return Math.floor(this.stat('def') * stageMultiplier(this.stage('def'))); }
   get spd() { return Math.floor(this.stat('spd') * stageMultiplier(this.stage('spd'))); }
@@ -417,6 +439,8 @@ export class Fighter {
   raise(k: StageKey, by = 1): string {
     // Fired Up (Knuckles): stat-verhogingen tellen dubbel
     if (by > 0 && this.def.passive?.id === 'flinch') by *= 2;
+    // Ultimate Lifeform (Shadow): niemand verlaagt zijn stats
+    if (by < 0 && this.def.passive?.id === 'lifeform') return `${this.name}'s ${STAGE_NAMES[k]} can't be lowered! (Ultimate Lifeform)`;
     const before = this.stages[k];
     this.stages[k] = Math.max(-MAX_STAGE, Math.min(MAX_STAGE, before + by));
     if (this.stages[k] === before) return `${this.name}'s ${STAGE_NAMES[k]} won't go any ${by > 0 ? 'higher' : 'lower'}!`;

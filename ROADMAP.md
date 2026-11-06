@@ -27,13 +27,14 @@
 - [x] Sonic-style battle HUD: ring counter, bag and buff icons on screen with hover info, Boost in the party menu and during rewards
 - [x] How to Play by topic, a guided practice fight with Tails, and one-time tips (can be turned off)
 - [x] Unit tests, end-to-end tests and automatic deploys
-- [x] Shadow as a playable character (Chaos Spear, Chaos Control, Super Shadow ultimate, Rampage passive)
+- [x] Shadow as a playable character (Chaos Spear, Chaos Control, Super Shadow ultimate, Ultimate Lifeform passive)
 - [x] Main bosses every 20 waves: Dr. Eggman in X-Zone / XX, rarely Shadow instead (unlocks him), PokéRogue-style boss shields
 - [x] Balance pass: enemies scale per zone, more (and later stronger) rivals, full EXP for everyone who fought, Shadow nerfs
 - [x] Toss items from your bag, voice lines for Shadow, spin balls for Knuckles and Shadow
 - [x] Chaos Emeralds give the bench +5% EXP each; Eggman's Egg Mobile gets a random type
 - [x] New animations for every team move (1 Boost and 2-3 Boost), Amy and Shadow buffs
 - [x] Cream rework: Chao Attack (Cheese as a weapon), cheaper Chao Cheer with +1 Boost, Chao Blessing revives and powers up the team
+- [x] Balance simulation (`npm run sim`) and a balance pass from it: Glove Punch stuns once per fight, Sonic dodges and has more HP, Amy is sturdier and keeps her ATK raises, Shadow's Ultimate Lifeform, Iron Fists only from above half HP, stronger 1-Boost moves
 
 ## Next
 - [ ] More main bosses (Chaos, more Eggman robots) with boss charms, and a super boss at wave 90 after all seven Chaos Emeralds

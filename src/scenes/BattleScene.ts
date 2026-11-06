@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, RAMPAGE_CHANCE, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -1584,9 +1584,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   /** Schade-vermenigvuldiger voor de aanval van deze beurt (Chao Blessing). */
   private dmgBonus = 1;
 
-  /** Dobbelsteen voor Rampage en de keuze van de main boss (de tests zetten ze vast). */
-  private rampageRoll = () => Math.random();
+  /** Dobbelstenen voor de keuze van de main boss en Sonic's ontwijken (de tests zetten ze vast). */
   private mainBossRoll = () => Math.random();
+  private dodgeRoll = () => Math.random();
 
   /** Wie er deze wave in het veld stond (krijgen allemaal de volle EXP, zoals in Pokémon). */
   private waveFighters = new Set<Fighter>();
@@ -1647,6 +1647,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     }
     // Light Speed Attack: de volgende aanvallen op Sonic missen gegarandeerd
     if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; }
+    // Sonic Speed: hoe sneller Sonic is dan de aanvaller, hoe vaker hij ontwijkt (ultimates raken altijd)
+    else if (!hit.missed && !status && (move.cost ?? 0) < MAX_BOOST && this.dodgeRoll() < dodgeChance(tgt, att)) {
+      hit = { ...hit, missed: true, damage: 0, crit: false };
+      guard = 'Sonic Speed!';
+    }
     let struck = false;
     let shieldsBroken = 0;
     const strike = () => {
@@ -1656,8 +1661,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       // boss-schilden: één schild per klap (tenzij de klap heel hard is)
       const cap = shieldCap(tgt, hit.damage);
       if (cap.damage !== hit.damage || cap.broken) { hit = { ...hit, damage: cap.damage }; shieldsBroken = cap.broken; }
+      const hpBefore = tgt.hp;
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
-      if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
+      // Iron Fists: één keer per zone met 1 HP blijven staan, als hij vóór de klap meer dan de helft had
+      if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed && hpBefore > tgt.maxHp * SASH_MIN_HP) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
       // tutorial: niemand van je team gaat neer, en de vijand pas bij de laatste stap
       if (this.tutorialMode && tgt.hp === 0 && (this.party.includes(tgt) || this.tutGuard)) tgt.hp = 1;
       const spr = isPlayer ? this.foe : this.hero;
@@ -1776,6 +1783,23 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
         audio.sfx('enemyhit', { volume: 0.5 });
         await this.say(`${this.who(tgt)} is stunned!`, 400);
       }
+      // Copter Dive: een verdoofd doelwit blijft 1 beurt langer verdoofd (één keer per gevecht), anders SPD -1
+      if (move.extendStun && !tgt.fainted) {
+        const extKey = isPlayer ? 'p:extend' : 'e:extend';
+        if (tgt.stun > 0 && !this.stunUsed.has(extKey)) {
+          this.stunUsed.add(extKey);
+          tgt.stun += move.extendStun;
+          await this.say(`${this.who(tgt)} stays stunned ${move.extendStun} turn longer!`, 400);
+        } else {
+          await this.changeStage(tgt, 'spd', -1);
+        }
+      }
+      // Homing Attack: een gewone vijand KO = de Boost komt terug
+      if (move.refundOnKo && tgt.fainted && isPlayer && !isBossWave(this.wave) && !this.rival && (move.cost ?? 0) > 0) {
+        att.gainBoost(move.cost ?? 0);
+        this.setBox(this.pBox, att, false);
+        await this.say(`${move.name} was free! (KO)`, 350);
+      }
       // Chaos Spear: het doelwit krijgt een paar beurten meer schade
       if (move.pierce && !tgt.fainted) {
         tgt.pierced = move.pierce;
@@ -1796,7 +1820,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /**
    * Shadow na zijn aanval: een KO maakt Chaos Control weer gratis (en Super Barrage, als die de KO maakte,
-   * tot ULT_CHAIN_MAX keer achter elkaar). Rampage: elke move die zo weer gratis wordt geeft ATK en SPD +1.
+   * tot ULT_CHAIN_MAX keer achter elkaar). Ultimate Lifeform: elke KO geeft hem ook 1 Boost.
    */
   private async shadowAfter(att: Fighter, tgt: Fighter, move: MoveDef, isPlayer: boolean) {
     const ult = move.id === att.def.ultimate;
@@ -1815,26 +1839,22 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       att.ultChain++;
       resets.push(`${move.name}|${att.ultChain}/${ULT_CHAIN_MAX}`);
     }
-    if (!resets.length) return;
+    const lifeform = att.def.passive?.id === 'lifeform' && att.boost < MAX_BOOST;
+    if (!resets.length && !lifeform) return;
     const spr = isPlayer ? this.hero : this.foe;
     const c = this.center(spr);
     shockwave(this, c.x, c.y, 0xff3a4a, 46, 320);
     audio.sfx('ringchime', { volume: 0.6 });
+    // een rival betaalt geen Boost, dus de berichten alleen voor je eigen Shadow
+    if (!isPlayer) return;
     for (const r of resets) {
       const [name, chain] = r.split('|');
-      // een rival betaalt geen Boost, dus daar alleen de Rampage
-      if (isPlayer) await this.say(`${name} is free again!${chain ? ` (${chain})` : ''}`, 400);
-      if (att.def.passive?.id === 'rampage' && this.rampageRoll() < RAMPAGE_CHANCE) {
-        // ATK en SPD tegelijk, in één bericht (50% kans per gratis geworden move)
-        const before = { ...att.stages };
-        att.raise('atk', 1);
-        att.raise('spd', 1);
-        const rose = (['atk', 'spd'] as const).filter(k => att.stages[k] > before[k]);
-        if (rose.length) this.statArrows(spr, true);
-        await this.say(rose.length === 2 ? `Rampage! ${this.who(att)}'s attack and speed rose!`
-          : rose.length ? `Rampage! ${this.who(att)}'s ${rose[0] === 'atk' ? 'attack' : 'speed'} rose!`
-          : `Rampage! ${this.who(att)}'s stats won't go any higher!`, 350);
-      }
+      await this.say(`${name} is free again!${chain ? ` (${chain})` : ''}`, 400);
+    }
+    if (lifeform) {
+      att.gainBoost(LIFEFORM_KO_BOOST);
+      this.setBox(this.pBox, att, false);
+      await this.say(`Ultimate Lifeform! ${att.name} gained ${LIFEFORM_KO_BOOST} Boost.`, 350);
     }
   }
 
@@ -2826,7 +2846,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.waveFighters.add(next);
     const prev = this.player;
     if (prev === next) return;
-    if (resetStages) prev.stages = emptyStages();
+    // Lucky Swing (Amy): ze houdt haar ATK-verhogingen als ze wisselt (niet als ze KO is)
+    if (resetStages) prev.stages = { ...emptyStages(), atk: prev.def.passive?.id === 'luckySwing' && !prev.fainted ? prev.stages.atk : 0 };
     prev.stun = 0;
     if (!prev.fainted) {
       await this.say(`Come back, ${prev.name}!`, 150);
@@ -3011,7 +3032,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       }
     }
     const burn = this.fieldEffect?.burn;
-    if (!burn || this.player.fainted) return;
+    // Ultimate Lifeform (Shadow): de hitte doet hem niks
+    if (!burn || this.player.fainted || this.player.def.passive?.id === 'lifeform') return;
     const dmg = Math.max(1, Math.floor(this.player.maxHp * burn));
     this.player.hp = Math.max(0, this.player.hp - dmg);
     this.hitFlash(this.hero);

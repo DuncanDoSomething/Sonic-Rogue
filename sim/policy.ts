@@ -4,7 +4,7 @@
 // Een echte speler kan beter (of slechter); kijk dus vooral naar VERSCHILLEN tussen characters en
 // naar wat er verandert als je een getal aanpast, niet naar de precieze waves.
 // ---------------------------------------------------------------------------
-import { Fighter, MAX_BOOST, MOVES, MoveDef, ULTIMATE_LEVEL, calcHit, critChance, shieldCap, typeMultiplier } from '../src/data/fighters';
+import { Fighter, MAX_BOOST, MOVES, MoveDef, ULTIMATE_LEVEL, calcHit, critChance, dodgeChance, shieldCap, typeMultiplier } from '../src/data/fighters';
 import { isBossWave } from '../src/data/zones';
 import type { RewardDef } from '../src/data/rewards';
 import type { ItemDef } from '../src/data/items';
@@ -45,7 +45,7 @@ const hard = (b: Battle) => b.isBoss || b.elite || b.rival;
 function foeDamage(b: Battle, f: Fighter) {
   const moves = b.enemy.def.moves.map(m => MOVES[m]).filter(m => m.power > 0);
   if (!moves.length) return 0;
-  return moves.reduce((n, m) => n + expDamage(b.enemy, f, m), 0) / moves.length;
+  return (moves.reduce((n, m) => n + expDamage(b.enemy, f, m), 0) / moves.length) * (1 - dodgeChance(f, b.enemy));
 }
 
 /** Hoe goed past `f` tegen deze vijand (hoger = beter). */
@@ -94,7 +94,8 @@ export const goodPlayer: Policy = {
       const needFirst = foeFirst && foeHit >= p.hp;
       const ok = needFirst ? kos.filter(m => m.priority > 0) : kos;
       const list = ok.length ? ok : kos;
-      list.sort((a, c) => p.costOf(a) - p.costOf(c) || c.priority - a.priority);
+      const eff = (m: MoveDef) => (m.refundOnKo && !hard(b) ? 0 : p.costOf(m));
+      list.sort((a, c) => eff(a) - eff(c) || c.priority - a.priority);
       return { kind: 'move', move: list[0] };
     }
     // 3. bijna KO en een gezonde teamgenoot: wisselen (KO blijft tot de zone-boss)
@@ -129,6 +130,7 @@ export const goodPlayer: Policy = {
       if (m.pierce && e.pierced === 0) v += best * 0.5 * Math.min(3, later);
       if (m.stun && e.stun === 0) v += (foeHit * 2 + (p.def.passive?.id === 'weakSpot' ? best * Math.min(2, later) : 0));
       if (m.targetStages?.atk) v += foeHit * 0.2 * later;
+      if (m.extendStun && e.stun > 0 && !b.stunUsed.has('p:extend')) v += foeHit + (p.def.passive?.id === 'weakSpot' ? best : 0);
       if (m.selfHeal) v += Math.min(p.maxHp - p.hp, p.maxHp * m.selfHeal) * 0.5;
       if (m.priority > 0 && foeFirst && foeHit >= p.hp) v += best;
       v -= p.costOf(m) * boostValue;

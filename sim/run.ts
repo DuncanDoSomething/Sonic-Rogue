@@ -29,6 +29,12 @@ const EXPERIMENTS: Record<string, () => void> = {
     Object.assign(FIGHTERS.amy.base, { hp: 25, def: 8 }); Object.assign(FIGHTERS.amy.growth, { hp: 3.3, def: 1.3 });
     Object.assign(FIGHTERS.shadow.base, { hp: 22 }); Object.assign(FIGHTERS.shadow.growth, { hp: 2.9 });
   },
+  // Iron Fists al vanaf 25% HP (in plaats van 50%)
+  sash25: () => { Battle.opts.sashMin = 0.25; },
+  // Sonic ontwijkt vaker: 15% per keer zo snel, max 40%
+  dodge15: () => { Battle.opts.dodge = [0.15, 0.4]; },
+  // Sonic iets meer HP
+  sonicHp: () => { Object.assign(FIGHTERS.sonic.base, { hp: 21 }); Object.assign(FIGHTERS.sonic.growth, { hp: 2.7, def: 1.2 }); },
   // Knuckles overleeft geen KO meer met 1 HP
   noSash: () => { Battle.opts.noSash = true; },
   // alleen Amy steviger

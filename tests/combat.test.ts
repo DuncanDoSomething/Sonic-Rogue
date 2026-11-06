@@ -3,7 +3,7 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
-  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, RAMPAGE_CHANCE, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, LIFEFORM_KO_BOOST, dodgeChance, DODGE_CAP, DODGE_PER_RATIO, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH,
 } from '../src/data/fighters';
 import { mainBossFor, MAIN_BOSS_SHIELDS, SHADOW_BOSS_CHANCE, enemyScaling, rivalChance, rivalLevelBonus } from '../src/data/zones';
 
@@ -239,7 +239,7 @@ describe('nieuwe moves en ultimates', () => {
   });
   it('alle zes characters hebben een passive', () => {
     expect(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'shadow'].map(id => FIGHTERS[id].passive?.id))
-      .toEqual(['speedster', 'weakSpot', 'flinch', 'luckySwing', 'chaoCare', 'rampage']);
+      .toEqual(['speedster', 'weakSpot', 'flinch', 'luckySwing', 'chaoCare', 'lifeform']);
   });
 });
 
@@ -273,10 +273,10 @@ describe('balans-update', () => {
 });
 
 describe('Shadow', () => {
-  it('speed-type, Rampage, en zijn kit', () => {
+  it('speed-type, Ultimate Lifeform, en zijn kit', () => {
     const d = FIGHTERS.shadow;
     expect(d.type).toBe('speed');
-    expect(d.passive?.id).toBe('rampage');
+    expect(d.passive?.id).toBe('lifeform');
     expect(d.moves).toEqual(['spinAttack', 'chaosSpear', 'chaosControl']);
     expect(d.ultimate).toBe('superBarrage');
     expect(HEROES).toContain('shadow');
@@ -289,8 +289,8 @@ describe('Shadow', () => {
     sh.spendBoost(MOVES.spinAttack); so.spendBoost(MOVES.spinAttack);
     expect([sh.boost, so.boost]).toEqual([2, 1]);
   });
-  it('Chaos Spear kost 3; het doelwit krijgt daarna 50% meer schade', () => {
-    expect(MOVES.chaosSpear.cost).toBe(3);
+  it('Chaos Spear kost 2; het doelwit krijgt daarna 50% meer schade', () => {
+    expect(MOVES.chaosSpear.cost).toBe(2);
     expect(MOVES.chaosSpear.pierce).toBe(3);
     const sonic = new Fighter('sonic', 20);
     const foe = new Fighter('beetle', 20);
@@ -351,9 +351,22 @@ describe('Shadow', () => {
     expect(sh.anim('idle')).toBe('shadow_idle');
     expect(SUPER_VULNERABLE).toBe(2);
   });
-  it('Chaos Spear is een status-move: geen power, raakt altijd', () => {
-    expect(MOVES.chaosSpear.power).toBe(0);
+  it('Chaos Spear doet ook schade (50 power) en raakt altijd; Chaos Control geeft ATK en SPD +1', () => {
+    expect(MOVES.chaosSpear.power).toBe(50);
     expect(MOVES.chaosSpear.accuracy).toBe(100);
+    expect(MOVES.chaosControl.selfStages).toEqual({ atk: 1, spd: 1 });
+  });
+  it('Ultimate Lifeform: geen zone-effecten en geen stat-verlagingen', () => {
+    const sh = new Fighter('shadow', 20);
+    sh.field.spd = -1;
+    expect(sh.stage('spd')).toBe(0);
+    sh.raise('atk', -1);
+    expect(sh.stages.atk).toBe(0);
+    sh.raise('atk', 1);
+    expect(sh.stages.atk).toBe(1);
+    const so = new Fighter('sonic', 20);
+    so.field.spd = -1;
+    expect(so.stage('spd')).toBe(-1);
   });
 });
 
@@ -424,8 +437,8 @@ describe('balans: zones, rivals en EXP', () => {
     expect([10, 14, 15, 16, 25, 31, 35, 40].map(rivalChance)).toEqual([0, 0, 0.75, 0, 0.75, 0.12, 0.75, 0]);
     expect([15, 30, 49, 50].map(rivalLevelBonus)).toEqual([0, 1, 1, 2]);
   });
-  it('Rampage heeft 50% kans per reset', () => {
-    expect(RAMPAGE_CHANCE).toBe(0.8);
+  it('Ultimate Lifeform geeft 1 Boost per KO', () => {
+    expect(LIFEFORM_KO_BOOST).toBe(1);
   });
 });
 
@@ -457,5 +470,28 @@ describe('Cream: Chao Care', () => {
   it('werkt ook vanaf de bank, maar half zo sterk', () => {
     expect(CHAO_CARE_HEAL).toBe(0.1);
     expect(CHAO_CARE_BENCH).toBe(0.05);
+  });
+});
+
+describe('nieuwe kits (balance-ronde 2)', () => {
+  it('Sonic Speed: ontwijken loopt op met hoe snel hij is, max 35%', () => {
+    const sonic = new Fighter('sonic', 20), foe = new Fighter('frog', 20);
+    expect(dodgeChance(new Fighter('tails', 20), foe)).toBe(0);    // alleen Sonic
+    const ratio = sonic.spd / foe.spd;
+    expect(dodgeChance(sonic, foe)).toBeCloseTo(Math.min(DODGE_CAP, DODGE_PER_RATIO * (ratio - 1)));
+    sonic.stages.spd = 6;
+    expect(dodgeChance(sonic, foe)).toBe(DODGE_CAP);
+    const fast = new Fighter('sonic', 5); fast.stages.spd = -6;
+    expect(dodgeChance(fast, new Fighter('sharkjet', 30))).toBe(0);  // trager: nooit
+  });
+  it('Homing Attack: 50 power, SPD +1, gratis bij een KO; Copter Dive verlengt een stun', () => {
+    expect(MOVES.homingAttack.power).toBe(50);
+    expect(MOVES.homingAttack.selfStages).toEqual({ spd: 1 });
+    expect(MOVES.homingAttack.refundOnKo).toBe(true);
+    expect(MOVES.copterDive.extendStun).toBe(1);
+  });
+  it('Amy: meer HP en DEF', () => {
+    expect(FIGHTERS.amy.base).toMatchObject({ hp: 25, def: 8 });
+    expect(FIGHTERS.amy.growth).toMatchObject({ hp: 3.3, def: 1.3 });
   });
 });

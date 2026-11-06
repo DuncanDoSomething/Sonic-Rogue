@@ -8,7 +8,7 @@
 // ---------------------------------------------------------------------------
 import {
   BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, FIGHTER_TYPES, FLINCH_CHANCE,
-  Fighter, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MOVES, MoveDef, RAMPAGE_CHANCE, RIVAL_HEROES, StageKey, ULT_CHAIN_MAX,
+  Fighter, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MOVES, MoveDef, LIFEFORM_KO_BOOST, RIVAL_HEROES, SASH_MIN_HP, dodgeChance, StageKey, ULT_CHAIN_MAX,
   benchExpRate, calcHit, emptyStages, expShareAfter, shieldCap,
 } from '../src/data/fighters';
 import {
@@ -111,7 +111,7 @@ export class Battle {
   log: RunLog;
 
   /** Experimenten met regels die niet in src/data staan (zie run.ts --exp). */
-  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean } = {};
+  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number] } = {};
 
   constructor(partyIds: string[], private policy: Policy, seed: number, private maxWave = 200) {
     this.rng = seeded(seed);
@@ -342,13 +342,14 @@ export class Battle {
       }
     }
     if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; }
+    else if (!hit.missed && !status && (move.cost ?? 0) < MAX_BOOST && this.rng() < this.dodge(tgt, att)) hit = { ...hit, missed: true, damage: 0, crit: false };
     // strike
     if (!hit.missed && !status) {
       const cap = shieldCap(tgt, hit.damage);
       hit = { ...hit, damage: cap.damage };
       const before = tgt.hp;
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
-      if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed && !Battle.opts.noSash) { tgt.hp = 1; tgt.sashUsed = true; }
+      if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed && !Battle.opts.noSash && before > tgt.maxHp * (Battle.opts.sashMin ?? SASH_MIN_HP)) { tgt.hp = 1; tgt.sashUsed = true; }
       if (isPlayer) {
         this.stat(att).dmg += before - tgt.hp;
         if (tgt.fainted) this.stat(att).kos++;
@@ -378,10 +379,22 @@ export class Battle {
         if (once) this.stunUsed.add(stunKey);
         tgt.stun = Math.max(tgt.stun, move.stun[0] + Math.floor(this.rng() * (move.stun[1] - move.stun[0] + 1)));
       }
+      if (move.extendStun && !tgt.fainted) {
+        const extKey = isPlayer ? 'p:extend' : 'e:extend';
+        if (tgt.stun > 0 && !this.stunUsed.has(extKey)) { this.stunUsed.add(extKey); tgt.stun += move.extendStun; }
+        else tgt.raise('spd', -1);
+      }
+      if (move.refundOnKo && tgt.fainted && isPlayer && !isBossWave(this.wave) && !this.rival) att.gainBoost(move.cost ?? 0);
       if (move.pierce && !tgt.fainted) { tgt.pierced = move.pierce; tgt.freshTurns.add('pierced'); }
     }
     if (move.superTurns && !att.fainted && att.superTurns <= 0) att.superTurns = move.superTurns;
     this.shadowAfter(att, tgt, move, freeUse);
+  }
+
+  private dodge(tgt: Fighter, att: Fighter) {
+    const o = Battle.opts.dodge;
+    if (!o || tgt.def.passive?.id !== 'speedster') return dodgeChance(tgt, att);
+    return Math.min(o[1], Math.max(0, o[0] * (tgt.spd / Math.max(1, att.spd) - 1)));
   }
 
   private shadowAfter(att: Fighter, tgt: Fighter, move: MoveDef, freeUse: boolean) {
@@ -392,9 +405,8 @@ export class Battle {
     let resets = 0;
     if (att.moves.includes('chaosControl') && !att.chaosFree) { att.chaosFree = true; resets++; }
     if (ult && move.resets === 'ownKo' && !att.ultFree && att.ultChain < ULT_CHAIN_MAX) { att.ultFree = true; att.ultChain++; resets++; }
-    for (let i = 0; i < resets; i++) {
-      if (att.def.passive?.id === 'rampage' && this.rng() < RAMPAGE_CHANCE) { att.raise('atk', 1); att.raise('spd', 1); }
-    }
+    void resets;
+    if (att.def.passive?.id === 'lifeform') att.gainBoost(LIFEFORM_KO_BOOST);
   }
 
   private doHeal(att: Fighter, move: MoveDef, target: Fighter) {
@@ -419,7 +431,7 @@ export class Battle {
   private endOfTurn() {
     for (const f of [this.player, this.enemy]) if (f && !f.fainted) f.tickTurns();
     const burn = this.fieldEffect?.burn;
-    if (!burn || this.player.fainted) return;
+    if (!burn || this.player.fainted || this.player.def.passive?.id === 'lifeform') return;
     this.player.hp = Math.max(0, this.player.hp - Math.max(1, Math.floor(this.player.maxHp * burn)));
     if (this.player.fainted) this.stat(this.player).downs++;
   }
@@ -428,7 +440,7 @@ export class Battle {
     this.waveFighters.add(next);
     const prev = this.player;
     if (prev === next) return;
-    if (resetStages) prev.stages = emptyStages();
+    if (resetStages) prev.stages = { ...emptyStages(), atk: prev.def.passive?.id === 'luckySwing' && !prev.fainted ? prev.stages.atk : 0 };
     prev.stun = 0;
     this.player = next;
   }

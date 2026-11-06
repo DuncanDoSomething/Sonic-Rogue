@@ -135,17 +135,27 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Glove Punch stuns the foe for 2 turns, every time', async ({ page }) => {
+  test('Glove Punch stuns the foe for 2 turns, once per fight; Copter Dive keeps it stunned 1 turn longer', async ({ page }) => {
     const errors = trackErrors(page);
     await openGame(page);
     await startRun(page);
-    const stun = () => page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.stun);
-    for (let i = 0; i < 2; i++) {
-      // Glove Punch eerst: 2 beurten verdoofd, de vijand slaat er meteen één over
-      await setup(page, 's.enemy.stun = 0; s.player.boost = 6; s.enemy.hp = 9999; s.runTurn({ ...window.MOVES.glovePunch, priority: 9 });');
-      await waitForMenu(page, 'command');
-      expect(await stun()).toBe(1);
-    }
+    const foe = () => page.evaluate(() => { const e = (window as any).game.scene.getScene('Battle').enemy; return { stun: e.stun, spd: e.stages.spd }; });
+    // Glove Punch eerst: 2 beurten verdoofd, de vijand slaat er meteen één over
+    await setup(page, 's.enemy.stun = 0; s.player.boost = 6; s.enemy.hp = 9999; s.runTurn({ ...window.MOVES.glovePunch, priority: 9 });');
+    await waitForMenu(page, 'command');
+    expect((await foe()).stun).toBe(1);
+    // Copter Dive op een verdoofde vijand: 1 beurt erbij (en hij slaat er weer één over)
+    await setup(page, 's.player.boost = 6; s.runTurn(window.MOVES.copterDive);');
+    await waitForMenu(page, 'command');
+    expect((await foe()).stun).toBe(1);
+    // nog een Glove Punch in hetzelfde gevecht: geen stun meer
+    await setup(page, 's.enemy.stun = 0; s.player.boost = 6; s.runTurn({ ...window.MOVES.glovePunch, priority: 9 });');
+    await waitForMenu(page, 'command');
+    expect((await foe()).stun).toBe(0);
+    // Copter Dive zonder stun: SPD -1 bij de vijand
+    await setup(page, 's.player.boost = 6; s.runTurn(window.MOVES.copterDive);');
+    await waitForMenu(page, 'command');
+    expect((await foe()).spd).toBe(-1);
     expect(errors).toEqual([]);
   });
 
@@ -491,7 +501,7 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(await page.evaluate(() => localStorage.getItem('sonicrogue_tips_seen'))).toContain('shop');
   });
 
-  test('Shadow: Chaos Spear pierces, a KO makes Chaos Control free and sets off Rampage', async ({ page }) => {
+  test('Shadow: Chaos Spear pierces, Chaos Control raises ATK/SPD, a KO makes it free and gives 1 Boost', async ({ page }) => {
     const errors = trackErrors(page);
     await openGame(page);
     await startBattleWith(page, ['shadow', 'tails']);
@@ -500,20 +510,21 @@ test.describe('Sonic Rogue smoke tests', () => {
       const f = s.player;
       return { pierced: s.enemy.pierced, chaosFree: f.chaosFree, atk: f.stages.atk, spd: f.stages.spd, boost: f.boost, canChaos: f.canUse((window as any).MOVES.chaosControl) };
     });
-    // Chaos Spear (kost 3): de vijand is 3 beurten pierced
+    // Chaos Spear (kost 2): doet schade en de vijand is 3 beurten pierced
     await setup(page, 's.enemy.hp = 9999; s.player.boost = 6;');
     await press(page, 'z', 'ArrowRight', 'z');
     await waitForMenu(page, 'command');
     const marked = await shadow();
     expect(marked.pierced).toBe(3);
-    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.hp)).toBe(9999);  // status-move: geen schade
-    // Chaos Control maakt de KO: daarna is hij gratis, en Rampage geeft ATK en SPD +1 (50% kans: hier vast gezet)
-    await setup(page, 's.enemy.hp = 1; s.player.boost = 6; s.rampageRoll = () => 0;');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.hp)).toBeLessThan(9999);
+    // Chaos Control maakt de KO: ATK en SPD +1, daarna is hij gratis, en Ultimate Lifeform geeft 1 Boost (6 - 4 + 1 = 3)
+    await setup(page, 's.enemy.hp = 1; s.player.boost = 6;');
     await press(page, 'z', 'ArrowLeft', 'ArrowDown', 'z');   // de cursor stond nog op Chaos Spear
     await waitForMenu(page, 'reward');
     const after = await shadow();
     expect(after.chaosFree).toBe(true);
     expect([after.atk, after.spd]).toEqual([1, 1]);
+    expect(after.boost).toBe(3);
     await setup(page, 's.player.boost = 0;');
     expect((await shadow()).canChaos).toBe(true);
     expect(errors).toEqual([]);
