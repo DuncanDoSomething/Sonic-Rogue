@@ -14,6 +14,7 @@ export type MoveAnim =
 // ---------------------------------------------------------------- types
 /** Speed / Fly / Power, zoals de teams in Advance 3 en Heroes. Fly > Power > Speed > Fly. */
 export type FighterType = 'speed' | 'fly' | 'power';
+export const FIGHTER_TYPES: FighterType[] = ['speed', 'fly', 'power'];
 export const TYPE_BEATS: Record<FighterType, FighterType> = { fly: 'power', power: 'speed', speed: 'fly' };
 export const TYPE_STRONG = 1.5;   // aanvaller heeft voordeel
 export const TYPE_WEAK = 0.67;    // aanvaller heeft nadeel
@@ -70,14 +71,14 @@ export const PASSIVES: Record<PassiveId, PassiveDef> = {
   speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. Hits harder the faster he is than the foe (up to +75%).' },
   weakSpot:   { id: 'weakSpot', name: 'Weak Spot', desc: 'Stunned foes take 2x damage from Tails.' },
   flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP.' },
-  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance per ATK stage. Crits cost her 10% max HP (not with Hammer Twirl).' },
+  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance per ATK stage. Crits cost her 5% max HP (not with Hammer Twirl).' },
   chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'If Cream is on the field when a wave starts, the whole team heals 10% HP.' },
-  rampage:    { id: 'rampage', name: 'Rampage', desc: 'Every time one of his moves becomes free again: 50% chance his ATK and SPD rise by 1.' },
+  rampage:    { id: 'rampage', name: 'Rampage', desc: 'Every time one of his moves becomes free again: 80% chance his ATK and SPD rise by 1.' },
 };
 export const FLINCH_CHANCE = 0.2;
 export const WEAK_SPOT_BONUS = 2;
 /** Lucky Swing: elke crit kost Amy zoveel van haar max-HP (zoals een Life Orb). Ze houdt altijd 1 HP over. */
-export const CRIT_RECOIL = 0.1;
+export const CRIT_RECOIL = 0.05;
 export const CHAO_CARE_HEAL = 0.1;
 export const BASE_CRIT = 0.0625;
 
@@ -89,7 +90,7 @@ export const SUPER_VULNERABLE = 2;
 /** Zo vaak achter elkaar kan Super Shadow Barrage weer gratis worden door een KO. */
 export const ULT_CHAIN_MAX = 2;
 /** Rampage: kans per gratis geworden move op ATK en SPD +1. */
-export const RAMPAGE_CHANCE = 0.5;
+export const RAMPAGE_CHANCE = 0.8;
 
 /** Sonic Speed: x1 bij gelijke snelheid, +25% per keer zo snel, max +75%. */
 export const SPEED_BONUS_CAP = 1.75;
@@ -164,13 +165,13 @@ export const MOVES: Record<string, MoveDef> = {
   spinAttack:   { id: 'spinAttack', name: 'Spin Attack', power: 40, accuracy: 95, priority: 0, anim: 'spin', boostGain: 1, desc: 'Curls into a ball and rolls into the foe.' },
   homingAttack: { id: 'homingAttack', name: 'Homing Attack', power: 30, accuracy: 100, priority: 1, anim: 'homing', cost: 1, selfStages: { spd: 1 }, desc: 'Locks on and strikes first. Raises SPD by 1.' },
   spinDash:     { id: 'spinDash', name: 'Spin Dash', power: 70, scaling: 'speed', accuracy: 100, priority: 0, anim: 'dash', cost: 2, desc: 'Revs up and launches. The faster Sonic is than the foe, the harder it hits (50-150).' },
-  glovePunch:   { id: 'glovePunch', name: 'Glove Punch', power: 70, accuracy: 100, priority: 0, anim: 'punch', cost: 3, stun: [2, 2], desc: 'Spring-loaded boxing gloves. Stuns the foe for 2 turns.' },
+  glovePunch:   { id: 'glovePunch', name: 'Glove Punch', power: 70, accuracy: 100, priority: 0, anim: 'punch', cost: 3, stun: [2, 2], desc: 'Pulls a boxing glove out of thin air, swings it on its chain and lets it fly. Stuns the foe for 2 turns.' },
   glideAttack:  { id: 'glideAttack', name: 'Glide Attack', power: 45, accuracy: 100, priority: 0, anim: 'glide', cost: 1, selfStages: { atk: 1, def: -1 }, desc: 'Glides in fists first. Raises ATK by 1, lowers DEF by 1.' },
-  drillPunch:   { id: 'drillPunch', name: 'Knuckle Punch', power: 80, accuracy: 100, priority: 1, anim: 'punch', cost: 3, desc: 'A full-power punch from the strongest fists on Angel Island. Always strikes first.' },
+  drillPunch:   { id: 'drillPunch', name: 'Knuckle Punch', power: 80, accuracy: 100, priority: 1, anim: 'punch', cost: 3, desc: 'Rushes in and throws a burning Megaton Hook, the strongest fist on Angel Island. Always strikes first.' },
   flutterDive:  { id: 'flutterDive', name: 'Flutter Dive', power: 30, accuracy: 100, priority: 1, anim: 'fly', cost: 1, desc: 'Flaps her ears, flies up and dives. Always strikes first.' },
   chaoCheer:    { id: 'chaoCheer', name: 'Chao Cheer', power: 0, accuracy: 100, priority: 0, anim: 'heal', heal: 0.3, ally: true, cost: 3, desc: 'Heals 30% max HP. Use it on Cream or on a teammate.' },
-  hammerSmash:  { id: 'hammerSmash', name: 'Piko Hammer', power: 60, accuracy: 100, priority: 0, anim: 'hammer', cost: 2, selfStages: { atk: 1 }, desc: 'Swings her Piko Piko Hammer down on the foe. Raises ATK by 1.' },
-  hammerTwirl:  { id: 'hammerTwirl', name: 'Hammer Twirl', power: 80, accuracy: 100, priority: 0, anim: 'twirl', cost: 3, selfHeal: 0.25, desc: 'Spins around with her hammer out and heals 25% of her max HP.' },
+  hammerSmash:  { id: 'hammerSmash', name: 'Piko Hammer', power: 60, accuracy: 100, priority: 0, anim: 'hammer', cost: 1, selfStages: { atk: 1 }, desc: 'Swings her Piko Piko Hammer down on the foe. Raises ATK by 1.' },
+  hammerTwirl:  { id: 'hammerTwirl', name: 'Hammer Twirl', power: 80, accuracy: 100, priority: 0, anim: 'twirl', cost: 2, selfHeal: 0.25, desc: 'Spins around with her hammer out and heals 25% of her max HP.' },
   chaosSpear:   { id: 'chaosSpear', name: 'Chaos Spear', power: 0, accuracy: 100, priority: 0, anim: 'spear', cost: 3, pierce: 3, desc: 'Status move: chaos spears mark the foe. It takes 50% more damage from your team for 3 turns.' },
   chaosControl: { id: 'chaosControl', name: 'Chaos Control', power: 100, accuracy: 100, priority: 0, anim: 'chaos', cost: 4, resets: 'anyKo', desc: 'Stops time and strikes freely. Becomes free once after every KO Shadow lands.' },
   copterDive:   { id: 'copterDive', name: 'Copter Dive', power: 50, accuracy: 100, priority: 1, anim: 'fly', cost: 1, desc: 'Rises on spinning tails, flips over and drills down on the foe. Always strikes first.' },
@@ -261,8 +262,9 @@ export const FIGHTERS: Record<string, FighterDef> = {
   amy: {
     type: 'power', ultimate: 'tornadoHammer', passive: PASSIVES.luckySwing,
     id: 'amy', name: 'Amy', atlas: 'amy', animPrefix: 'amy', scale: 2,
-    base: { hp: 25, atk: 13, def: 7, spd: 12 },
-    growth: { hp: 3.2, atk: 2.1, def: 1.1, spd: 1.6 },
+    // de harde hitter van het team: veel ATK, iets minder HP en SPD
+    base: { hp: 23, atk: 15, def: 7, spd: 11 },
+    growth: { hp: 3.0, atk: 2.5, def: 1.1, spd: 1.5 },
     moves: ['spinAttack', 'hammerSmash', 'hammerTwirl'],
     expYield: 20, // alleen als rival
   },

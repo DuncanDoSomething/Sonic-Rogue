@@ -89,7 +89,7 @@ export function hearts(scene: Phaser.Scene, x: number, y: number, n: number, col
 }
 
 /** Vlammetje dat opstijgt en uitdooft. */
-function flame(scene: Phaser.Scene, x: number, y: number, big = 1) {
+export function flame(scene: Phaser.Scene, x: number, y: number, big = 1) {
   const c = scene.add.circle(x, y, rndF(2, 4.5) * big, Phaser.Utils.Array.GetRandom([0xffe14a, 0xff9a1a, 0xff5a1a, 0xe8243a]), 0.9)
     .setDepth(15).setBlendMode(ADD);
   scene.tweens.add({ targets: c, y: y - rnd(18, 40), x: x + rnd(-6, 6), scale: 0.2, alpha: 0, duration: rnd(320, 520), onComplete: () => c.destroy() });

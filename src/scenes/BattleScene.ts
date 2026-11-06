@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOOST_ON_HIT, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, RAMPAGE_CHANCE, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, RAMPAGE_CHANCE, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -15,6 +15,7 @@ import { addHelpButton, addMenuButton } from './ui';
 import { HUD, RingCounter, checkerBand, sonicPanel, tooltip } from './hud';
 import { richText } from './richText';
 import { audio, MusicKey } from '../audio';
+import { chaoCheer, glovePunch, hammerTwirl, knucklePunch, spinDash, type HeroCtx } from './heroMoves';
 import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
 import { chaosControl, chaosSpear, superShadow } from './shadowMoves';
 import { TEST_KEYS, TEST_MODE } from '../data/testMode';
@@ -35,9 +36,16 @@ const SHOP_TILE_Y = 63;
 
 const PLAYER_POS = { x: 118, y: 208 };
 /** textures van de speelbare characters (zie bodyHeight) */
-const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'shadow', 'shadowfx', 'knucklesball', 'shadowball', 'sonicidle', 'amyidle', 'tailssit', 'amyvictory', 'sonicbosswin']);
+const CHARACTER_TEXTURES = new Set(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'shadow', 'shadowfx', 'knucklesball', 'shadowball', 'sonicidle', 'amyidle', 'tailssit', 'amyvictory', 'sonicbosswin', 'sbmoves']);
 /** lichaamshoogte van een character in sprite-pixels */
 const CHARACTER_BODY = 38;
+/** Moves met een eigen animatie (heroMoves.ts): move-id -> [van wie, animatie]. */
+const HERO_MOVES: Record<string, [string, (c: HeroCtx) => Promise<void>]> = {
+  spinDash: ['sonic', spinDash],
+  glovePunch: ['tails', glovePunch],
+  drillPunch: ['knuckles', knucklePunch],
+  hammerTwirl: ['amy', hammerTwirl],
+};
 const ENEMY_POS = { x: 352, y: 132 };
 
 type MenuState = 'busy' | 'command' | 'fight' | 'bag' | 'reward' | 'gameover' | 'choice';
@@ -1334,6 +1342,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (rivalId) this.rivalsMet.push(rivalId);
     // zone-bosses zijn type-neutraal zolang je maar 1 character hebt (anders is een boss voor sommigen onmogelijk)
     if (boss && BOSS_TYPE_NEUTRAL) this.enemy.typeOverride = this.player.type;
+    // Eggman bouwt zijn Egg Mobile elke keer anders: een random type (anders is één type altijd sterk tegen hem)
+    if (id === 'eggman') this.enemy.typeOverride = Phaser.Utils.Array.GetRandom(FIGHTER_TYPES);
 
     // nieuwe zone: achtergrond wisselen + zone-titel; boss-wave: Chaos Angel
     const firstOfZone = waveInZone(this.wave) === 1;
@@ -1373,7 +1383,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     else if (id === 'eggman') audio.voice('eggmanlaugh');
     await this.say(this.rival ? `Rival ${this.enemy.name} wants to battle!`
       : id === 'shadow' && boss ? 'Shadow blocks the way! "Show me what you\'ve got."'
-      : id === 'eggman' ? 'Dr. Eggman appeared! "Hohoho! You won\'t get past me!"'
+      : id === 'eggman' ? `Dr. Eggman appeared in a ${this.enemy.type.toUpperCase()} type Egg Mobile! "Hohoho! You won't get past me!"`
       : boss ? `Watch out! ${this.enemy.name} appeared!` : elite ? `A strong ${this.enemy.name} appeared!` : `A wild ${this.enemy.name} appeared!`, 500);
     // Battle Style "Switch": voor elke wave (behalve de eerste) gratis wisselen
     if (this.rival) await this.tip('rival');
@@ -1631,9 +1641,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       if (hit.crit && !move.alwaysCrit) void bigText(this, c.x, c.y - 40, 'CRITICAL!', isPlayer ? '#ffd23a' : '#ff6a5a');
       this.popNumber(spr.x, spr.y - this.bodyHeight(spr) - 4, `-${hit.damage}`, hit.crit ? '#f2c230' : '#ffffff');
       this.cameras.main.shake(hit.crit ? 220 : 120, hit.crit ? 0.008 : 0.004);
-      if (isPlayer) audio.sfx(isBossWave(this.wave) ? 'bosshit' : 'enemyhit', { volume: 0.8 });
-      if (isPlayer && tgt.def.id === 'eggman' && Math.random() < 0.4) audio.voice('eggmanow', 0.8);
-      else { audio.sfx('hurtrings', { volume: 0.7 }); this.player.gainBoost(BOOST_ON_HIT); }
+      if (isPlayer) {
+        audio.sfx(isBossWave(this.wave) ? 'bosshit' : 'enemyhit', { volume: 0.8 });
+        if (tgt.def.id === 'eggman' && Math.random() < 0.4) audio.voice('eggmanow', 0.8);
+      } else { audio.sfx('hurtrings', { volume: 0.7 }); this.player.gainBoost(BOOST_ON_HIT); }
       this.hitFlash(spr);
       if (shieldsBroken) this.shieldBreakFx(isPlayer ? this.eBox : this.pBox, tgt, shieldsBroken);
       if (!isPlayer) this.hero.play(this.player.anim('hurt'));
@@ -1708,7 +1719,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       }
       if (guard) await this.say(guard, 350);
       if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (Iron Fists)`, 500);
-      // Lucky Swing (Amy): elke crit kost haar 10% max-HP, maar ze gaat er zelf nooit van KO
+      // Lucky Swing (Amy): elke crit kost haar 5% max-HP, maar ze gaat er zelf nooit van KO
       if (hit.crit && att.def.passive?.id === 'luckySwing' && !move.recoil && !move.selfHeal && !att.fainted) {
         const cost = Math.min(att.hp - 1, Math.ceil(att.maxHp * CRIT_RECOIL));
         if (cost > 0) {
@@ -1829,6 +1840,12 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (isPlayer && move.teamHeal) {
       await cutIn(this, att.def.id, move.name);
       await chaoBlessing({ ...this.ultCtx(spr, att, this.foe, PLAYER_POS, 1, () => undefined), clearsField: !!(move.clearField && this.fieldEffect) });
+    } else if (att.def.id === 'cream') {
+      // Chao Cheer: Cheese cirkelt om wie er geneest wordt (op de bank: om zijn hoofdje in de HUD)
+      const icon = isPlayer && target !== att ? this.partyHeads[this.party.indexOf(target)] : undefined;
+      const to = icon ? { x: icon.x + 8, y: icon.y + 8 } : this.center(spr);
+      await chaoCheer({ scene: this, s: spr, dir: isPlayer ? 1 : -1, burst: (x, y, color, n) => this.burst(x, y, color, n) }, to, !!icon);
+      if (icon) { icon.setTintFill(0x7cf07c); this.time.delayedCall(160, () => this.refreshPartyHeads()); }
     } else {
       const anim = this.playOnce(spr, att.anim('cheer'));
       audio.sfx('heal1');
@@ -1903,6 +1920,13 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const base = p.def.scale;
     const run = this.anims.exists(p.anim('run')) ? p.anim('run') : p.anim('spin');
     // aanloop: eerst even door de knieën (niet bij de ultimate en de Spin Dash, die hebben hun eigen opbouw)
+    // de grote moves van het team hebben hun eigen animatie (heroMoves.ts); die zetten de sprite zelf weer thuis
+    const signature = HERO_MOVES[move.id];
+    if (signature && p.def.id === signature[0]) {
+      await signature[1]({ ...this.ultCtx(s, p, target, home, dir, strike), missed, dust: (x, y, n) => this.dust(x, y, n), bodyHeight: spr => this.bodyHeight(spr) });
+      s.play(p.anim('idle'));
+      return;
+    }
     const ranged = move.anim === 'spear' || move.anim === 'chaos';
     if (move.anim !== 'ultimate' && move.anim !== 'dash' && !ranged) await this.anticipate(s, base);
     if (move.anim !== 'hammer' && move.anim !== 'ultimate' && !ranged) audio.sfx(move.anim === 'dash' ? 'spindash' : 'jump', { volume: move.anim === 'dash' ? 0.6 : 0.8 });

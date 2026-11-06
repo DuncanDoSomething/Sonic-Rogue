@@ -18,7 +18,7 @@ const CREDITS: Array<[string, string?]> = [
   ['Ren "Foxx" Ramos - Sonic, Tails,'],
   ['Knuckles, Cream, Amy'],
   ['QuadFactor - Shadow, Sonic Battle'],
-  ['effects and cut-in art'],
+  ['team moves, effects and cut-in art'],
   ['Shadow Mastah - Super Shadow'],
   ['Bacon - Sonic Battle portraits'],
   ['SkyLights, Dinoshi 64 - Eggman'],

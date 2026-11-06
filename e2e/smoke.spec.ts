@@ -559,9 +559,10 @@ test.describe('Sonic Rogue smoke tests', () => {
     await waitForMenu(page, 'command');
     const boss = await page.evaluate(() => {
       const s = (window as any).game.scene.getScene('Battle');
-      return { id: s.enemy.def.id, segments: s.enemy.segments, max: s.enemy.maxHp };
+      return { id: s.enemy.def.id, segments: s.enemy.segments, max: s.enemy.maxHp, type: s.enemy.type };
     });
     expect(boss).toMatchObject({ id: 'eggman', segments: 5 });
+    expect(['speed', 'fly', 'power']).toContain(boss.type);   // Eggman krijgt een random type
     // een veel te sterke klap: stopt op de eerste grens (of een paar verder), maar nooit KO
     await setup(page, 's.player.level = 45; s.player.stages.atk = 2; s.pickEnemyMove = () => window.MOVES.eggLaugh;');
     await press(page, 'z', 'z');                 // Fight > de move onder de cursor
@@ -601,6 +602,16 @@ test.describe('Sonic Rogue smoke tests', () => {
       await waitForMenu(page, 'command');
       expect(await superTurns()).toBe(left);
     }
+  });
+
+  test('hitting the foe does not give your character Boost (only getting hit does)', async ({ page }) => {
+    await openGame(page);
+    await startRun(page);
+    // de vijand mist gegarandeerd (evade), dus alleen de kosten van Homing Attack tellen
+    await setup(page, 's.player.boost = 3; s.player.evade = 5; s.enemy.hp = 9999; s.runTurn(window.MOVES.homingAttack);');
+    await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
+    await waitForMenu(page, 'command');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').player.boost)).toBe(2);
   });
 
   test('everyone who fought in a wave gets the full EXP', async ({ page }) => {

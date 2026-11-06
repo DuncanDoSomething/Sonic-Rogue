@@ -425,7 +425,7 @@ describe('balans: zones, rivals en EXP', () => {
     expect([15, 30, 49, 50].map(rivalLevelBonus)).toEqual([0, 1, 1, 2]);
   });
   it('Rampage heeft 50% kans per reset', () => {
-    expect(RAMPAGE_CHANCE).toBe(0.5);
+    expect(RAMPAGE_CHANCE).toBe(0.8);
   });
 });
 
