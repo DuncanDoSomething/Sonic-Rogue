@@ -4,6 +4,7 @@ import {
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
   PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, LIFEFORM_KO_BOOST, dodgeChance, DODGE_CAP, DODGE_PER_RATIO, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH,
+  shellHit, traitMove, chargeMult, CHARGE_MULT, spikeRecoil, poisonDamage, applyElite, regenTick, ELITE_REGEN_TOTAL, ELITE_IDS, PIGGY_MAX_DEF,
 } from '../src/data/fighters';
 import { mainBossFor, MAIN_BOSS_SHIELDS, SHADOW_BOSS_CHANCE, enemyScaling, rivalChance, rivalLevelBonus } from '../src/data/zones';
 
@@ -493,5 +494,83 @@ describe('nieuwe kits (balance-ronde 2)', () => {
   it('Amy: meer HP en DEF', () => {
     expect(FIGHTERS.amy.base).toMatchObject({ hp: 25, def: 8 });
     expect(FIGHTERS.amy.growth).toMatchObject({ hp: 3.3, def: 1.3 });
+  });
+});
+
+describe('badnik-eigenschappen (enemy-variatie)', () => {
+  it('elke badnik is anders: een eigenschap of een move met een bijeffect', () => {
+    const badniks = ['beetle', 'sharkjet', 'octo', 'frog', 'bee', 'snowman', 'pig', 'soldier', 'penguin', 'mine', 'turtle'];
+    for (const id of badniks) {
+      const d = FIGHTERS[id];
+      const special = d.trait || d.moves.some(m => MOVES[m].tag);
+      expect(special, id).toBeTruthy();
+    }
+  });
+
+  it('Hard Shell: alleen de eerste klap gaat voor de helft door', () => {
+    const b = new Fighter('beetle', 10);
+    expect(b.shell).toBe(true);
+    expect(shellHit(b, 41)).toEqual({ damage: 21, cracked: true });
+    expect(shellHit(b, 41)).toEqual({ damage: 41, cracked: false });
+    expect(new Fighter('frog', 10).shell).toBe(false);
+  });
+
+  it('Charge: Copter Octo laadt op beurt 2, 5, 8 op en nooit twee keer achter elkaar', () => {
+    const o = new Fighter('octo', 10);
+    const normal = () => MOVES.bodyCheck;
+    const picks: string[] = [];
+    for (let t = 1; t <= 8; t++) {
+      const m = traitMove(o, normal);
+      picks.push(m.id);
+      if (m.charge) o.charged = true; else o.charged = false;
+    }
+    expect(picks).toEqual(['bodyCheck', 'chargeUp', 'bodyCheck', 'bodyCheck', 'chargeUp', 'bodyCheck', 'bodyCheck', 'chargeUp']);
+    // al opgeladen (bijv. omdat hij verdoofd was): dan eerst gewoon aanvallen
+    const o2 = new Fighter('octo', 10); o2.foeTurns = 1; o2.charged = true;
+    expect(traitMove(o2, normal).id).toBe('bodyCheck');
+    expect(chargeMult(o)).toBe(CHARGE_MULT);
+  });
+
+  it('Shell Up: na het opladen slaat Shell Tank met Tank Slam (x1,5)', () => {
+    const t = new Fighter('turtle', 20);
+    t.charged = true;
+    expect(traitMove(t, () => MOVES.shellCannon).id).toBe('tankSlam');
+    expect(chargeMult(t)).toBe(1.5);
+  });
+
+  it('Spikes: 1/8 van je schade terug, maar nooit KO', () => {
+    const mine = new Fighter('mine', 10), sonic = new Fighter('sonic', 10);
+    expect(spikeRecoil(mine, sonic, 80)).toBe(10);
+    expect(spikeRecoil(mine, sonic, 3)).toBe(1);
+    sonic.hp = 1;
+    expect(spikeRecoil(mine, sonic, 80)).toBe(0);
+    expect(spikeRecoil(new Fighter('frog', 10), new Fighter('sonic', 10), 80)).toBe(0);
+  });
+
+  it('gif doet 1/16 van je max-HP', () => {
+    const s = new Fighter('knuckles', 20);
+    expect(poisonDamage(s)).toBe(Math.floor(s.maxHp / 16));
+    expect(MOVES.stingShot.poison).toBe(3);
+  });
+
+  it('elites: Armored 2 schilden, Swift SPD +2, Regenerating max de helft van zijn HP', () => {
+    const a = new Fighter('pig', 15); applyElite(a, 'armored');
+    expect(a.segments).toBe(2);
+    const s = new Fighter('pig', 15); applyElite(s, 'swift');
+    expect(s.stage('spd')).toBe(2);
+    const r = new Fighter('pig', 15); applyElite(r, 'regen');
+    r.hp = 1;
+    let healed = 0;
+    for (let i = 0; i < 20; i++) healed += regenTick(r);
+    expect(healed).toBe(Math.floor(r.maxHp * ELITE_REGEN_TOTAL));
+    expect(regenTick(new Fighter('pig', 15))).toBe(0);
+    expect(ELITE_IDS).toHaveLength(4);
+  });
+
+  it('Shark Jet steelt Boost, Top Hat Pengu gaat altijd eerst', () => {
+    expect(MOVES[FIGHTERS.sharkjet.moves[0]].drainBoost).toBe(1);
+    expect(MOVES[FIGHTERS.penguin.moves[0]].priority).toBe(1);
+    expect(FIGHTERS.pig.trait).toBe('piggyBank');
+    expect(PIGGY_MAX_DEF).toBe(4);
   });
 });

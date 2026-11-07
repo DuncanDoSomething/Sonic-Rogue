@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier } from '../data/fighters';
+import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -398,9 +398,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   }
 
   /** Actieve reward-effecten, voor de icoontjes links in beeld. */
-  private activeBuffs(): Array<{ key: string; icon: string; name: string; desc: string; count?: number }> {
+  private activeBuffs(): Array<{ key: string; icon: string; name: string; desc: string; count?: number; tint?: number }> {
     const b = this.buffs;
-    const out: Array<{ key: string; icon: string; name: string; desc: string; count?: number }> = [];
+    const out: Array<{ key: string; icon: string; name: string; desc: string; count?: number; tint?: number }> = [];
     const n = (k: number, word: string) => `${k} ${word}${k === 1 ? '' : 's'}`;
     if (this.waveShield) out.push({ key: 'shieldW', icon: 'monitor_shield', name: 'Shield+', desc: 'All damage to your team is halved this wave.' });
     if (b.shieldWaves) out.push({ key: 'shieldN', icon: 'monitor_shield', name: 'Shield+', desc: `Half damage in the next ${n(b.shieldWaves, 'wave')}.`, count: b.shieldWaves });
@@ -421,6 +421,12 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (b.blessTurns) out.push({ key: 'blessing', icon: 'sbmoves:sbfx_cheese_fly_0', name: 'Chao Blessing', desc: `Your team does ${Math.round(BLESS_BONUS * 100)}% more damage for ${n(b.blessTurns, 'more turn')}.`, count: b.blessTurns });
     if (this.foeBless) out.push({ key: 'foeBless', icon: 'sbmoves:sbfx_cheese_fly_0', name: 'Chao Blessing (foe)', desc: `The foe does ${Math.round(BLESS_BONUS * 100)}% more damage for ${n(this.foeBless, 'more turn')}.`, count: this.foeBless });
     if (this.fieldCleared && zoneForWave(this.wave, this.zoneOrder).effect) out.push({ key: 'bless', icon: 'head_cream', name: 'Chao Blessing', desc: 'The zone effect is gone until the zone boss.' });
+    // badnik-effecten op jou
+    if (p?.poison > 0 && !p.fainted) out.push({ key: 'poison', icon: 'badniks:bee_idle_0', tint: 0xc07aff, name: 'Poisoned', desc: `${p.name} loses ${poisonDamage(p)} HP at the end of every turn. ${n(p.poison, 'turn')} left.`, count: p.poison });
+    if (p?.frozen && p.stun > 0) out.push({ key: 'frozen', icon: 'badniks:snowman_idle_0', tint: 0x9ad8ff, name: 'Frozen', desc: `${p.name} is frozen and skips the next turn.` });
+    const e = this.enemy;
+    if (e && !e.fainted && e.charged) out.push({ key: 'charged', icon: `${e.def.atlas}:${e.def.animPrefix}_idle_0`, tint: 0xff9a3a, name: 'Charged up!', desc: `The foe's next attack does ${chargeMult(e)}x damage. Dodge it, switch, or finish it first!` });
+    if (e && !e.fainted && e.shell) out.push({ key: 'shell', icon: `${e.def.atlas}:${e.def.animPrefix}_idle_0`, tint: 0x8ad8ff, name: 'Shell', desc: `The next hit on the foe only does ${Math.round(SHELL_FACTOR * 100)}% damage.` });
     return out;
   }
 
@@ -490,6 +496,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       const g = sonicPanel(this.add.graphics(), -11, -11, 22, 22, 'blue', 0.92);
       const icon = this.hudIcon(b.icon);
       icon.setScale(Math.min(16 / icon.width, 17 / icon.height));
+      if (b.tint) icon.setTint(b.tint);
       c.add([g, icon]);
       if (b.count && b.count > 1) {
         c.add(this.add.text(10, 11, `${b.count}`, { fontFamily: FONT, fontSize: '8px', color: '#ffffff', stroke: '#281060', strokeThickness: 3 }).setOrigin(1, 1));
@@ -561,6 +568,15 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       box.badge = this.add.text(w - 10, h + 2, '', { fontFamily: FONT, fontSize: '8px', color: '#ff7a2a' }).setOrigin(1, 0);
       box.segments = this.add.graphics();
       root.add([box.badgeBg, box.badge, box.segments]);
+      // hover/tik op het label: wat deze vijand speciaal maakt
+      box.badge.setInteractive({ useHandCursor: true });
+      const show = () => {
+        const info = this.enemyBadge();
+        if (info.tip) this.showHudTip(root.x + w - 6, root.y + h + 16, info.tipTitle, info.tip, true);
+      };
+      box.badge.on('pointerover', show);
+      box.badge.on('pointerout', () => this.hideHudTip());
+      box.badge.on('pointerdown', () => { if (this.hudTip) this.hideHudTip(); else show(); });
     }
     if (isPlayer) {
       // Boost-meter: 6 blokjes onder de HP-balk
@@ -1182,16 +1198,15 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (box === this.pBox) this.refreshPartyHeads();
     box.typeIcon.setTexture(`type_${f.type}`).setX(box.name.x + box.name.width + 4);
     if (box.badge) {
-      const kind = box === this.eBox ? this.enemyRank() : '';
-      const colors: Record<string, string> = { BOSS: '#ff7a2a', ELITE: '#c08aff', RIVAL: '#ff4a5a' };
-      box.badge.setText(kind).setColor(colors[kind] ?? '#ffffff');
+      const info = this.enemyBadge();
+      box.badge.setText(info.text).setColor(info.color);
       // tabje onder de box, rechts uitgelijnd
       box.badgeBg!.clear();
-      if (kind) {
+      if (info.text) {
         const bw = box.badge.width + 8;
         box.badgeBg!.fillStyle(HUD.outline, 0.95).fillRoundedRect(box.badge.x - bw + 4, box.badge.y - 2, bw, 12, 3);
         box.badgeBg!.fillStyle(HUD.blueBottom, 0.95).fillRect(box.badge.x - bw + 5, box.badge.y - 1, bw - 2, 10);
-        box.badgeBg!.lineStyle(1, Phaser.Display.Color.HexStringToColor(colors[kind]).color).strokeRect(box.badge.x - bw + 5.5, box.badge.y - 0.5, bw - 3, 9);
+        box.badgeBg!.lineStyle(1, Phaser.Display.Color.HexStringToColor(info.color).color).strokeRect(box.badge.x - bw + 5.5, box.badge.y - 0.5, bw - 3, 9);
       }
       // boss-balk in stukken: elk stuk is een schild (zie shieldCap)
       box.segments!.clear();
@@ -1305,7 +1320,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async startWave() {
     this.autoSave();
     this.menu = 'busy';
-    this.party.forEach(f => { f.stun = 0; f.evade = 0; f.pierced = 0; });
+    // gif, ijs en stat-verlagingen van badniks duren maar één gevecht
+    this.party.forEach(f => {
+      f.stun = 0; f.evade = 0; f.pierced = 0; f.poison = 0; f.frozen = false;
+      for (const k of Object.keys(f.stages) as StageKey[]) f.stages[k] = Math.max(0, f.stages[k]);
+    });
     this.stunUsed.clear();
     this.itemsUsed = 0;
     this.waveShield = this.buffs.shieldWaves > 0;
@@ -1327,14 +1346,14 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const zone = zoneForWave(this.wave, this.zoneOrder);
     const boss = isBossWave(this.wave);
     // rivals: vaak op waves die op 5 eindigen, en later soms ook op een gewone wave
-    const rivalId = this.forceRival || (!this.tutorialMode && Math.random() < rivalChance(this.wave)) ? this.pickRival() : undefined;
+    const rivalId = !this.forceFoe && (this.forceRival || (!this.tutorialMode && Math.random() < rivalChance(this.wave))) ? this.pickRival() : undefined;
     this.forceRival = false;
     this.rival = !!rivalId;
-    const elite = (isEliteWave(this.wave) || this.alarmWave) && !this.rival && !boss;
+    const elite = ((isEliteWave(this.wave) || this.alarmWave) && !this.rival && !boss) || !!this.forceElite;
     this.elite = elite;
     // main boss (wave 20, 40, ...): Eggman of Shadow; zone-boss: die van de zone
     const mainBoss = boss && isMainBossWave(this.wave) && !this.tutorialMode;
-    const id = this.tutorialMode ? 'beetle' : rivalId ?? (mainBoss ? mainBossFor(this.wave, this.party.map(f => f.def.id), this.mainBossRoll) : boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
+    const id = this.forceFoe ?? (this.tutorialMode ? 'beetle' : undefined) ?? rivalId ?? (mainBoss ? mainBossFor(this.wave, this.party.map(f => f.def.id), this.mainBossRoll) : boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
     // vijanden stijgen ~0,65 level per wave; jij blijft dan net iets voor (bosses/elites +2, rivals op gelijk niveau)
     this.enemy = new Fighter(id, this.tutorialMode ? 3 : 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || elite ? 2 : 0) + (rivalId ? rivalLevelBonus(this.wave) : 0));
     this.charFoe = HEROES.includes(id);
@@ -1347,6 +1366,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // boss-Shadow: meer HP; bosses krijgen schilden (stukken HP-balk)
     if (this.charFoe && boss) { this.enemy.hpMult = SHADOW_BOSS_HP; this.enemy.hp = this.enemy.maxHp; }
     if (boss && !this.tutorialMode) this.enemy.segments = mainBoss ? MAIN_BOSS_SHIELDS : ZONE_BOSS_SHIELDS;
+    // elites krijgen een random extra eigenschap (Armored, Enraged, Regenerating, Swift)
+    if (elite) applyElite(this.enemy, this.forceElite ?? Phaser.Utils.Array.GetRandom(ELITE_IDS));
+    this.forceFoe = undefined;
+    this.forceElite = undefined;
     if (rivalId) this.rivalsMet.push(rivalId);
     // zone-bosses zijn type-neutraal zolang je maar 1 character hebt (anders is een boss voor sommigen onmogelijk)
     if (boss && BOSS_TYPE_NEUTRAL) this.enemy.typeOverride = this.player.type;
@@ -1392,7 +1415,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     await this.say(this.rival ? `Rival ${this.enemy.name} wants to battle!`
       : id === 'shadow' && boss ? 'Shadow blocks the way! "Show me what you\'ve got."'
       : id === 'eggman' ? `Dr. Eggman appeared in a ${this.enemy.type.toUpperCase()} type Egg Mobile! "Hohoho! You won't get past me!"`
-      : boss ? `Watch out! ${this.enemy.name} appeared!` : elite ? `A strong ${this.enemy.name} appeared!` : `A wild ${this.enemy.name} appeared!`, 500);
+      : boss ? `Watch out! ${this.enemy.name} appeared!` : elite ? `A strong ${this.enemy.name} appeared! It's ${ELITE_TRAITS[this.enemy.elite!].name.toLowerCase()}!` : `A wild ${this.enemy.name} appeared!`, 500);
     // Battle Style "Switch": voor elke wave (behalve de eerste) gratis wisselen
     if (this.rival) await this.tip('rival');
     else if (boss) await this.tip('boss');
@@ -1445,7 +1468,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private statusFx = new Map<Phaser.GameObjects.Sprite, Phaser.GameObjects.Image[]>();
   private pierceFx = new Map<Phaser.GameObjects.Sprite, Phaser.GameObjects.Sprite>();
   private statusClock = 0;
+  private frozenFx = new Set<Phaser.GameObjects.Sprite>();
+  /** Intentie-icoontje boven een opgeladen vijand ("!" in een oranje bolletje). */
+  private intentFx?: Phaser.GameObjects.Container;
   private updateStatusFx(dt: number) {
+    this.updateIntent();
     this.statusClock += dt;
     const pairs: Array<[Phaser.GameObjects.Sprite, Fighter | undefined]> = [[this.hero, this.player], [this.foe, this.enemy]];
     for (const [spr, f] of pairs) {
@@ -1460,7 +1487,13 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
         this.statusFx.delete(spr);
         stars = undefined;
       }
+      // bevroren: ijsblauw in plaats van gele sterretjes, en de sprite zelf ook blauw
+      const frozen = stunned && !!f?.frozen;
+      if (frozen !== this.frozenFx.has(spr)) {
+        if (frozen) { this.frozenFx.add(spr); spr.setTint(0x9ad8ff); } else { this.frozenFx.delete(spr); spr.clearTint(); }
+      }
       if (stars) {
+        stars.forEach(st => st.setTint(frozen ? 0xcff0ff : 0xfff27a));
         const top = spr.y - this.bodyHeight(spr) - 4;
         stars.forEach((st, i) => {
           const a = this.statusClock / 260 + (i / 3) * Math.PI * 2;
@@ -1553,7 +1586,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (att.stun > 0) {
       att.stun--;
       this.hitFlash(att === this.player ? this.hero : this.foe);
-      await this.say(`${this.who(att)} is stunned and can't move!`, 400);
+      const frozen = att.frozen;
+      if (att.stun === 0) att.frozen = false;
+      await this.say(frozen ? `${this.who(att)} is frozen solid and can't move!` : `${this.who(att)} is stunned and can't move!`, 400);
       return;
     }
     if (this.flinched.has(att)) {
@@ -1571,6 +1606,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (att === this.player && blessed) this.buffs.blessTurns--;
     else if (blessed) this.foeBless--;
     this.dmgBonus = blessed ? 1 + BLESS_BONUS : 1;
+    // Charge: de opgeladen aanval doet dubbele schade (ook als hij mist is de lading op)
+    this.chargedHit = att !== this.player && att.charged && att.chargeReady && move.power > 0;
+    if (this.chargedHit) { att.charged = false; this.dmgBonus *= chargeMult(att); }
     await this.doAttack(att, tgt, move, ally);
   }
 
@@ -1581,12 +1619,19 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /** Chao Blessing van een rival-Cream: zoveel beurten doet de vijand meer schade. */
   private foeBless = 0;
-  /** Schade-vermenigvuldiger voor de aanval van deze beurt (Chao Blessing). */
+  /** Schade-vermenigvuldiger voor de aanval van deze beurt (Chao Blessing, Charge). */
   private dmgBonus = 1;
+  /** De aanval van deze beurt is opgeladen (Charge). */
+  private chargedHit = false;
 
   /** Dobbelstenen voor de keuze van de main boss en Sonic's ontwijken (de tests zetten ze vast). */
   private mainBossRoll = () => Math.random();
   private dodgeRoll = () => Math.random();
+  /** Testmodus/tests: deze vijand (en elite-eigenschap) op de volgende wave. */
+  private forceFoe?: string;
+  private forceElite?: typeof ELITE_IDS[number];
+  /** Dobbelsteen voor bijeffecten van badnik-moves (bevriezen, Trumpet Blast). */
+  private effectRoll = () => Math.random();
 
   /** Wie er deze wave in het veld stond (krijgen allemaal de volle EXP, zoals in Pokémon). */
   private waveFighters = new Set<Fighter>();
@@ -1600,6 +1645,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.menu = 'busy';
     this.pointer.setVisible(false);
     const enemyMove = this.pickEnemyMove();
+    this.enemy.chargeReady = this.enemy.charged;
     const playerFirst = playerMove.priority !== enemyMove.priority
       ? playerMove.priority > enemyMove.priority
       : this.player.spd >= this.enemy.spd;
@@ -1627,6 +1673,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const isPlayer = att === this.player;
     await this.say(`${this.who(att)} used ${move.name}!`, 150);
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
+    if (move.charge) return this.doCharge(att);
     let hit = calcHit(att, tgt, move, Math.random, isPlayer ? this.critBonus : 0, this.dmgBonus);
     // status-move (Chaos Spear): raakt altijd en doet geen schade, alleen het effect
     const status = move.power === 0;
@@ -1654,15 +1701,21 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     }
     let struck = false;
     let shieldsBroken = 0;
+    let shellCracked = false;
+    let dealt = 0;
     const strike = () => {
       if (hit.missed || struck) return;
       struck = true;
       if (status) { this.hitFlash(isPlayer ? this.foe : this.hero); return; }
+      // Hard Shell / Shell Up: de schelp vangt de helft op
+      const shell = shellHit(tgt, hit.damage);
+      if (shell.cracked) { hit = { ...hit, damage: shell.damage }; shellCracked = true; }
       // boss-schilden: één schild per klap (tenzij de klap heel hard is)
       const cap = shieldCap(tgt, hit.damage);
       if (cap.damage !== hit.damage || cap.broken) { hit = { ...hit, damage: cap.damage }; shieldsBroken = cap.broken; }
       const hpBefore = tgt.hp;
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
+      dealt = hpBefore - tgt.hp;
       // Iron Fists: één keer per zone met 1 HP blijven staan, als hij vóór de klap meer dan de helft had
       if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed && hpBefore > tgt.maxHp * SASH_MIN_HP) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
       // tutorial: niemand van je team gaat neer, en de vijand pas bij de laatste stap
@@ -1682,7 +1735,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       if (isPlayer) {
         audio.sfx(isBossWave(this.wave) ? 'bosshit' : 'enemyhit', { volume: 0.8 });
         if (tgt.def.id === 'eggman' && Math.random() < 0.4) audio.voice('eggmanow', 0.8);
-      } else { audio.sfx('hurtrings', { volume: 0.7 }); this.player.gainBoost(BOOST_ON_HIT); }
+      } else {
+        audio.sfx('hurtrings', { volume: 0.7 });
+        // Shark Jet's Drill Ram: geen Boost voor de klap (hij steelt er juist een, zie hieronder)
+        if (!move.drainBoost) this.player.gainBoost(BOOST_ON_HIT);
+      }
       this.hitFlash(spr);
       if (shieldsBroken) this.shieldBreakFx(isPlayer ? this.eBox : this.pBox, tgt, shieldsBroken);
       if (!isPlayer) this.hero.play(this.player.anim('hurt'));
@@ -1707,9 +1764,28 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       this.popMiss(spr.x + (isPlayer ? -30 : 34), spr.y - this.bodyHeight(spr) * 0.7);
       await this.say(guard ? `${guard} ${tgt.name} avoided the attack!` : `${tgt.name} avoided the attack!`, 400);
     }
+    if (shellCracked) await this.say(`${this.who(tgt)}'s shell took half the damage!`, 350);
+    if (this.chargedHit && !hit.missed) await this.say(chargeMult(att) >= 2 ? 'The charged attack hit twice as hard!' : 'The charged attack hit extra hard!', 350);
+    else if (this.chargedHit) await this.say(`${this.who(att)} wasted its charge!`, 350);
     if (shieldsBroken) {
       audio.sfx('monitorbreak', { volume: 0.7 });
       await this.say(shieldsBroken > 1 ? `${shieldsBroken} of ${this.who(tgt)}'s shields broke at once!` : `${this.who(tgt)}'s shield broke!`, 400);
+      // Shell Up (Shell Tank): kruipt in zijn schelp en laadt Tank Slam op
+      if (tgt.def.trait === 'shellUp' && !tgt.fainted) {
+        tgt.shell = true;
+        tgt.charged = true;
+        this.chargeFx(isPlayer ? this.foe : this.hero);
+        await this.say(`${this.who(tgt)} hid in its shell and is charging up a Tank Slam!`, 500);
+      }
+    }
+    // Spikes (Spike Mine): wie hem raakt prikt zichzelf (nooit KO)
+    const spikes = isPlayer ? spikeRecoil(tgt, att, dealt) : 0;
+    if (spikes > 0) {
+      att.hp -= spikes;
+      this.hitFlash(this.hero);
+      this.popNumber(this.hero.x, this.hero.y - this.bodyHeight(this.hero) - 4, `-${spikes}`, '#ff9a9a');
+      await this.setBox(this.pBox, att, true);
+      await this.say(`${att.name} got hurt by the spikes! (-${spikes})`, 350);
     }
     if (move.spendStages && Object.values(att.stages).some(v => v !== 0)) {
       att.stages = { atk: 0, def: 0, spd: 0, acc: 0 };
@@ -1755,9 +1831,35 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       for (const [k, v] of Object.entries(move.selfStages ?? {})) {
         if (!att.fainted) await this.changeStage(att, k as StageKey, v);
       }
-      // moves die de stats van het doelwit verlagen (Chao Attack: ATK -1)
-      for (const [k, v] of Object.entries(move.targetStages ?? {})) {
-        if (!tgt.fainted) await this.changeStage(tgt, k as StageKey, v);
+      // moves die de stats van het doelwit verlagen (Chao Attack: ATK -1); sommige maar met een kans (Trumpet Blast)
+      if (!move.targetChance || this.effectRoll() < move.targetChance) {
+        for (const [k, v] of Object.entries(move.targetStages ?? {})) {
+          if (!tgt.fainted) await this.changeStage(tgt, k as StageKey, v);
+        }
+      }
+      // Shark Jet: steelt Boost
+      if (move.drainBoost && !tgt.fainted && tgt.boost > 0 && this.party.includes(tgt)) {
+        const n = Math.min(tgt.boost, move.drainBoost);
+        tgt.boost -= n;
+        this.setBox(this.pBox, tgt, false);
+        audio.sfx('statdown', { volume: 0.6 });
+        await this.say(`${this.who(att)} drained ${n} Boost from ${tgt.name}!`, 400);
+      }
+      // Buzz Cannon: gif
+      if (move.poison && !tgt.fainted) {
+        const fresh = tgt.poison <= 0;
+        tgt.poison = move.poison;
+        this.burst(this.center(this.hero).x, this.center(this.hero).y, 0xb06aff, 8);
+        await this.say(fresh ? `${tgt.name} was poisoned!` : `${tgt.name}'s poison was refreshed!`, 400);
+      }
+      // Snow Bot: kans om te bevriezen (één keer per gevecht)
+      if (move.freezeChance && !tgt.fainted && !this.stunUsed.has('e:freeze') && this.effectRoll() < move.freezeChance) {
+        this.stunUsed.add('e:freeze');
+        tgt.stun = Math.max(tgt.stun, 1);
+        tgt.frozen = true;
+        this.burst(this.center(this.hero).x, this.center(this.hero).y, 0xcff0ff, 12);
+        audio.sfx('monitorbreak', { volume: 0.4 });
+        await this.say(`${tgt.name} was frozen solid!`, 450);
       }
       if (guard) await this.say(guard, 350);
       if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (Iron Fists)`, 500);
@@ -2471,7 +2573,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const kind = isBossWave(this.wave) ? 'boss' : this.elite ? 'elite' : 'normal';
     // Eggman Alarm gehaald: de rewards hierna zijn minstens uncommon
     this.minTier = this.alarmWave && !this.rival ? 'uncommon' : 'common';
-    const gained = Math.round(waveRings(this.wave, kind) * (this.waveMagnet ? 1 + MAGNET_BONUS : 1));
+    // Piggy Bank: dubbele rings
+    const piggy = this.enemy.def.trait === 'piggyBank' ? 2 : 1;
+    const gained = Math.round(waveRings(this.wave, kind) * piggy * (this.waveMagnet ? 1 + MAGNET_BONUS : 1));
     // na een boss: een eigen, grotere overwinning als die er is (Sonic: breakdance en duim omhoog)
     const bossWin = this.player.anim('bosswin');
     if (!this.player.fainted) this.hero.play(isBossWave(this.wave) && this.anims.exists(bossWin) ? bossWin : this.player.anim('victory'));
@@ -2849,6 +2953,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // Lucky Swing (Amy): ze houdt haar ATK-verhogingen als ze wisselt (niet als ze KO is)
     if (resetStages) prev.stages = { ...emptyStages(), atk: prev.def.passive?.id === 'luckySwing' && !prev.fainted ? prev.stages.atk : 0 };
     prev.stun = 0;
+    prev.frozen = false;
     if (!prev.fainted) {
       await this.say(`Come back, ${prev.name}!`, 150);
       await this.tween({ targets: this.hero, x: -60, alpha: 0, duration: 220, ease: 'Quad.easeIn' });
@@ -2874,7 +2979,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (i < 0) { this.openCommand(1); return; }
     await this.switchTo(this.party[i]);
     this.tut?.event('switched');
-    await this.act(this.enemy, this.player, this.pickEnemyMove());
+    const move = this.pickEnemyMove();
+    this.enemy.chargeReady = this.enemy.charged;
+    await this.act(this.enemy, this.player, move);
     await this.tickSuper();
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(1); return; }
     await this.endOfTurn();
@@ -2947,6 +3054,31 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     await this.say(`${name} joined the team!`, 500);
   }
 
+  /**
+   * Label onder de vijand-box: BOSS / RIVAL / "ARMORED ELITE", of de eigenschap van een gewone badnik ("HARD SHELL").
+   * Hover of tik = uitleg.
+   */
+  enemyBadge(): { text: string; color: string; tipTitle: string; tip: string } {
+    const e = this.enemy;
+    const rank = this.enemyRank();
+    const colors: Record<string, string> = { BOSS: '#ff7a2a', ELITE: '#c08aff', RIVAL: '#ff4a5a' };
+    if (!e) return { text: '', color: '#ffffff', tipTitle: '', tip: '' };
+    const trait = e.trait;
+    const elite = e.elite ? ELITE_TRAITS[e.elite] : undefined;
+    const lines: string[] = [];
+    if (elite) lines.push(`${elite.name} elite: ${elite.desc}`);
+    if (trait) lines.push(`${trait.name}: ${trait.desc}`);
+    const special = e.def.moves.map(m => MOVES[m]).filter(m => m.desc && !this.charFoe && e.def.id !== 'eggman');
+    for (const m of special) lines.push(`${m.name}: ${m.desc}`);
+    const tip = lines.join('\n');
+    if (rank === 'ELITE' && elite) return { text: `${elite.name.toUpperCase()} ELITE`, color: colors.ELITE, tipTitle: e.name.toUpperCase(), tip };
+    if (rank) return { text: rank, color: colors[rank], tipTitle: e.name.toUpperCase(), tip };
+    if (trait) return { text: trait.name.toUpperCase(), color: '#8ad8ff', tipTitle: e.name.toUpperCase(), tip };
+    const tag = special.find(m => m.tag)?.tag;
+    if (tag) return { text: tag, color: '#8ad8ff', tipTitle: e.name.toUpperCase(), tip };
+    return { text: '', color: '#ffffff', tipTitle: '', tip };
+  }
+
   /** Wat voor vijand dit is, voor het label op de HP-box. */
   private enemyRank(): '' | 'BOSS' | 'ELITE' | 'RIVAL' {
     if (this.rival) return 'RIVAL';
@@ -2995,6 +3127,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     row(y + 50, this.player, 'YOU');
     txt(x + w - 10, y + 50, `BOOST ${this.player.boost}/${MAX_BOOST}`, '#4ad8ff').setOrigin(1, 0);
     row(y + 78, this.enemy, 'FOE');
+    const badge = this.enemyBadge();
+    if (badge.text) txt(x + w - 10, y + 78, badge.text, badge.color).setOrigin(1, 0);
     const m = typeMultiplier(this.player.type, this.enemy.type);
     const vs = `${this.player.type.toUpperCase()} vs ${this.enemy.type.toUpperCase()}: `;
     txt(x + 10, y + 106, vs + (m > 1 ? 'type advantage!' : m < 1 ? 'type disadvantage!' : 'neutral'),
@@ -3031,6 +3165,20 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
         if (k === 'pierced') await this.say(`${this.who(f)} is no longer pierced.`, 350);
       }
     }
+    await this.foeEndOfTurn();
+    // gif (Buzz Cannon)
+    const p = this.player;
+    if (p.poison > 0 && !p.fainted) {
+      const dmg = Math.min(p.hp, poisonDamage(p));
+      p.hp -= dmg;
+      p.poison--;
+      this.hitFlash(this.hero);
+      this.burst(this.hero.x, this.hero.y - 20, 0xb06aff, 6);
+      this.popNumber(this.hero.x, this.hero.y - this.bodyHeight(this.hero) - 4, `-${dmg}`, '#c07aff');
+      await this.setBox(this.pBox, p, true);
+      await this.say(p.poison > 0 ? `${p.name} is hurt by poison!` : `${p.name} is hurt by poison! The poison wore off.`, 300);
+      if (p.fainted) return;
+    }
     const burn = this.fieldEffect?.burn;
     // Ultimate Lifeform (Shadow): de hitte doet hem niks
     if (!burn || this.player.fainted || this.player.def.passive?.id === 'lifeform') return;
@@ -3041,6 +3189,21 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.popNumber(this.hero.x, this.hero.y - this.bodyHeight(this.hero) - 4, `-${dmg}`, '#ff8a3a');
     await this.setBox(this.pBox, this.player, true);
     await this.say(`${this.player.name} is hurt by the heat!`, 300);
+  }
+
+  /** Einde van de beurt voor de vijand: Piggy Bank (DEF +1), Enraged (ATK +1), Regenerating (8% HP). */
+  private async foeEndOfTurn() {
+    const e = this.enemy;
+    if (!e || e.fainted) return;
+    if (e.def.trait === 'piggyBank' && e.stages.def < PIGGY_MAX_DEF) await this.changeStage(e, 'def', 1, 'Piggy Bank! ');
+    if (e.elite === 'enraged' && e.stage('atk') < 6) await this.changeStage(e, 'atk', 1, 'Enraged! ');
+    const h = regenTick(e);
+    if (h > 0) {
+      hearts(this, this.foe.x, this.foe.y - this.bodyHeight(this.foe) * 0.6, 4, 0x7cf07c);
+      this.popNumber(this.foe.x, this.foe.y - this.bodyHeight(this.foe) - 4, `+${h}`, '#7cf07c');
+      await this.setBox(this.eBox, e, true);
+      await this.say(`${this.who(e)} regenerated ${h} HP!`, 300);
+    }
   }
 
   /** Kies een rival: liefst iemand die nog op slot zit en die je deze run nog niet tegenkwam. */
@@ -3061,12 +3224,56 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       return MOVES[e.def.ultimate];
     }
     // geen Chaos Spear als je al pierced bent; Eggman lacht alleen tot zijn ATK +2 is
-    const all = e.def.moves.map(m => MOVES[m]);
-    const sensible = all.filter(m => !(m.pierce && this.player.pierced > 0) && !(m.id === 'eggLaugh' && e.stage('atk') >= 2));
-    const moves = sensible.length ? sensible : all;
-    const hurt = this.enemy.hp < this.enemy.maxHp * 0.5;
-    const usable = moves.filter(m => !m.heal || hurt);
-    return Phaser.Utils.Array.GetRandom(usable.length ? usable : moves);
+    // badnik-ritme: Copter Octo laadt op, Shell Tank slaat na het opladen met Tank Slam
+    return traitMove(e, () => {
+      const all = e.def.moves.map(m => MOVES[m]);
+      const sensible = all.filter(m => !(m.pierce && this.player.pierced > 0) && !(m.id === 'eggLaugh' && e.stage('atk') >= 2));
+      const moves = sensible.length ? sensible : all;
+      const hurt = this.enemy.hp < this.enemy.maxHp * 0.5;
+      const usable = moves.filter(m => !m.heal || hurt);
+      return Phaser.Utils.Array.GetRandom(usable.length ? usable : moves);
+    });
+  }
+
+  /** Copter Octo laadt op: gloed, vonkjes die naar hem toe trekken, en het "!" erboven. */
+  private async doCharge(att: Fighter) {
+    const spr = att === this.player ? this.hero : this.foe;
+    this.chargeFx(spr);
+    att.charged = true;
+    await this.wait(450);
+    await this.say(`${this.who(att)} is charging up! Its next attack does ${chargeMult(att)}x damage!`, 500);
+  }
+
+  private chargeFx(spr: Phaser.GameObjects.Sprite) {
+    audio.sfx('spindash', { volume: 0.6 });
+    const c = this.center(spr);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const p = this.add.image(c.x + Math.cos(a) * 46, c.y + Math.sin(a) * 46, 'px').setScale(3).setTint(i % 2 ? 0xffd23a : 0xff8a3a)
+        .setDepth(spr.depth + 1).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: p, x: c.x, y: c.y, alpha: 0.2, duration: 380, delay: i * 18, ease: 'Quad.easeIn', onComplete: () => p.destroy() });
+    }
+    this.tweens.add({ targets: spr, x: spr.x + 3, duration: 40, yoyo: true, repeat: 5 });
+    this.time.delayedCall(380, () => shockwave(this, c.x, c.y, 0xff9a3a, 38, 260));
+  }
+
+  /** "!" boven een opgeladen vijand, zodat je ziet dat er een dubbele klap aankomt. */
+  private updateIntent() {
+    const e = this.enemy;
+    const show = !!e && e.charged && !e.fainted && this.foe?.visible;
+    if (!show) { this.intentFx?.destroy(); this.intentFx = undefined; return; }
+    if (!this.intentFx) {
+      const g = this.add.graphics();
+      g.fillStyle(HUD.outline).fillCircle(0, 0, 9);
+      g.fillStyle(0xff7a2a).fillCircle(0, 0, 7.5);
+      g.fillStyle(0xffd23a).fillCircle(-2, -2, 3);
+      const t = this.add.text(0, 0, '!', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', stroke: '#5a1800', strokeThickness: 3 }).setOrigin(0.5).setScale(1.5);
+      this.intentFx = this.add.container(0, 0, [g, t]).setDepth(21).setName('intent');
+    }
+    const top = this.foe.y - this.bodyHeight(this.foe) - 12;
+    this.intentFx.setPosition(this.foe.x, top + Math.sin(this.statusClock / 160) * 3).setScale(1 + 0.08 * Math.sin(this.statusClock / 90));
+    // af en toe een oranje schim: hij staat te trillen van de energie
+    if (Math.floor(this.statusClock / 220) !== Math.floor((this.statusClock - 16) / 220)) this.ghost(this.foe, 0xff9a3a);
   }
 
   /** "RIVAL!"-balk met het hoofdje van de rival (schuift van rechts in beeld). */

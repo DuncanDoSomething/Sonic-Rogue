@@ -35,15 +35,15 @@
 - [x] New animations for every team move (1 Boost and 2-3 Boost), Amy and Shadow buffs
 - [x] Cream rework: Chao Attack (Cheese as a weapon), cheaper Chao Cheer with +1 Boost, Chao Blessing revives and powers up the team
 - [x] Balance simulation (`npm run sim`) and a balance pass from it: Glove Punch stuns once per fight, Sonic dodges and has more HP, Amy is sturdier and keeps her ATK raises, Shadow's Ultimate Lifeform, Iron Fists only from above half HP, stronger 1-Boost moves
+- [x] Enemy variety: every badnik plays differently (Hard Shell, Charge with an intent icon, Spikes, Piggy Bank, poison, freeze, Boost drain, stat drops, first strike), Shell Tank's Shell Up, and elites with a random trait (Armored, Enraged, Regenerating, Swift)
 
 ## Next
 - [ ] More main bosses (Chaos, more Eggman robots) with boss charms, and a super boss at wave 90 after all seven Chaos Emeralds
-- [ ] Enemies with more interaction: their own status moves, buffs and patterns
+- [ ] More enemy patterns: status moves for Eggman and rivals, minibosses with phases
 - [ ] Team ultimates
 - [ ] Rouge as a second legendary
 - [ ] More badniks from Sonic Advance 1, 2 and 3, with unique enemies per zone
 - [ ] Minibosses and a unique boss per zone
-- [ ] Status effects and moves that deal % HP damage
 - [ ] Short dialogue before and after rival fights
 
 - [ ] EXP changes: an EXP reward and level caps

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { activeScenes, battle, fixReward, openGame, press, setup, startBattleWith, startRun, toCharacterSelect, trackErrors, waitForMenu } from './helpers';
 
 test.describe('Sonic Rogue smoke tests', () => {
@@ -677,5 +677,84 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(after[0]).toBeGreaterThan(before[0]);   // Sonic (meegevochten)
     expect(after[1]).toBeGreaterThan(before[1]);   // Tails (in het veld)
     expect(after[2]).toBe(before[2]);              // Amy (bank, nog geen Exp. Share op wave 1)
+  });
+  // ------------------------------------------------------------- enemy-variatie
+  /** Nieuwe wave tegen deze vijand (testmodus-haakje), en wachten tot je aan de beurt bent. */
+  async function meet(page: Page, foe: string, extra = '') {
+    await setup(page, `delete s.pickEnemyMove; s.forceFoe = '${foe}'; ${extra} s.wave = 12; s.menu = 'busy'; s.startWave();`);
+    await waitForMenu(page, 'command');
+  }
+  async function turn(page: Page, js: string) {
+    await setup(page, js);
+    await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
+    await waitForMenu(page, 'command');
+  }
+  const foeState = (page: Page) => page.evaluate(() => {
+    const b = (window as any).game.scene.getScene('Battle');
+    return {
+      foe: b.enemy.def.id, charged: b.enemy.charged, shell: b.enemy.shell, segments: b.enemy.segments, foeHp: b.enemy.hp,
+      hp: b.player.hp, max: b.player.maxHp, boost: b.player.boost, poison: b.player.poison, frozen: b.player.frozen, stun: b.player.stun,
+      badge: b.enemyBadge().text,
+    };
+  });
+  const HIT = "{ ...window.MOVES.spinAttack, accuracy: 1000 }";
+
+  test('badniks: Copter Octo charges up, Buzz Cannon poisons, Spike Mine pricks back', async ({ page }) => {
+    test.setTimeout(120_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startBattleWith(page, ['tails']);
+    // Copter Octo: laadt op beurt 2 op ("!" erboven), de klap erna is dubbel en de lading is op
+    await meet(page, 'octo');
+    expect((await foeState(page)).badge).toBe('CHARGE');
+    await turn(page, `s.enemy.hp = 9999; s.player.hp = 9999; s.enemy.foeTurns = 1; s.runTurn(${HIT});`);
+    expect((await foeState(page)).charged).toBe(true);
+    await turn(page, `s.pickEnemyMove = () => ({ ...window.MOVES.bodyCheck, accuracy: 1000 }); s.runTurn(${HIT});`);
+    expect((await foeState(page)).charged).toBe(false);
+    // Buzz Cannon: gif, 1/16 HP aan het eind van elke beurt
+    await meet(page, 'bee');
+    expect((await foeState(page)).badge).toBe('POISON');
+    await turn(page, `s.enemy.hp = 9999; s.player.hp = 9999; s.pickEnemyMove = () => ({ ...window.MOVES.stingShot, accuracy: 1000 }); s.runTurn(${HIT});`);
+    expect((await foeState(page)).poison).toBe(2);
+    const before = await foeState(page);
+    await turn(page, `s.pickEnemyMove = () => ({ ...window.MOVES.bodyCheck, accuracy: 0 }); s.runTurn(${HIT});`);
+    const after = await foeState(page);
+    expect(before.hp - after.hp).toBe(Math.max(1, Math.floor(after.max / 16)));
+    expect(after.poison).toBe(1);
+    // Spike Mine: wie hem raakt krijgt 1/8 van de schade terug
+    await meet(page, 'mine');
+    await turn(page, `s.enemy.hp = 9999; s.player.hp = 500; s.pickEnemyMove = () => ({ ...window.MOVES.spikeBurst, accuracy: 0 }); s.runTurn(${HIT});`);
+    const m = await foeState(page);
+    expect(500 - m.hp).toBe(Math.max(1, Math.floor((9999 - m.foeHp) / 8)));
+    // gif en stat-verlagingen duren maar één gevecht
+    await meet(page, 'frog');
+    expect((await foeState(page)).poison).toBe(0);
+    expect(errors).toEqual([]);
+  });
+
+  test('badniks: elites, Shark Jet, Snow Bot and Shell Tank', async ({ page }) => {
+    test.setTimeout(120_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startBattleWith(page, ['tails']);
+    // elite met een random eigenschap op het label
+    await meet(page, 'pig', "s.forceElite = 'armored';");
+    expect(await foeState(page)).toMatchObject({ badge: 'ARMORED ELITE', segments: 2 });
+    // Shark Jet: geen Boost voor de klap en hij steelt er een (Spin Attack +1, dus netto gelijk)
+    await meet(page, 'sharkjet');
+    await turn(page, `s.enemy.hp = 9999; s.player.hp = 9999; s.player.boost = 3; s.pickEnemyMove = () => ({ ...window.MOVES.sharkRam, accuracy: 1000 }); s.runTurn(${HIT});`);
+    expect((await foeState(page)).boost).toBe(3);
+    // Snow Bot: bevriest je (jij ging eerst, dus je mist de volgende beurt)
+    await meet(page, 'snowman');
+    await turn(page, `s.enemy.hp = 9999; s.player.hp = 9999; s.effectRoll = () => 0; s.pickEnemyMove = () => ({ ...window.MOVES.snowball, accuracy: 1000 }); s.runTurn({ ...window.MOVES.spinAttack, accuracy: 1000, priority: 5 });`);
+    expect(await foeState(page)).toMatchObject({ frozen: true, stun: 1 });
+    await turn(page, `s.pickEnemyMove = () => ({ ...window.MOVES.snowball, accuracy: 0 }); s.runTurn(${HIT});`);
+    expect(await foeState(page)).toMatchObject({ frozen: false, stun: 0 });
+    // Shell Tank: een schild breekt -> schelp + opgeladen Tank Slam (pas de beurt erna)
+    await meet(page, 'turtle');
+    await turn(page, `s.enemy.segments = 4; s.enemy.hp = s.enemy.maxHp; s.player.hp = 9999; s.pickEnemyMove = () => ({ ...window.MOVES.shellCannon, accuracy: 0 }); s.runTurn({ ...window.MOVES.spinAttack, accuracy: 1000, power: 900, priority: 5 });`);
+    expect(await foeState(page)).toMatchObject({ shell: true, charged: true });
+    expect(await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); delete b.pickEnemyMove; return b.pickEnemyMove().id; })).toBe('tankSlam');
+    expect(errors).toEqual([]);
   });
 });

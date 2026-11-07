@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { audio } from '../audio';
-import { EMERALD_EXP_BONUS, EXP_SHARE_STEPS, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MAX_STAGE, type PassiveDef, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
+import { ELITE_TRAITS, EMERALD_EXP_BONUS, EXP_SHARE_STEPS, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MAX_STAGE, type PassiveDef, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
 import { EFFECTS, FIRST_RIVAL_WAVE, LATE_RIVAL_WAVE, MAIN_BOSS_BOOST, RIVAL_CHANCE, SHADOW_BOSS_CHANCE, ZONE_BOSS_HEAL, ZONES } from '../data/zones';
 import { BAG_SIZE, ITEMS, ITEMS_PER_FIGHT } from '../data/items';
 import { TIER_COLOR, TIER_NAME, TIERS } from '../data/rewards';
@@ -28,6 +28,17 @@ function wrap(text: string, n = COLS): string[] {
   }
   if (line) out.push(line);
   return out;
+}
+
+/** Badniks: per soort het plaatje, de naam en wat hem anders maakt (2 regels). */
+function badnikPage(title: string, rows: Array<[string, string]>, extra: string[] = []): Page {
+  const lines: string[] = [];
+  const icons: Icon[] = [];
+  for (const [id, what] of rows) {
+    icons.push({ row: lines.length, key: 'badniks', frame: `${FIGHTERS[id].animPrefix}_idle_0` });
+    lines.push(`    ${FIGHTERS[id].name.toUpperCase()}`, `    ${what}`);
+  }
+  return { title, lines: [...lines, ...extra], icons };
 }
 
 /** Passives met het hoofdje van het character voor de naam. */
@@ -313,6 +324,34 @@ export function categories(): Category[] {
             '    patch-up for your team.',
           ],
           icons: [{ row: 5, key: 'emeralds', frame: 'emerald_blue_0' }],
+        },
+        badnikPage('BADNIKS 1/2', [
+          ['beetle', 'Shell: 1st hit does half.'],
+          ['sharkjet', 'Steals 1 Boost per hit.'],
+          ['octo', 'Charges up (!): next hit 2x.'],
+          ['frog', 'Lowers your ATK.'],
+          ['bee', 'Poison: 1/16 HP for 3 turns.'],
+          ['mine', 'Spikes: hitting it hurts.'],
+        ]),
+        badnikPage('BADNIKS 2/2', [
+          ['pig', 'DEF up every turn. 2x rings.'],
+          ['soldier', 'Can lower your ACC.'],
+          ['penguin', 'Always first, gets faster.'],
+          ['snowman', 'Can freeze you for a turn.'],
+          ['turtle', 'Boss. Every broken shield:'],
+        ], ['    shell up + a charged Tank Slam.', 'Hover the label under a foe\'s', 'HP bar to see what it does.']),
+        {
+          title: 'ELITES',
+          lines: [
+            'Elites (wave 5 of every zone, or',
+            'after an Eggman Alarm) are 2',
+            'levels higher and get an extra:',
+            '',
+            ...Object.values(ELITE_TRAITS).flatMap(e => wrap(`${e.name.toUpperCase()}: ${e.desc}`)),
+            '',
+            'Stat drops, poison and ice from',
+            'badniks only last one fight.',
+          ],
         },
         {
           title: 'MAIN BOSSES & SHIELDS',

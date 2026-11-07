@@ -20,7 +20,7 @@ function combos<T>(a: T[], k: number): T[][] {
 }
 
 // experimenten: --exp naam[,naam]  (verandert getallen alleen voor deze simulatie)
-import { FIGHTERS, MOVES } from '../src/data/fighters';
+import { CHARGE_MULTS, FIGHTERS, MOVES } from '../src/data/fighters';
 const EXPERIMENTS: Record<string, () => void> = {
   bossRandomType: () => { Battle.opts.bossRandomType = true; },
   // de "glass cannons" wat steviger
@@ -47,6 +47,22 @@ const EXPERIMENTS: Record<string, () => void> = {
   knuxNerf: () => { Object.assign(FIGHTERS.knuckles.growth, { hp: 3.3, def: 1.4 }); },
   // Eggman minder HP-groei
   eggmanHp: () => { Object.assign(FIGHTERS.eggman.growth, { hp: 4.2 }); },
+  // vergelijking: de badniks van vóór de enemy-variatie (geen traits, geen bijeffecten, geen elite-eigenschappen)
+  oldFoes: () => {
+    Battle.opts.noTraits = true; Battle.opts.noEliteTraits = true;
+    Object.assign(MOVES.stingShot, { power: 38, poison: undefined });
+    Object.assign(MOVES.snowball, { freezeChance: undefined });
+    Object.assign(MOVES.tongueLash, { power: 36, targetStages: undefined });
+    Object.assign(MOVES.trumpetBlast, { power: 38, targetStages: undefined });
+    Object.assign(MOVES.sharkRam, { power: 42, accuracy: 88, drainBoost: undefined });
+    Object.assign(MOVES.bellySlide, { priority: 0, selfStages: undefined });
+  },
+  // Shell Tank's opgeladen Tank Slam x2 in plaats van x1,5
+  tank2: () => { CHARGE_MULTS.shellUp = 2; },
+  // Shell Up zonder de schelp (alleen opladen)
+  tankNoShell: () => { Battle.opts.tankNoShell = true; },
+  // alleen de elite-eigenschappen uit
+  noEliteTraits: () => { Battle.opts.noEliteTraits = true; },
 };
 const exps = args.includes('--exp') ? args[args.indexOf('--exp') + 1].split(',') : [];
 for (const e of exps) { if (!EXPERIMENTS[e]) throw new Error(`onbekend experiment ${e}`); EXPERIMENTS[e](); }

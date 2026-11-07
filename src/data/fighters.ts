@@ -9,7 +9,7 @@ export type MoveAnim =
   | 'glide' | 'hammer' | 'twirl' | 'heal' | 'chao' | 'ultimate'
   | 'spear' | 'chaos'                               // Shadow
   | 'missile' | 'bomb' | 'laugh'                    // Eggman
-  | 'shoot' | 'tackle' | 'lash' | 'slam';          // badniks
+  | 'shoot' | 'tackle' | 'lash' | 'slam' | 'charge'; // badniks
 
 // ---------------------------------------------------------------- types
 /** Speed / Fly / Power, zoals de teams in Advance 3 en Heroes. Fly > Power > Speed > Fly. */
@@ -87,6 +87,51 @@ export const CHAO_CARE_HEAL = 0.1;
 /** Chao Care vanaf de bank: zwakker dan in het veld. */
 export const CHAO_CARE_BENCH = 0.05;
 export const BASE_CRIT = 0.0625;
+
+// ---------------------------------------------------------------- badnik-eigenschappen
+/**
+ * Elke badnik speelt anders: een vaste eigenschap (trait) per soort. Moves met een bijeffect
+ * (gif, bevriezen, Boost stelen) staan bij de moves zelf.
+ */
+export type TraitId = 'hardShell' | 'charger' | 'spikes' | 'piggyBank' | 'shellUp';
+export interface TraitDef { id: TraitId; name: string; desc: string; }
+export const TRAITS: Record<TraitId, TraitDef> = {
+  hardShell: { id: 'hardShell', name: 'Hard Shell', desc: 'The first hit on it only does half damage.' },
+  charger:   { id: 'charger', name: 'Charge', desc: 'Every few turns it charges up. Its next attack does double damage.' },
+  spikes:    { id: 'spikes', name: 'Spikes', desc: 'Hitting it hurts: you take 1/8 of the damage you deal (it never KOs you).' },
+  piggyBank: { id: 'piggyBank', name: 'Piggy Bank', desc: 'Its DEF rises every turn (up to +4), so hit it hard and fast. Drops double rings.' },
+  shellUp:   { id: 'shellUp', name: 'Shell Up', desc: 'When a shield breaks it hides in its shell (next hit does half) and charges up a Tank Slam that does 1.5x damage.' },
+};
+/** Hard Shell / Shell Up: zoveel schade komt er door de schelp. */
+export const SHELL_FACTOR = 0.5;
+/** Spikes: de aanvaller krijgt dit deel van zijn schade terug. */
+export const SPIKE_RECOIL = 1 / 8;
+/** Charge: op beurt 2, 5, 8 ... laadt hij op; de aanval erna doet dubbele schade. */
+export const CHARGE_EVERY = 3;
+export const CHARGE_MULT = 2;
+/** Opgeladen schade per eigenschap (Shell Tank's Tank Slam kan anders zijn dan Copter Octo). */
+// Shell Tank laadt 3x op (bij elk schild), dus zijn Tank Slam is "maar" x1,5 (sim: x2 maakte de zone-boss te zwaar)
+export const CHARGE_MULTS: Partial<Record<TraitId, number>> = { charger: CHARGE_MULT, shellUp: 1.5 };
+export function chargeMult(f: Fighter) { return (f.def.trait && CHARGE_MULTS[f.def.trait]) || CHARGE_MULT; }
+/** Gif (Sting Shot): elke beurt dit deel van je max-HP, zoveel beurten. */
+export const POISON_FRAC = 1 / 16;
+
+/** Elites krijgen een random extra eigenschap (staat op het label: "ARMORED ELITE"). */
+export type EliteId = 'armored' | 'enraged' | 'regen' | 'swift';
+export interface EliteDef { id: EliteId; name: string; desc: string; }
+export const ELITE_TRAITS: Record<EliteId, EliteDef> = {
+  armored: { id: 'armored', name: 'Armored', desc: 'Has 2 shields, like a boss.' },
+  enraged: { id: 'enraged', name: 'Enraged', desc: 'Its ATK rises every turn.' },
+  regen:   { id: 'regen', name: 'Regenerating', desc: 'Heals 8% of its HP every turn, up to half its HP in total.' },
+  swift:   { id: 'swift', name: 'Swift', desc: 'Starts with SPD +2.' },
+};
+export const ELITE_IDS = Object.keys(ELITE_TRAITS) as EliteId[];
+export const ELITE_REGEN = 0.08;
+/** Regenerating geneest per gevecht nooit meer dan dit deel van zijn HP (anders kan een zwak team vast komen te zitten). */
+export const ELITE_REGEN_TOTAL = 0.5;
+/** Piggy Bank: DEF stijgt elke beurt, tot deze stage. */
+export const PIGGY_MAX_DEF = 4;
+export const ELITE_ARMOR_SHIELDS = 2;
 
 // ---------------------------------------------------------------- Shadow
 /** Chaos Spear: het doelwit krijgt zoveel extra schade, een paar beurten lang. */
@@ -190,6 +235,18 @@ export interface MoveDef {
   spendStages?: boolean;
   /** Geneest de gebruiker met dit deel van zijn max-HP als de move raakt (Hammer Twirl). */
   selfHeal?: number;
+  /** Kans dat targetStages gebeurt (standaard altijd). */
+  targetChance?: number;
+  /** Badnik: steelt zoveel Boost als hij raakt (en je krijgt geen Boost voor de klap). */
+  drainBoost?: number;
+  /** Badnik: vergiftigt het doelwit zoveel beurten (POISON_FRAC per beurt). */
+  poison?: number;
+  /** Badnik: kans om het doelwit 1 beurt te bevriezen (één keer per gevecht). */
+  freezeChance?: number;
+  /** Badnik: laadt op in plaats van aan te vallen; de volgende aanval doet CHARGE_MULT schade. */
+  charge?: boolean;
+  /** Korte naam van het bijeffect, voor het label onder de vijand-box ("POISON"). */
+  tag?: string;
 }
 
 export const MOVES: Record<string, MoveDef> = {
@@ -220,12 +277,15 @@ export const MOVES: Record<string, MoveDef> = {
   eggBomb:    { id: 'eggBomb', name: 'Egg Bomb', power: 60, accuracy: 85, priority: 0, anim: 'bomb', desc: '' },
   eggLaugh:   { id: 'eggLaugh', name: 'Evil Laugh', power: 0, accuracy: 100, priority: 0, anim: 'laugh', selfStages: { atk: 1 }, desc: '' },
   // --- badniks
-  stingShot:  { id: 'stingShot', name: 'Sting Shot', power: 38, accuracy: 92, priority: 0, anim: 'shoot', desc: '', tint: 0xffb340 },
-  snowball:   { id: 'snowball', name: 'Snowball', power: 34, accuracy: 95, priority: 0, anim: 'shoot', desc: '', tint: 0xffffff },
+  stingShot:  { id: 'stingShot', tag: 'POISON', name: 'Sting Shot', power: 34, accuracy: 92, priority: 0, anim: 'shoot', poison: 3, desc: 'Poisons: 1/16 HP per turn for 3 turns.', tint: 0xb06aff },
+  snowball:   { id: 'snowball', tag: 'FREEZE', name: 'Snowball', power: 34, accuracy: 95, priority: 0, anim: 'shoot', freezeChance: 0.25, desc: '25% chance to freeze you for 1 turn (once per fight).', tint: 0xffffff },
   drillRam:   { id: 'drillRam', name: 'Drill Ram', power: 42, accuracy: 88, priority: 0, anim: 'tackle', desc: '' },
+  sharkRam:   { id: 'sharkRam', tag: 'BOOST DRAIN', name: 'Drill Ram', power: 38, accuracy: 90, priority: 0, anim: 'tackle', drainBoost: 1, desc: 'Steals 1 Boost (and you get no Boost for the hit).' },
   bodyCheck:  { id: 'bodyCheck', name: 'Body Check', power: 32, accuracy: 95, priority: 0, anim: 'tackle', desc: '' },
-  tongueLash: { id: 'tongueLash', name: 'Tongue Lash', power: 36, accuracy: 95, priority: 0, anim: 'lash', desc: '' },
-  trumpetBlast:{ id: 'trumpetBlast', name: 'Trumpet Blast', power: 38, accuracy: 92, priority: 0, anim: 'shoot', desc: '', tint: 0xffe070 },
+  bellySlide: { id: 'bellySlide', tag: 'FIRST STRIKE', name: 'Belly Slide', power: 32, accuracy: 95, priority: 1, anim: 'tackle', selfStages: { spd: 1 }, desc: 'Always goes first. Raises its SPD by 1.' },
+  chargeUp:   { id: 'chargeUp', name: 'Charge Up', power: 0, accuracy: 100, priority: 0, anim: 'charge', charge: true, desc: 'Its next attack does double damage.' },
+  tongueLash: { id: 'tongueLash', tag: 'ATK DOWN', name: 'Tongue Lash', power: 34, accuracy: 95, priority: 0, anim: 'lash', targetStages: { atk: -1 }, desc: 'Lowers your ATK by 1 (until the fight ends).' },
+  trumpetBlast:{ id: 'trumpetBlast', tag: 'ACC DOWN', name: 'Trumpet Blast', power: 36, accuracy: 92, priority: 0, anim: 'shoot', targetStages: { acc: -1 }, targetChance: 0.5, desc: '50% chance to lower your ACC by 1 (until the fight ends).', tint: 0xffe070 },
   spikeBurst: { id: 'spikeBurst', name: 'Spike Burst', power: 44, accuracy: 88, priority: 0, anim: 'lash', desc: '' },
   shellCannon:{ id: 'shellCannon', name: 'Shell Cannon', power: 40, accuracy: 92, priority: 0, anim: 'shoot', desc: '', tint: 0x6aa8ff },
   tankSlam:   { id: 'tankSlam', name: 'Tank Slam', power: 55, accuracy: 85, priority: 0, anim: 'slam', desc: '' },
@@ -255,6 +315,8 @@ export interface FighterDef {
   passive?: PassiveDef;
   /** Boost die Spin Attack hem geeft (standaard de boostGain van de move, 1) */
   spinGain?: number;
+  /** vaste eigenschap van een badnik (zie TRAITS) */
+  trait?: TraitId;
 }
 
 export const FIGHTERS: Record<string, FighterDef> = {
@@ -312,11 +374,11 @@ export const FIGHTERS: Record<string, FighterDef> = {
   },
   // ------------------------------------------------------------- badniks
   beetle:   { type: 'fly', id: 'beetle', name: 'Buzz Beetle', atlas: 'badniks', animPrefix: 'beetle', scale: 1.6, facesRight: true, hover: 26,
-    base: { hp: 13, atk: 7, def: 5, spd: 11 }, growth: { hp: 2.4, atk: 1.3, def: 0.9, spd: 1.3 }, moves: ['bodyCheck'], expYield: 8 },
+    base: { hp: 13, atk: 7, def: 5, spd: 11 }, growth: { hp: 2.4, atk: 1.3, def: 0.9, spd: 1.3 }, moves: ['bodyCheck'], expYield: 8, trait: 'hardShell' },
   sharkjet: { type: 'speed', id: 'sharkjet', name: 'Shark Jet', atlas: 'badniks', animPrefix: 'sharkjet', scale: 1.5, hover: 30,
-    base: { hp: 12, atk: 8, def: 5, spd: 13 }, growth: { hp: 2.3, atk: 1.4, def: 0.9, spd: 1.4 }, moves: ['drillRam'], expYield: 9 },
+    base: { hp: 12, atk: 8, def: 5, spd: 13 }, growth: { hp: 2.3, atk: 1.4, def: 0.9, spd: 1.4 }, moves: ['sharkRam'], expYield: 9 },
   octo:     { type: 'power', id: 'octo', name: 'Copter Octo', atlas: 'badniks', animPrefix: 'octo', scale: 1.5, hover: 22,
-    base: { hp: 15, atk: 7, def: 6, spd: 7 }, growth: { hp: 2.6, atk: 1.3, def: 1.0, spd: 1.0 }, moves: ['drillRam', 'bodyCheck'], expYield: 9 },
+    base: { hp: 15, atk: 7, def: 6, spd: 7 }, growth: { hp: 2.6, atk: 1.3, def: 1.0, spd: 1.0 }, moves: ['drillRam', 'bodyCheck'], expYield: 9, trait: 'charger' },
   frog:     { type: 'speed', id: 'frog', name: 'Ribbit Bot', atlas: 'badniks', animPrefix: 'frog', scale: 1.8,
     base: { hp: 16, atk: 7, def: 7, spd: 6 }, growth: { hp: 2.8, atk: 1.3, def: 1.1, spd: 0.9 }, moves: ['tongueLash'], expYield: 9 },
   bee:      { type: 'fly', id: 'bee', name: 'Buzz Cannon', atlas: 'badniks', animPrefix: 'bee', scale: 1.5, hover: 18,
@@ -324,19 +386,19 @@ export const FIGHTERS: Record<string, FighterDef> = {
   snowman:  { type: 'power', id: 'snowman', name: 'Snow Bot', atlas: 'badniks', animPrefix: 'snowman', scale: 1.7, facesRight: true,
     base: { hp: 17, atk: 7, def: 6, spd: 5 }, growth: { hp: 2.8, atk: 1.3, def: 1.0, spd: 0.8 }, moves: ['snowball'], expYield: 9 },
   pig:      { type: 'power', id: 'pig', name: 'Piggy Bank', atlas: 'badniks', animPrefix: 'pig', scale: 1.8, facesRight: true,
-    base: { hp: 19, atk: 8, def: 7, spd: 6 }, growth: { hp: 3.0, atk: 1.4, def: 1.1, spd: 0.8 }, moves: ['bodyCheck'], expYield: 10 },
+    base: { hp: 19, atk: 8, def: 7, spd: 6 }, growth: { hp: 3.0, atk: 1.4, def: 1.1, spd: 0.8 }, moves: ['bodyCheck'], expYield: 10, trait: 'piggyBank' },
   soldier:  { type: 'speed', id: 'soldier', name: 'Toy Trooper', atlas: 'badniks', animPrefix: 'soldier', scale: 1.7, facesRight: true,
     base: { hp: 15, atk: 9, def: 6, spd: 9 }, growth: { hp: 2.6, atk: 1.5, def: 1.0, spd: 1.2 }, moves: ['trumpetBlast'], expYield: 10 },
   penguin:  { type: 'speed', id: 'penguin', name: 'Top Hat Pengu', atlas: 'badniks', animPrefix: 'penguin', scale: 1.7,
-    base: { hp: 16, atk: 8, def: 6, spd: 9 }, growth: { hp: 2.7, atk: 1.4, def: 1.0, spd: 1.2 }, moves: ['bodyCheck'], expYield: 10 },
+    base: { hp: 16, atk: 8, def: 6, spd: 9 }, growth: { hp: 2.7, atk: 1.4, def: 1.0, spd: 1.2 }, moves: ['bellySlide'], expYield: 10 },
   mine:     { type: 'power', id: 'mine', name: 'Spike Mine', atlas: 'badniks', animPrefix: 'mine', scale: 1.6, hover: 16,
-    base: { hp: 14, atk: 9, def: 8, spd: 4 }, growth: { hp: 2.4, atk: 1.5, def: 1.3, spd: 0.7 }, moves: ['spikeBurst'], expYield: 10 },
+    base: { hp: 14, atk: 9, def: 8, spd: 4 }, growth: { hp: 2.4, atk: 1.5, def: 1.3, spd: 0.7 }, moves: ['spikeBurst'], expYield: 10, trait: 'spikes' },
   // ------------------------------------------------------------- boss
   // ------------------------------------------------------------- main bosses (wave 20, 40, 60, 80)
   eggman:   { type: 'power', id: 'eggman', name: 'Dr. Eggman', atlas: 'eggman', animPrefix: 'eggman', scale: 2, facesRight: true, hover: 26,
     base: { hp: 40, atk: 10, def: 10, spd: 6 }, growth: { hp: 5.0, atk: 1.7, def: 1.4, spd: 0.9 }, moves: ['eggMissile', 'eggBomb', 'eggLaugh'], expYield: 40 },
   turtle:   { type: 'power', id: 'turtle', name: 'Shell Tank', atlas: 'badniks', animPrefix: 'turtle', scale: 2.2,
-    base: { hp: 30, atk: 9, def: 9, spd: 6 }, growth: { hp: 4.2, atk: 1.6, def: 1.3, spd: 0.9 }, moves: ['shellCannon', 'tankSlam'], expYield: 25 },
+    base: { hp: 30, atk: 9, def: 9, spd: 6 }, growth: { hp: 4.2, atk: 1.6, def: 1.3, spd: 0.9 }, moves: ['shellCannon', 'tankSlam'], expYield: 25, trait: 'shellUp' },
 };
 
 /** Alle speelbare characters (en dus ook mogelijke rivals). */
@@ -376,12 +438,30 @@ export class Fighter {
   segments = 0;
   /** net gezet: de teller loopt pas vanaf de volgende beurt (zo krijg je echt n hele beurten) */
   freshTurns = new Set<'pierced'>();
+  /** Hard Shell / Shell Up: de volgende klap doet SHELL_FACTOR schade. */
+  shell = false;
+  /** Charge (Copter Octo, Shell Tank): de volgende aanval doet CHARGE_MULT schade. */
+  charged = false;
+  /** Was hij al opgeladen toen hij zijn move van deze beurt koos? Alleen dan telt de lading (Shell Up laadt midden in een beurt op). */
+  chargeReady = false;
+  /** Hoeveel beurten deze vijand al gekozen heeft (voor het oplaad-ritme). */
+  foeTurns = 0;
+  /** Gif: nog zoveel beurten POISON_FRAC schade. */
+  poison = 0;
+  /** Bevroren (Snowball): is verdoofd, maar dan met ijs in plaats van sterretjes. */
+  frozen = false;
+  /** Elite-eigenschap (alleen elites). */
+  elite?: EliteId;
+  /** Regenerating: hoeveel HP hij dit gevecht nog mag genezen. */
+  regenLeft = 0;
 
   constructor(id: string, level: number) {
     this.def = FIGHTERS[id];
     this.level = level;
     this.hp = this.maxHp;
+    this.shell = this.def.trait === 'hardShell';
   }
+  get trait(): TraitDef | undefined { return this.def.trait ? TRAITS[this.def.trait] : undefined; }
 
   get name() { return this.def.name; }
   anim(name: string) { return `${this.def.animPrefix}_${name}`; }
@@ -534,4 +614,40 @@ export function shieldCap(target: Fighter, damage: number): { damage: number; br
   while (bypass < k0 && extra >= Math.round(size * 2 ** (bypass + 1))) bypass++;
   const landAt = bypass >= k0 ? 0 : thr(k0 - bypass);
   return { damage: Math.min(damage, target.hp - landAt), broken: bypass + 1 };
+}
+
+// ---------------------------------------------------------------- badnik-regels (BattleScene én sim gebruiken deze)
+/** Vijand kiest zijn move met het ritme van zijn eigenschap: Charge laadt op beurt 2, 5, 8 ... op; Shell Up slaat na het opladen met Tank Slam. */
+export function traitMove(e: Fighter, normal: () => MoveDef): MoveDef {
+  e.foeTurns++;
+  if (e.def.trait === 'shellUp' && e.charged) return MOVES.tankSlam;
+  if (e.def.trait === 'charger' && !e.charged && e.foeTurns % CHARGE_EVERY === 2) return MOVES.chargeUp;
+  return normal();
+}
+/** Hard Shell / Shell Up: de klap gaat voor de helft door de schelp, en de schelp is weer weg. */
+export function shellHit(target: Fighter, damage: number): { damage: number; cracked: boolean } {
+  if (!target.shell || damage <= 0) return { damage, cracked: false };
+  target.shell = false;
+  return { damage: Math.max(1, Math.ceil(damage * SHELL_FACTOR)), cracked: true };
+}
+/** Spikes (Spike Mine): wie hem raakt krijgt een deel van de schade terug, maar gaat er nooit KO van. */
+export function spikeRecoil(target: Fighter, attacker: Fighter, dealt: number) {
+  if (target.def.trait !== 'spikes' || dealt <= 0 || attacker.fainted) return 0;
+  return Math.max(0, Math.min(attacker.hp - 1, Math.max(1, Math.floor(dealt * SPIKE_RECOIL))));
+}
+export function poisonDamage(f: Fighter) { return Math.max(1, Math.floor(f.maxHp * POISON_FRAC)); }
+/** Elite-eigenschap geven (bij de start van de wave). */
+export function applyElite(e: Fighter, id: EliteId) {
+  e.elite = id;
+  if (id === 'armored') e.segments = Math.max(e.segments, ELITE_ARMOR_SHIELDS);
+  if (id === 'swift') e.stages.spd = 2;
+  if (id === 'regen') e.regenLeft = Math.floor(e.maxHp * ELITE_REGEN_TOTAL);
+}
+/** Regenerating: wat hij deze beurt geneest (en dat gaat van zijn tegoed af). */
+export function regenTick(e: Fighter) {
+  if (e.elite !== 'regen' || e.fainted || e.hp >= e.maxHp) return 0;
+  const h = Math.min(e.maxHp - e.hp, Math.ceil(e.maxHp * ELITE_REGEN), e.regenLeft);
+  e.regenLeft -= h;
+  e.hp += h;
+  return h;
 }

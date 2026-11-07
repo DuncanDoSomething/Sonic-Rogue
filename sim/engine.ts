@@ -10,6 +10,7 @@ import {
   BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, FIGHTER_TYPES, FLINCH_CHANCE,
   Fighter, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MOVES, MoveDef, LIFEFORM_KO_BOOST, RIVAL_HEROES, SASH_MIN_HP, dodgeChance, StageKey, ULT_CHAIN_MAX,
   benchExpRate, calcHit, emptyStages, expShareAfter, shieldCap,
+  CHARGE_MULT, chargeMult, ELITE_IDS, PIGGY_MAX_DEF, regenTick, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove,
 } from '../src/data/fighters';
 import {
   EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZoneEffect,
@@ -111,7 +112,7 @@ export class Battle {
   log: RunLog;
 
   /** Experimenten met regels die niet in src/data staan (zie run.ts --exp). */
-  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number] } = {};
+  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number]; noTraits?: boolean; noEliteTraits?: boolean; tankNoShell?: boolean } = {};
 
   constructor(partyIds: string[], private policy: Policy, seed: number, private maxWave = 200) {
     this.rng = seeded(seed);
@@ -148,7 +149,10 @@ export class Battle {
 
   // ------------------------------------------------------------------ wave
   private startWave() {
-    this.party.forEach(f => { f.stun = 0; f.evade = 0; f.pierced = 0; });
+    this.party.forEach(f => {
+      f.stun = 0; f.evade = 0; f.pierced = 0; f.poison = 0; f.frozen = false;
+      for (const k of Object.keys(f.stages) as StageKey[]) f.stages[k] = Math.max(0, f.stages[k]);
+    });
     this.stunUsed.clear();
     this.itemsUsed = 0;
     this.waveShield = this.buffs.shieldWaves > 0;
@@ -175,6 +179,8 @@ export class Battle {
     this.foeBless = 0;
     if (this.charFoe && boss) { this.enemy.hpMult = SHADOW_BOSS_HP; this.enemy.hp = this.enemy.maxHp; }
     if (boss) this.enemy.segments = mainBoss ? MAIN_BOSS_SHIELDS : ZONE_BOSS_SHIELDS;
+    if (this.elite && !Battle.opts.noEliteTraits) applyElite(this.enemy, pick(this.rng, ELITE_IDS));
+    if (Battle.opts.noTraits) { this.enemy.shell = false; }
     if (rivalId) this.rivalsMet.push(rivalId);
     if (id === 'eggman' || (boss && !mainBoss && Battle.opts.bossRandomType)) this.enemy.typeOverride = pick(this.rng, FIGHTER_TYPES);
     if (id === 'eggman' && Battle.opts.eggmanLevel) { this.enemy.level += Battle.opts.eggmanLevel; this.enemy.hp = this.enemy.maxHp; }
@@ -233,7 +239,9 @@ export class Battle {
       if (a.kind === 'switch') {
         this.stat(this.player).switches++;
         this.switchTo(a.to);
-        this.act(this.enemy, this.player, this.pickEnemyMove());
+        const move = this.pickEnemyMove();
+        this.enemy.chargeReady = this.enemy.charged;
+        this.act(this.enemy, this.player, move);
         this.tickSuper();
         if (this.player.fainted && !this.handleFaint()) return this.lose(kind, foeId);
         this.endOfTurn();
@@ -283,16 +291,20 @@ export class Battle {
       this.foeUltUsed = true;
       return MOVES[e.def.ultimate];
     }
-    const all = e.def.moves.map(m => MOVES[m]);
-    const sensible = all.filter(m => !(m.pierce && this.player.pierced > 0) && !(m.id === 'eggLaugh' && e.stage('atk') >= 2));
-    const moves = sensible.length ? sensible : all;
-    const hurt = e.hp < e.maxHp * 0.5;
-    const usable = moves.filter(m => !m.heal || hurt);
-    return pick(this.rng, usable.length ? usable : moves);
+    const normal = () => {
+      const all = e.def.moves.map(m => MOVES[m]);
+      const sensible = all.filter(m => !(m.pierce && this.player.pierced > 0) && !(m.id === 'eggLaugh' && e.stage('atk') >= 2));
+      const moves = sensible.length ? sensible : all;
+      const hurt = e.hp < e.maxHp * 0.5;
+      const usable = moves.filter(m => !m.heal || hurt);
+      return pick(this.rng, usable.length ? usable : moves);
+    };
+    return Battle.opts.noTraits ? normal() : traitMove(e, normal);
   }
 
   private runTurn(playerMove: MoveDef, ally?: Fighter) {
     const enemyMove = this.pickEnemyMove();
+    this.enemy.chargeReady = this.enemy.charged;
     const playerFirst = playerMove.priority !== enemyMove.priority ? playerMove.priority > enemyMove.priority : this.player.spd >= this.enemy.spd;
     const order: Array<[Fighter, Fighter, MoveDef]> = playerFirst
       ? [[this.player, this.enemy, playerMove], [this.enemy, this.player, enemyMove]]
@@ -308,7 +320,7 @@ export class Battle {
 
   private act(att: Fighter, tgt: Fighter, move: MoveDef, ally?: Fighter) {
     if (att === this.player) this.stat(att).turns++;
-    if (att.stun > 0) { att.stun--; return; }
+    if (att.stun > 0) { att.stun--; if (att.stun === 0) att.frozen = false; return; }
     if (this.flinched.has(att)) return;
     const freeUse = att.isFree(move);
     if (att === this.player) {
@@ -323,12 +335,15 @@ export class Battle {
     const blessed = att === this.player ? this.buffs.blessTurns > 0 : this.foeBless > 0;
     if (att === this.player && blessed) this.buffs.blessTurns--;
     else if (blessed) this.foeBless--;
-    this.doAttack(att, tgt, move, ally, critBonus, blessed ? 1 + BLESS_BONUS : 1, freeUse);
+    let dmgBonus = blessed ? 1 + BLESS_BONUS : 1;
+    if (att !== this.player && att.charged && att.chargeReady && move.power > 0) { att.charged = false; dmgBonus *= chargeMult(att); }
+    this.doAttack(att, tgt, move, ally, critBonus, dmgBonus, freeUse);
   }
 
   private doAttack(att: Fighter, tgt: Fighter, move: MoveDef, ally: Fighter | undefined, critBonus: number, dmgBonus: number, freeUse: boolean) {
     const isPlayer = att === this.player;
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
+    if (move.charge) { att.charged = true; return; }
     let hit = calcHit(att, tgt, move, this.rng, isPlayer ? critBonus : 0, dmgBonus);
     const status = move.power === 0;
     if (status) hit = { damage: 0, crit: false, missed: false, effect: 1 };
@@ -344,20 +359,27 @@ export class Battle {
     if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; }
     else if (!hit.missed && !status && (move.cost ?? 0) < MAX_BOOST && this.rng() < this.dodge(tgt, att)) hit = { ...hit, missed: true, damage: 0, crit: false };
     // strike
+    let broken = 0;
+    let dealt = 0;
     if (!hit.missed && !status) {
+      hit = { ...hit, damage: shellHit(tgt, hit.damage).damage };
       const cap = shieldCap(tgt, hit.damage);
       hit = { ...hit, damage: cap.damage };
+      broken = cap.broken;
       const before = tgt.hp;
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
       if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed && !Battle.opts.noSash && before > tgt.maxHp * (Battle.opts.sashMin ?? SASH_MIN_HP)) { tgt.hp = 1; tgt.sashUsed = true; }
+      dealt = before - tgt.hp;
       if (isPlayer) {
         this.stat(att).dmg += before - tgt.hp;
         if (tgt.fainted) this.stat(att).kos++;
       } else {
-        this.player.gainBoost(BOOST_ON_HIT);
+        if (!move.drainBoost) this.player.gainBoost(BOOST_ON_HIT);
         if (tgt.fainted) this.stat(tgt).downs++;
       }
     }
+    if (broken && tgt.def.trait === 'shellUp' && !tgt.fainted && !Battle.opts.noTraits) { tgt.shell = !Battle.opts.tankNoShell; tgt.charged = true; }
+    if (isPlayer && !Battle.opts.noTraits) att.hp -= spikeRecoil(tgt, att, dealt);
     if (move.spendStages) att.stages = emptyStages();
     if (move.recoil && !att.fainted) {
       att.hp = Math.max(0, att.hp - Math.ceil(att.maxHp * move.recoil));
@@ -367,7 +389,16 @@ export class Battle {
     if (!hit.missed) {
       if (move.selfHeal && !att.fainted && att.hp < att.maxHp) att.hp += Math.min(att.maxHp - att.hp, Math.ceil(att.maxHp * move.selfHeal));
       for (const [k, v] of Object.entries(move.selfStages ?? {})) if (!att.fainted) att.raise(k as StageKey, v);
-      for (const [k, v] of Object.entries(move.targetStages ?? {})) if (!tgt.fainted) tgt.raise(k as StageKey, v);
+      if (!move.targetChance || this.rng() < move.targetChance) {
+        for (const [k, v] of Object.entries(move.targetStages ?? {})) if (!tgt.fainted) tgt.raise(k as StageKey, v);
+      }
+      if (move.drainBoost && !tgt.fainted && this.party.includes(tgt)) tgt.boost = Math.max(0, tgt.boost - move.drainBoost);
+      if (move.poison && !tgt.fainted) tgt.poison = move.poison;
+      if (move.freezeChance && !tgt.fainted && !this.stunUsed.has('e:freeze') && this.rng() < move.freezeChance) {
+        this.stunUsed.add('e:freeze');
+        tgt.stun = Math.max(tgt.stun, 1);
+        tgt.frozen = true;
+      }
       if (hit.crit && att.def.passive?.id === 'luckySwing' && !move.recoil && !move.selfHeal && !att.fainted) {
         const cost = Math.min(att.hp - 1, Math.ceil(att.maxHp * CRIT_RECOIL));
         if (cost > 0) att.hp -= cost;
@@ -430,6 +461,18 @@ export class Battle {
 
   private endOfTurn() {
     for (const f of [this.player, this.enemy]) if (f && !f.fainted) f.tickTurns();
+    const e = this.enemy;
+    if (e && !e.fainted) {
+      if (e.def.trait === 'piggyBank' && !Battle.opts.noTraits && e.stages.def < PIGGY_MAX_DEF) e.raise('def', 1);
+      if (e.elite === 'enraged') e.raise('atk', 1);
+      regenTick(e);
+    }
+    const p = this.player;
+    if (p.poison > 0 && !p.fainted) {
+      p.hp = Math.max(0, p.hp - poisonDamage(p));
+      p.poison--;
+      if (p.fainted) { this.stat(p).downs++; return; }
+    }
     const burn = this.fieldEffect?.burn;
     if (!burn || this.player.fainted || this.player.def.passive?.id === 'lifeform') return;
     this.player.hp = Math.max(0, this.player.hp - Math.max(1, Math.floor(this.player.maxHp * burn)));
@@ -442,6 +485,7 @@ export class Battle {
     if (prev === next) return;
     if (resetStages) prev.stages = { ...emptyStages(), atk: prev.def.passive?.id === 'luckySwing' && !prev.fainted ? prev.stages.atk : 0 };
     prev.stun = 0;
+    prev.frozen = false;
     this.player = next;
   }
 
@@ -457,7 +501,8 @@ export class Battle {
     if (this.player.def.passive?.id === 'speedster' && !this.player.fainted) this.player.raise('spd', 1);
     const kind = isBossWave(this.wave) ? 'boss' : this.elite ? 'elite' : 'normal';
     this.minTier = this.alarmWave && !this.rival ? 'uncommon' : 'common';
-    this.rings += Math.round(waveRings(this.wave, kind) * (this.waveMagnet ? 1 + MAGNET_BONUS : 1));
+    const piggy = this.enemy.def.trait === 'piggyBank' && !Battle.opts.noTraits ? 2 : 1;
+    this.rings += Math.round(waveRings(this.wave, kind) * piggy * (this.waveMagnet ? 1 + MAGNET_BONUS : 1));
     const exp = this.enemy.def.expYield + this.enemy.level * 3;
     this.player.gainExp(exp);
     this.teamExp(exp);
