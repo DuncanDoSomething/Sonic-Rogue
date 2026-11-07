@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove } from '../data/fighters';
+import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, luckyExtraChance, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -1704,6 +1704,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (move.extraHit && this.lastLanded && !att.fainted && !tgt.fainted && this.extraRoll() < move.extraHit) {
       await this.doAttack(att, tgt, { ...move, selfStages: undefined, extraHit: undefined }, ally, true);
     }
+    // Lucky Swing (Amy) bij ATK +6: kans dat ze dezelfde aanval nog een keer doet
+    else if (this.lastLanded && !att.fainted && !tgt.fainted && this.extraRoll() < luckyExtraChance(att, move)) {
+      await this.doAttack(att, tgt, { ...move, selfStages: undefined }, ally, 'lucky');
+    }
     // Chao Revival (rival-Cream): één keer terug, en jouw team ATK -2
     if (tgt === this.enemy && this.rival && chaoRevival(tgt)) await this.rivalRevive();
   }
@@ -1725,7 +1729,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   }
   /** De laatste aanval raakte (voor de extra Homing Attack). */
   private lastLanded = false;
-  /** Dobbelsteen voor de extra Homing Attack (de tests zetten hem vast). */
+  /** Dobbelsteen voor de extra Homing Attack en Lucky Swing (de tests zetten hem vast). */
   private extraRoll = () => Math.random();
 
   /** De vijand is een character (rival, of Shadow als boss): KO-pose, character-aanvallen, idles. */
@@ -1785,9 +1789,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.openCommand();
   }
 
-  private async doAttack(att: Fighter, tgt: Fighter, move: MoveDef, ally?: Fighter, again = false) {
+  private async doAttack(att: Fighter, tgt: Fighter, move: MoveDef, ally?: Fighter, again: boolean | 'lucky' = false) {
     const isPlayer = att === this.player;
-    await this.say(again ? `${this.who(att)} homed in again!` : `${this.who(att)} used ${move.name}!`, 150);
+    await this.say(again === 'lucky' ? `Lucky Swing! ${this.who(att)} swung again!` : again ? `${this.who(att)} homed in again!` : `${this.who(att)} used ${move.name}!`, 150);
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
     if (move.charge) return this.doCharge(att);
     let hit = calcHit(att, tgt, move, Math.random, isPlayer ? this.critBonus : 0, this.dmgBonus);
@@ -1894,7 +1898,6 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       await this.say(guard ? `${guard} ${tgt.name} avoided the attack!` : `${tgt.name} avoided the attack!`, 400);
     }
     if (shellCracked) await this.say(`${this.who(tgt)}'s shell took half the damage!`, 350);
-    if (this.chargedHit && !hit.missed) audio.sfx('charged', { volume: 0.6 });
     if (this.chargedHit && !hit.missed) await this.say(chargeMult(att) >= 2 ? 'The charged attack hit twice as hard!' : 'The charged attack hit extra hard!', 350);
     else if (this.chargedHit) await this.say(`${this.who(att)} wasted its charge!`, 350);
     if (shieldsBroken) {

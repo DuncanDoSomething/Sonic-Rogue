@@ -318,7 +318,7 @@ test.describe('Sonic Rogue smoke tests', () => {
     await openGame(page);
     await startRun(page);
     await setup(page, `s.switchTo(s.party[2]).then(() => {
-      s.player.hp = 10; s.player.boost = 6; s.player.stages.atk = 6; // 100% crit
+      s.player.hp = 10; s.player.boost = 6; s.player.stages.atk = 2; // ATK +2: altijd crit
       s.enemy.hp = 9999; s.enemy.stun = 5;                           // de vijand kan niks terugdoen
       s.runTurn(window.MOVES.hammerTwirl);
     });`);
@@ -326,6 +326,27 @@ test.describe('Sonic Rogue smoke tests', () => {
     await waitForMenu(page, 'command');
     const amy = await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { hp: b.player.hp, max: b.player.maxHp }; });
     expect(amy.hp).toBe(10 + Math.ceil(amy.max * 0.25));
+    expect(errors).toEqual([]);
+  });
+
+  test('Amy at ATK +6: Lucky Swing can swing the same attack again, and each crit costs HP', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startRun(page);
+    await setup(page, `s.switchTo(s.party[2]).then(() => {
+      s.player.hp = s.player.maxHp; s.player.stages.atk = 6;
+      s.enemy.hp = 9999; s.enemy.stun = 5;
+      s.extraRoll = () => 0;                                    // de extra klap komt altijd
+      window.__swings = [];
+      const orig = s.doAttack.bind(s);
+      s.doAttack = (a, t, m, al, again) => { window.__swings.push([m.id, again]); return orig(a, t, m, al, again); };
+      s.runTurn({ ...window.MOVES.spinAttack, accuracy: 1000 });
+    });`);
+    await expect.poll(async () => (await battle(page)).menu, { timeout: 20_000 }).not.toBe('command');
+    await waitForMenu(page, 'command');
+    const r = await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { swings: (window as any).__swings, hp: b.player.hp, max: b.player.maxHp }; });
+    expect(r.swings.map(([m, again]) => [m, again ?? false])).toEqual([['spinAttack', false], ['spinAttack', 'lucky']]);
+    expect(r.hp).toBe(r.max - 2 * Math.ceil(r.max * 0.05));   // twee crits, twee keer 5%
     expect(errors).toEqual([]);
   });
 
@@ -450,6 +471,8 @@ test.describe('Sonic Rogue smoke tests', () => {
     await expect.poll(() => activeScenes(page)).toContain('Help');
     await press(page, 'z');                     // TUTORIAL is selected: start
     await expect.poll(() => activeScenes(page)).toContain('Battle');
+    // geen toeval in de begeleide fight (een extra Homing-klap kan de vijand te vroeg verslaan)
+    await page.evaluate(() => { const s = (window as any).game.scene.getScene('Battle'); s.extraRoll = () => 1; s.dodgeRoll = () => 1; });
     const tut = () => page.evaluate(() => { const s = (window as any).game.scene.getScene('Battle'); return { step: s.tut?.index, shown: s.tut?.shown, talking: s.tut?.talking, menu: s.menu, active: s.player?.def.id }; });
     const atStep = async (step: number) => expect.poll(async () => { const t = await tut(); return t.shown ? t.step : -1; }, { timeout: 30_000 }).toBe(step);
     await atStep(0);

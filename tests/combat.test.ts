@@ -3,7 +3,7 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
-  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, LIFEFORM_KO_BOOST, dodgeChance, DODGE_CAP, DODGE_PER_RATIO, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH, critMult, applyRival, RIVAL_SHIELDS, RIVAL_TRAITS, rivalOptions, ironWill, chaoRevival,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, LIFEFORM_KO_BOOST, dodgeChance, DODGE_CAP, DODGE_PER_RATIO, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH, critMult, luckyExtraChance, applyRival, RIVAL_SHIELDS, RIVAL_TRAITS, rivalOptions, ironWill, chaoRevival,
   shellHit, traitMove, chargeMult, CHARGE_MULT, spikeRecoil, poisonDamage, applyElite, regenTick, ELITE_REGEN_TOTAL, ELITE_IDS, PIGGY_MAX_DEF,
 } from '../src/data/fighters';
 import { mainBossFor, MAIN_BOSS_SHIELDS, SHADOW_BOSS_CHANCE, enemyScaling, rivalChance, rivalLevelBonus } from '../src/data/zones';
@@ -162,15 +162,22 @@ describe('moves en passives', () => {
     expect(speedBonus(new Fighter('tails', 20), slow)).toBe(1);   // alleen Sonic
   });
 
-  it('Lucky Swing: Amy +33% crit per ATK stage, en bij ATK +6 doen haar crits 2x', () => {
+  it('Lucky Swing: +1 meer crit-kans, +2 altijd crit, +4 crits 2x, +6 kans op nog een aanval', () => {
     const amy = new Fighter('amy', 10);
     expect(critChance(amy)).toBe(BASE_CRIT);
-    amy.raise('atk'); amy.raise('atk');
-    expect(critChance(amy)).toBeCloseTo(BASE_CRIT + 0.66);
-    expect(critMult(amy)).toBe(1.5);
-    for (let i = 0; i < 4; i++) amy.raise('atk');
+    amy.raise('atk');
+    expect(critChance(amy)).toBeCloseTo(BASE_CRIT + 0.33);
+    amy.raise('atk');
     expect(critChance(amy)).toBe(1);
+    expect(critMult(amy)).toBe(1.5);
+    expect(luckyExtraChance(amy, MOVES.hammerSmash)).toBe(0);
+    amy.raise('atk'); amy.raise('atk');
     expect(critMult(amy)).toBe(2);
+    expect(luckyExtraChance(amy, MOVES.hammerSmash)).toBe(0);
+    amy.raise('atk'); amy.raise('atk');
+    expect(luckyExtraChance(amy, MOVES.hammerSmash)).toBe(0.3);
+    expect(luckyExtraChance(amy, MOVES.tornadoHammer)).toBe(0);   // niet met haar ultimate
+    expect(luckyExtraChance(new Fighter('knuckles', 10), MOVES.spinAttack)).toBe(0);
     const sonic = new Fighter('sonic', 10); for (let i = 0; i < 6; i++) sonic.raise('atk');
     expect(critChance(sonic)).toBe(BASE_CRIT);
     expect(critMult(sonic)).toBe(1.5);

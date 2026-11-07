@@ -10,7 +10,7 @@ import {
   BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, FIGHTER_TYPES, FLINCH_CHANCE,
   Fighter, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MOVES, MoveDef, LIFEFORM_KO_BOOST, RIVAL_HEROES, SASH_MIN_HP, dodgeChance, StageKey, ULT_CHAIN_MAX,
   benchExpRate, calcHit, emptyStages, expShareAfter, shieldCap,
-  CHARGE_MULT, chargeMult, ELITE_IDS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, type EliteId, PIGGY_MAX_DEF, regenTick, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove,
+  CHARGE_MULT, chargeMult, luckyExtraChance, ELITE_IDS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, type EliteId, PIGGY_MAX_DEF, regenTick, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove,
 } from '../src/data/fighters';
 import {
   EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZoneEffect,
@@ -360,6 +360,10 @@ export class Battle {
     this.doAttack(att, tgt, move, ally, critBonus, dmgBonus, freeUse);
     if (move.extraHit && this.lastLanded && !att.fainted && !tgt.fainted && this.rng() < move.extraHit) {
       this.doAttack(att, tgt, { ...move, selfStages: undefined, extraHit: undefined }, ally, critBonus, dmgBonus * (Battle.opts.extraMult ?? 1), freeUse);
+    }
+    // Lucky Swing (Amy) bij ATK +6: kans op dezelfde aanval nog een keer
+    else if (this.lastLanded && !att.fainted && !tgt.fainted && this.rng() < luckyExtraChance(att, move)) {
+      this.doAttack(att, tgt, { ...move, selfStages: undefined }, ally, critBonus, dmgBonus, freeUse);
     }
     // Chao Revival (rival-Cream): terug met de helft, jouw team ATK -2
     if (tgt === this.enemy && this.rival && chaoRevival(tgt)) for (const f of this.party) if (!f.fainted) f.raise('atk', RIVAL_REVIVE_ATK);

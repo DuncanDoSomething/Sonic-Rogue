@@ -71,7 +71,7 @@ export const PASSIVES: Record<PassiveId, PassiveDef> = {
   speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. The faster he is than the foe, the harder he hits (+25% per time as fast, up to +50%) and the more attacks he dodges (up to 35%).' },
   weakSpot:   { id: 'weakSpot', name: 'Weak Spot', desc: 'Stunned foes take 2x damage from Tails.' },
   flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP, if he had more than half his HP.' },
-  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+33% crit chance per ATK stage, and at ATK +6 her crits do 2x damage. She keeps her ATK raises when she switches out. Crits cost her 5% max HP (not with Hammer Twirl).' },
+  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: 'ATK +1: 39% crit chance. ATK +2: always crits. ATK +4: crits do 2x. ATK +6: 30% chance to attack again. She keeps her ATK raises when she switches out. Crits cost her 5% max HP (not with Hammer Twirl).' },
   chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'When a wave starts, the whole team heals 10% HP if Cream is on the field, or 5% if she is on the bench.' },
   lifeform:   { id: 'lifeform', name: 'Ultimate Lifeform', desc: 'Zone effects and stat drops don\'t affect him. Every KO he lands gives him 1 Boost.' },
 };
@@ -168,19 +168,35 @@ export function dodgeChance(target: Fighter, attacker: Fighter) {
   return Math.min(DODGE_CAP, Math.max(0, DODGE_PER_RATIO * (ratio - 1)));
 }
 
-/** Critical-kans: 1/16, plus Lucky Swing (Amy). */
-/** Lucky Swing (Amy): crit-kans per ATK-stage, en bij ATK +6 doen haar crits zoveel schade. */
+/**
+ * Lucky Swing (Amy), in treden op haar ATK-stage:
+ *  +1: extra crit-kans  ·  +2: altijd crit  ·  +4: crits doen 2x  ·  +6: kans op nog een aanval (dezelfde move).
+ */
 export const LUCKY_PER_STAGE = 0.33;
+export const LUCKY_SURE_STAGE = 2;
+export const LUCKY_DOUBLE_STAGE = 4;
 export const LUCKY_MAX_CRIT = 2;
+export const LUCKY_EXTRA_STAGE = 6;
+export const LUCKY_EXTRA_CHANCE = 0.3;
 export const CRIT_MULT = 1.5;
+const lucky = (f: Fighter) => f.def.passive?.id === 'luckySwing';
 export function critMult(attacker: Fighter) {
-  return attacker.def.passive?.id === 'luckySwing' && attacker.stage('atk') >= 6 ? LUCKY_MAX_CRIT : CRIT_MULT;
+  return lucky(attacker) && attacker.stage('atk') >= LUCKY_DOUBLE_STAGE ? LUCKY_MAX_CRIT : CRIT_MULT;
 }
+/** Critical-kans: 1/16, plus Lucky Swing (Amy). */
 export function critChance(attacker: Fighter) {
-  const bonus = attacker.def.passive?.id === 'luckySwing' ? LUCKY_PER_STAGE * Math.max(0, attacker.stage('atk')) : 0;
   // Super Shadow: 100% crit zolang hij super is
   if (attacker.superTurns > 0) return 1;
-  return Math.min(1, BASE_CRIT + bonus);
+  if (!lucky(attacker)) return BASE_CRIT;
+  const atk = attacker.stage('atk');
+  if (atk >= LUCKY_SURE_STAGE) return 1;
+  return Math.min(1, BASE_CRIT + LUCKY_PER_STAGE * Math.max(0, atk));
+}
+/** Lucky Swing bij ATK +6: kans dat Amy nog een keer aanvalt met dezelfde move (niet met haar ultimate). */
+export function luckyExtraChance(attacker: Fighter, move: MoveDef) {
+  if (!lucky(attacker) || attacker.stage('atk') < LUCKY_EXTRA_STAGE) return 0;
+  if ((move.cost ?? 0) >= MAX_BOOST || (move.power === 0 && !move.scaling)) return 0;
+  return LUCKY_EXTRA_CHANCE;
 }
 
 export interface MoveDef {
@@ -286,7 +302,7 @@ export const MOVES: Record<string, MoveDef> = {
   maximumHeat:  { id: 'maximumHeat', name: 'Maximum Heat', power: 100, scaling: 'stages', accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, spendStages: true, desc: 'A meteor dive. +25 power for every stat stage Knuckles has, up or down; uses them all up.' },
   chaoAttack:   { id: 'chaoAttack', name: 'Chao Blessing', power: 0, accuracy: 100, priority: 1, anim: 'heal', teamHeal: 1, revive: BLESS_REVIVE, blessing: true, clearField: true, cost: MAX_BOOST,
     desc: 'Cheese and friends heal the team to full HP, revive fallen teammates with 50% HP and clear the zone effect. Your team then does 50% more damage for 5 turns.' },
-  tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 120, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, critDouble: true, recoil: 0.5, desc: 'A hammer storm. Always crits; doubles at 100% crit chance. Costs Amy 50% max HP (KO if below half).' },
+  tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 120, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, critDouble: true, recoil: 0.5, desc: 'A hammer storm. Always crits; doubles once her crits are guaranteed (ATK +2). Costs Amy 50% max HP (KO if below half).' },
   superBarrage: { id: 'superBarrage', name: 'Super Barrage', power: 100, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, superTurns: 3, resets: 'ownKo', desc: 'Goes Super and unloads a barrage. Always crits. For 3 turns: 100% crit, but he takes double damage (a chain does not refresh it). A KO makes it free again (max 2x).' },
   // --- Eggman (main boss)
   eggMissile: { id: 'eggMissile', name: 'Egg Missile', power: 40, accuracy: 95, priority: 0, anim: 'missile', desc: '' },

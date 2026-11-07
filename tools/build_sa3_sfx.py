@@ -10,7 +10,7 @@ import os, subprocess, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'public', 'audio', 'sfx')
 
-# (Copter Dive, Piko Hammer, Hammer Twirl, opladen en character select vond Moe met de oude geluiden leuker)
+# (Copter Dive, Piko Hammer, Hammer Twirl, opladen, de opgeladen klap en character select vond Moe zonder SA3-geluid leuker)
 # game-naam: (SA3-nummer, naam in de decompilatie, max lengte in s of None, fade-out in s, volume)
 SOUNDS = {
     'whoosh':      (121, 'SE_TAILS__TAIL_HIT', None, 0, 1.0),        # korte zwiep (staartslag)
@@ -22,7 +22,6 @@ SOUNDS = {
     'shield':      (151, 'SE_SHIELD_ACTIVATE', None, 0, 1.0),
     'spikes':      (154, 'SE_SPIKES', None, 0, 1.0),
     'speedup':     (155, 'SE_SPEED_BOOSTER', 0.8, 0.3, 1.0),
-    'charged':     (539, 'SE_TAG_ACTION_CHARGED', None, 0, 0.8),
     'freeze':      (586, 'SE_ICE_SPIKE', None, 0, 1.0),
 }
 
