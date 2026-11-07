@@ -153,12 +153,12 @@ describe('moves en passives', () => {
     expect(MOVES.homingAttack.selfStages).toEqual({ spd: 1 });
   });
 
-  it('Sonic Speed: meer schade als Sonic sneller is, max +75%', () => {
+  it('Sonic Speed: +35% per keer zo snel, max +100%', () => {
     const sonic = new Fighter('sonic', 20), slow = new Fighter('turtle', 20);
     expect(speedBonus(sonic, sonic)).toBe(1);
-    expect(speedBonus(sonic, slow)).toBeGreaterThan(1);
+    expect(speedBonus(sonic, slow)).toBeCloseTo(1 + 0.35 * (sonic.spd / slow.spd - 1));
     for (let i = 0; i < 6; i++) sonic.raise('spd');
-    expect(speedBonus(sonic, slow)).toBe(1.75);
+    expect(speedBonus(sonic, slow)).toBe(2);
     expect(speedBonus(new Fighter('tails', 20), slow)).toBe(1);   // alleen Sonic
   });
 
@@ -485,10 +485,15 @@ describe('nieuwe kits (balance-ronde 2)', () => {
     const fast = new Fighter('sonic', 5); fast.stages.spd = -6;
     expect(dodgeChance(fast, new Fighter('sharkjet', 30))).toBe(0);  // trager: nooit
   });
-  it('Homing Attack: 50 power, SPD +1, gratis bij een KO; Copter Dive verlengt een stun', () => {
-    expect(MOVES.homingAttack.power).toBe(50);
+  it('Homing Attack: 40-80 op snelheid, SPD +1, 50% kans op een tweede klap; Copter Dive verlengt een stun', () => {
+    const sonic = new Fighter('sonic', 20);
+    expect(movePower(MOVES.homingAttack, sonic, new Fighter('sonic', 20))).toBe(50);     // even snel
+    expect(movePower(MOVES.homingAttack, sonic, new Fighter('turtle', 20))).toBe(70);    // 3x zo snel
+    expect(speedPower(10, 20, MOVES.homingAttack.speedTable)).toBe(40);
+    expect(speedPower(99, 20, MOVES.homingAttack.speedTable)).toBe(80);
     expect(MOVES.homingAttack.selfStages).toEqual({ spd: 1 });
-    expect(MOVES.homingAttack.refundOnKo).toBe(true);
+    expect(MOVES.homingAttack.extraHit).toBe(0.5);
+    expect(MOVES.homingAttack.refundOnKo).toBeUndefined();
     expect(MOVES.copterDive.extendStun).toBe(1);
   });
   it('Amy: meer HP en DEF', () => {

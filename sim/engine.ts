@@ -112,7 +112,7 @@ export class Battle {
   log: RunLog;
 
   /** Experimenten met regels die niet in src/data staan (zie run.ts --exp). */
-  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number]; noTraits?: boolean; noEliteTraits?: boolean; tankNoShell?: boolean } = {};
+  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number]; noTraits?: boolean; noEliteTraits?: boolean; tankNoShell?: boolean; extraMult?: number } = {};
 
   constructor(partyIds: string[], private policy: Policy, seed: number, private maxWave = 200) {
     this.rng = seeded(seed);
@@ -337,9 +337,14 @@ export class Battle {
     else if (blessed) this.foeBless--;
     let dmgBonus = blessed ? 1 + BLESS_BONUS : 1;
     if (att !== this.player && att.charged && att.chargeReady && move.power > 0) { att.charged = false; dmgBonus *= chargeMult(att); }
+    this.lastLanded = false;
     this.doAttack(att, tgt, move, ally, critBonus, dmgBonus, freeUse);
+    if (move.extraHit && this.lastLanded && !att.fainted && !tgt.fainted && this.rng() < move.extraHit) {
+      this.doAttack(att, tgt, { ...move, selfStages: undefined, extraHit: undefined }, ally, critBonus, dmgBonus * (Battle.opts.extraMult ?? 1), freeUse);
+    }
   }
 
+  private lastLanded = false;
   private doAttack(att: Fighter, tgt: Fighter, move: MoveDef, ally: Fighter | undefined, critBonus: number, dmgBonus: number, freeUse: boolean) {
     const isPlayer = att === this.player;
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
@@ -387,6 +392,7 @@ export class Battle {
     }
     if (move.evade && !att.fainted) att.evade = move.evade;
     if (!hit.missed) {
+      this.lastLanded = !status;
       if (move.selfHeal && !att.fainted && att.hp < att.maxHp) att.hp += Math.min(att.maxHp - att.hp, Math.ceil(att.maxHp * move.selfHeal));
       for (const [k, v] of Object.entries(move.selfStages ?? {})) if (!att.fainted) att.raise(k as StageKey, v);
       if (!move.targetChance || this.rng() < move.targetChance) {

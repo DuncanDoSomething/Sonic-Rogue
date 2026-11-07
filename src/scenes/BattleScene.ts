@@ -1609,8 +1609,17 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // Charge: de opgeladen aanval doet dubbele schade (ook als hij mist is de lading op)
     this.chargedHit = att !== this.player && att.charged && att.chargeReady && move.power > 0;
     if (this.chargedHit) { att.charged = false; this.dmgBonus *= chargeMult(att); }
+    this.lastLanded = false;
     await this.doAttack(att, tgt, move, ally);
+    // Homing Attack: kans op nog een klap (één keer per beurt, zonder extra SPD)
+    if (move.extraHit && this.lastLanded && !att.fainted && !tgt.fainted && this.extraRoll() < move.extraHit) {
+      await this.doAttack(att, tgt, { ...move, selfStages: undefined, extraHit: undefined }, ally, true);
+    }
   }
+  /** De laatste aanval raakte (voor de extra Homing Attack). */
+  private lastLanded = false;
+  /** Dobbelsteen voor de extra Homing Attack (de tests zetten hem vast). */
+  private extraRoll = () => Math.random();
 
   /** De vijand is een character (rival, of Shadow als boss): KO-pose, character-aanvallen, idles. */
   private charFoe = false;
@@ -1669,9 +1678,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.openCommand();
   }
 
-  private async doAttack(att: Fighter, tgt: Fighter, move: MoveDef, ally?: Fighter) {
+  private async doAttack(att: Fighter, tgt: Fighter, move: MoveDef, ally?: Fighter, again = false) {
     const isPlayer = att === this.player;
-    await this.say(`${this.who(att)} used ${move.name}!`, 150);
+    await this.say(again ? `${this.who(att)} homed in again!` : `${this.who(att)} used ${move.name}!`, 150);
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
     if (move.charge) return this.doCharge(att);
     let hit = calcHit(att, tgt, move, Math.random, isPlayer ? this.critBonus : 0, this.dmgBonus);
@@ -1813,6 +1822,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // geraakt: crit/effectiviteit, en daarna de bijeffecten van de move (dit hing per ongeluk aan de
     // evade-check hierboven, waardoor Light Speed zijn SPD +3 nooit gaf)
     if (!hit.missed) {
+      this.lastLanded = !status;
       if (hit.crit) await this.say('A critical hit!', 350);
       if (hit.effect > 1) await this.say("It's super effective!", 350);
       else if (hit.effect < 1) await this.say("It's not very effective...", 350);

@@ -732,6 +732,23 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
+  test('Homing Attack: 50% chance to home in again, without extra SPD', async ({ page }) => {
+    test.setTimeout(90_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startBattleWith(page, ['sonic']);
+    await meet(page, 'frog');
+    const COUNT = "s.__hits = 0; if (!s.__orig) { s.__orig = s.doAttack.bind(s); s.doAttack = (...a) => { if (a[0] === s.player) s.__hits++; return s.__orig(...a); }; }";
+    const hits = () => page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { hits: b.__hits, spd: b.player.stages.spd }; });
+    const HOMING = "{ ...window.MOVES.homingAttack, accuracy: 1000 }";
+    const QUIET = "s.enemy.hp = 9999; s.player.hp = 9999; s.player.boost = 6; s.dodgeRoll = () => 1; s.pickEnemyMove = () => ({ ...window.MOVES.tongueLash, accuracy: 0 });";
+    await turn(page, `${COUNT} ${QUIET} s.extraRoll = () => 0; s.runTurn(${HOMING});`);
+    expect(await hits()).toEqual({ hits: 2, spd: 1 });
+    await turn(page, `${COUNT} ${QUIET} s.extraRoll = () => 0.99; s.runTurn(${HOMING});`);
+    expect(await hits()).toEqual({ hits: 1, spd: 2 });
+    expect(errors).toEqual([]);
+  });
+
   test('badniks: elites, Shark Jet, Snow Bot and Shell Tank', async ({ page }) => {
     test.setTimeout(120_000);
     const errors = trackErrors(page);

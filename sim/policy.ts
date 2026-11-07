@@ -8,7 +8,7 @@ import { Fighter, MAX_BOOST, MOVES, MoveDef, ULTIMATE_LEVEL, calcHit, critChance
 import { isBossWave } from '../src/data/zones';
 import type { RewardDef } from '../src/data/rewards';
 import type { ItemDef } from '../src/data/items';
-import type { Action, Battle, Policy } from './engine';
+import { Battle, type Action, type Policy } from './engine';
 
 /** rng-reeks voor calcHit: nooit missen, geen crit, gemiddelde roll */
 function fixedRng() {
@@ -24,7 +24,9 @@ export function expDamage(att: Fighter, tgt: Fighter, m: MoveDef, b?: Battle): n
   const hit = calcHit(att, tgt, m, fixedRng(), 0, mult);
   const crit = m.alwaysCrit ? 1 : critChance(att);
   const acc = (m.cost ?? 0) >= MAX_BOOST ? 1 : Math.min(1, m.accuracy / 100);
-  const raw = hit.damage * (m.alwaysCrit ? 1.5 : 1 + 0.5 * crit) * acc;
+  // Homing Attack: kans op een tweede klap
+  const extra = 1 + (m.extraHit ?? 0) * (Battle.opts.extraMult ?? 1);
+  const raw = hit.damage * (m.alwaysCrit ? 1.5 : 1 + 0.5 * crit) * acc * extra;
   return shieldCap(tgt, Math.floor(raw)).damage;
 }
 /** Schade zonder crit en met de laagste roll: haalt hij het zeker? */

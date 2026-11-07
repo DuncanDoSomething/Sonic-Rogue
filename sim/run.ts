@@ -20,7 +20,7 @@ function combos<T>(a: T[], k: number): T[][] {
 }
 
 // experimenten: --exp naam[,naam]  (verandert getallen alleen voor deze simulatie)
-import { CHARGE_MULTS, FIGHTERS, MOVES } from '../src/data/fighters';
+import { CHARGE_MULTS, FIGHTERS, MOVES, PASSIVE_TUNING } from '../src/data/fighters';
 const EXPERIMENTS: Record<string, () => void> = {
   bossRandomType: () => { Battle.opts.bossRandomType = true; },
   // de "glass cannons" wat steviger
@@ -61,6 +61,15 @@ const EXPERIMENTS: Record<string, () => void> = {
   tank2: () => { CHARGE_MULTS.shellUp = 2; },
   // Shell Up zonder de schelp (alleen opladen)
   tankNoShell: () => { Battle.opts.tankNoShell = true; },
+  // Sonic zoals vóór de Sonic-buff (passive +25%/max 75%, Homing 50 power en gratis bij KO, geen extra klap)
+  oldSonic: () => {
+    PASSIVE_TUNING.perRatio = 0.25; PASSIVE_TUNING.cap = 1.75;
+    Object.assign(MOVES.homingAttack, { scaling: undefined, speedTable: undefined, extraHit: undefined, refundOnKo: true });
+  },
+  // de extra Homing Attack doet de helft
+  halfExtra: () => { Battle.opts.extraMult = 0.5; },
+  // de extra Homing Attack maar 30% kans
+  extra30: () => { MOVES.homingAttack.extraHit = 0.3; },
   // alleen de elite-eigenschappen uit
   noEliteTraits: () => { Battle.opts.noEliteTraits = true; },
 };

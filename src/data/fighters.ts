@@ -68,7 +68,7 @@ export function expShareAfter(cleared: number) {
 export type PassiveId = 'speedster' | 'weakSpot' | 'flinch' | 'luckySwing' | 'chaoCare' | 'lifeform';
 export interface PassiveDef { id: PassiveId; name: string; desc: string; }
 export const PASSIVES: Record<PassiveId, PassiveDef> = {
-  speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. The faster he is than the foe, the harder he hits (up to +75%) and the more attacks he dodges (up to 35%).' },
+  speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. The faster he is than the foe, the harder he hits (+35% per time as fast, up to +100%) and the more attacks he dodges (up to 35%).' },
   weakSpot:   { id: 'weakSpot', name: 'Weak Spot', desc: 'Stunned foes take 2x damage from Tails.' },
   flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP, if he had more than half his HP.' },
   luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance per ATK stage, and she keeps her ATK raises when she switches out. Crits cost her 5% max HP (not with Hammer Twirl).' },
@@ -145,12 +145,15 @@ export const SUPER_VULNERABLE = 2;
 /** Zo vaak achter elkaar kan Super Shadow Barrage weer gratis worden door een KO. */
 export const ULT_CHAIN_MAX = 2;
 
-/** Sonic Speed: x1 bij gelijke snelheid, +25% per keer zo snel, max +75%. */
-export const SPEED_BONUS_CAP = 1.75;
+/** Sonic Speed: x1 bij gelijke snelheid, +35% per keer zo snel, max +100% (2x zo snel = +35%, 3x = +70%). */
+export const SPEED_BONUS_PER_RATIO = 0.35;
+export const SPEED_BONUS_CAP = 2;
+/** (de sim zet deze om varianten te testen) */
+export const PASSIVE_TUNING = { perRatio: SPEED_BONUS_PER_RATIO, cap: SPEED_BONUS_CAP };
 export function speedBonus(attacker: Fighter, target: Fighter) {
   if (attacker.def.passive?.id !== 'speedster') return 1;
   const ratio = attacker.spd / Math.max(1, target.spd);
-  return Math.min(SPEED_BONUS_CAP, Math.max(1, 1 + 0.25 * (ratio - 1)));
+  return Math.min(PASSIVE_TUNING.cap, Math.max(1, 1 + PASSIVE_TUNING.perRatio * (ratio - 1)));
 }
 
 /**
@@ -245,6 +248,10 @@ export interface MoveDef {
   freezeChance?: number;
   /** Badnik: laadt op in plaats van aan te vallen; de volgende aanval doet CHARGE_MULT schade. */
   charge?: boolean;
+  /** 'speed'-power met een eigen tabel (Homing Attack 40-80), anders SPEED_POWER. */
+  speedTable?: Array<[number, number]>;
+  /** Kans op nog een gratis klap met dezelfde move (Homing Attack), één keer per beurt. */
+  extraHit?: number;
   /** Korte naam van het bijeffect, voor het label onder de vijand-box ("POISON"). */
   tag?: string;
 }
@@ -252,7 +259,7 @@ export interface MoveDef {
 export const MOVES: Record<string, MoveDef> = {
   // --- team
   spinAttack:   { id: 'spinAttack', name: 'Spin Attack', power: 40, accuracy: 95, priority: 0, anim: 'spin', boostGain: 1, desc: 'Curls into a ball and rolls into the foe.' },
-  homingAttack: { id: 'homingAttack', name: 'Homing Attack', power: 50, accuracy: 100, priority: 1, anim: 'homing', cost: 1, selfStages: { spd: 1 }, refundOnKo: true, desc: 'Locks on and strikes first. Raises SPD by 1. Free if it KOs the foe (not bosses or rivals).' },
+  homingAttack: { id: 'homingAttack', name: 'Homing Attack', power: 50, scaling: 'speed', speedTable: [[4, 80], [3, 70], [2, 60], [1, 50], [0, 40]], accuracy: 100, priority: 1, anim: 'homing', cost: 1, selfStages: { spd: 1 }, extraHit: 0.5, desc: 'Locks on and strikes first. Raises SPD by 1. Hits harder the faster Sonic is (40-80). 50% chance to home in for a second hit.' },
   spinDash:     { id: 'spinDash', name: 'Spin Dash', power: 70, scaling: 'speed', accuracy: 100, priority: 0, anim: 'dash', cost: 2, desc: 'Revs up and launches. The faster Sonic is than the foe, the harder it hits (50-150).' },
   glovePunch:   { id: 'glovePunch', name: 'Glove Punch', power: 70, accuracy: 100, priority: 0, anim: 'punch', cost: 3, stun: [2, 2], stunOnce: true, desc: 'Pulls a boxing glove out of thin air, swings it on its chain and lets it fly. Stuns the foe for 2 turns (once per fight).' },
   glideAttack:  { id: 'glideAttack', name: 'Glide Attack', power: 45, accuracy: 100, priority: 0, anim: 'glide', cost: 1, selfStages: { atk: 1, def: -1 }, desc: 'Glides in fists first. Raises ATK by 1, lowers DEF by 1.' },
@@ -549,9 +556,9 @@ export class Fighter {
  * een stap hoger omdat de move 3 Boost kost.
  */
 export const SPEED_POWER: Array<[number, number]> = [[4, 150], [3, 120], [2, 90], [1, 70], [0, 50]];
-export function speedPower(userSpd: number, targetSpd: number) {
+export function speedPower(userSpd: number, targetSpd: number, table = SPEED_POWER) {
   const r = userSpd / Math.max(1, targetSpd);
-  return SPEED_POWER.find(([min]) => r >= min)![1];
+  return table.find(([min]) => r >= min)![1];
 }
 /** Maximum Heat: +25 power per stat stage, of die nu omhoog of omlaag staat (max 300). */
 export const STAGES_POWER_STEP = 25;
@@ -563,7 +570,7 @@ export function stagesPower(base: number, user: Fighter) {
 /** De echte power van een move tegen dit doelwit. */
 export const MOVE_CHIP_POWER = 30;
 export function movePower(m: MoveDef, user: Fighter, target?: Fighter) {
-  if (m.scaling === 'speed' && target) return speedPower(user.spd, target.spd);
+  if (m.scaling === 'speed' && target) return speedPower(user.spd, target.spd, m.speedTable);
   if (m.scaling === 'stages') return stagesPower(m.power, user);
   if (m.id === 'spinAttack' && user.spinChip) return m.power + MOVE_CHIP_POWER;
   return m.power;

@@ -192,9 +192,6 @@ export class CharSelectScene extends Phaser.Scene {
       const head = this.add.image(x + SLOT / 2, y + SLOT / 2, 'ui', 'head_sonic').setVisible(false);
       this.slots.push({ x: x + SLOT / 2, y: y + SLOT / 2, num, head });
     }
-    // uitleg eronder
-    const what = n === 1 ? 'Pick your character.' : `Pick ${n} characters.\nThe 1st one starts.`;
-    this.add.text(x0 + 4, y0 + h + 6, what, { fontFamily: FONT, fontSize: '8px', color: '#ffffff', lineSpacing: 4, stroke: '#141a6c', strokeThickness: 3 });
     this.slotGlow = this.add.graphics();
     this.tweens.add({ targets: this.slotGlow, alpha: 0.25, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
