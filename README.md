@@ -22,7 +22,7 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 
 ## Gameplay
 
-- **Team of three.** Sonic, Tails and Amy are available from the start. Knuckles and Cream show up as rivals and Shadow as a rare boss; beat them to unlock them, and they can join your current run.
+- **Team of three.** Sonic, Tails and Amy are available from the start. Knuckles and Cream show up as rivals and Shadow as a rare boss; beat them to unlock them, and they can join your current run. Rivals have 2 shields and their own trick: Sonic attacks before you can move, Tails ambushes you, Knuckles hangs on once with Iron Will, Cream revives with Chao Blessing, Amy starts warmed up.
 - **Boost meter instead of PP.** Spin Attack is free and builds Boost. Stronger moves cost Boost and never miss. Every character learns an ultimate at level 30 that uses the full meter.
 - **Stuns and flinches.** Some moves stop the foe from acting for a turn or more.
 - **Ultimate cut-ins.** Every ultimate opens with a Persona-style cut-in and has its own animation: Sonic turns Super Sonic, Tails calls down lightning, Knuckles hits like a meteor, Amy whips up a tornado, Cream calls in the Chao and Shadow goes Super Shadow for a Chaos Blast.

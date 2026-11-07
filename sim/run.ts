@@ -70,6 +70,16 @@ const EXPERIMENTS: Record<string, () => void> = {
   halfExtra: () => { Battle.opts.extraMult = 0.5; },
   // de extra Homing Attack maar 30% kans
   extra30: () => { MOVES.homingAttack.extraHit = 0.3; },
+  // rivals zoals vóór de rival-update (geen schilden, geen trucs, wel opnieuw dezelfde)
+  oldRivals: () => { Battle.opts.oldRivals = true; },
+  // rivals krijgen ook een elite-eigenschap
+  rivalEnraged: () => { Battle.opts.rivalElite = 'enraged'; },
+  rivalSwift: () => { Battle.opts.rivalElite = 'swift'; },
+  rivalNoShields: () => { Battle.opts.rivalShields = 0; },
+  rivalNoTraits: () => { Battle.opts.noRivalTraits = true; },
+  noRivalLevel: () => { Battle.opts.noRivalLevel = true; },
+  lateRivalHalf: () => { Battle.opts.lateRivalMult = 0.5; },
+  lateRivalNone: () => { Battle.opts.lateRivalMult = 0; },
   // alleen de elite-eigenschappen uit
   noEliteTraits: () => { Battle.opts.noEliteTraits = true; },
 };

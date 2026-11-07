@@ -10,7 +10,7 @@ import {
   BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, FIGHTER_TYPES, FLINCH_CHANCE,
   Fighter, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MOVES, MoveDef, LIFEFORM_KO_BOOST, RIVAL_HEROES, SASH_MIN_HP, dodgeChance, StageKey, ULT_CHAIN_MAX,
   benchExpRate, calcHit, emptyStages, expShareAfter, shieldCap,
-  CHARGE_MULT, chargeMult, ELITE_IDS, PIGGY_MAX_DEF, regenTick, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove,
+  CHARGE_MULT, chargeMult, ELITE_IDS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, type EliteId, PIGGY_MAX_DEF, regenTick, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove,
 } from '../src/data/fighters';
 import {
   EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZoneEffect,
@@ -112,7 +112,7 @@ export class Battle {
   log: RunLog;
 
   /** Experimenten met regels die niet in src/data staan (zie run.ts --exp). */
-  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number]; noTraits?: boolean; noEliteTraits?: boolean; tankNoShell?: boolean; extraMult?: number } = {};
+  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number]; noTraits?: boolean; noEliteTraits?: boolean; tankNoShell?: boolean; extraMult?: number; oldRivals?: boolean; rivalElite?: EliteId; rivalShields?: number; noRivalTraits?: boolean; onlyTrait?: string; noRivalLevel?: boolean; lateRivalMult?: number } = {};
 
   constructor(partyIds: string[], private policy: Policy, seed: number, private maxWave = 200) {
     this.rng = seeded(seed);
@@ -166,12 +166,12 @@ export class Battle {
     this.buffs.eliteNext = false;
     const zone = zoneForWave(this.wave, this.zoneOrder);
     const boss = isBossWave(this.wave);
-    const rivalId = this.rng() < rivalChance(this.wave) ? this.pickRival() : undefined;
+    const rivalId = this.rng() < rivalChance(this.wave) * (this.wave % 10 === 5 ? 1 : (Battle.opts.lateRivalMult ?? 1)) ? this.pickRival() : undefined;
     this.rival = !!rivalId;
     this.elite = (isEliteWave(this.wave) || this.alarmWave) && !this.rival && !boss;
     const mainBoss = boss && isMainBossWave(this.wave);
     const id = rivalId ?? (mainBoss ? mainBossFor(this.wave, this.party.map(f => f.def.id), this.rng) : boss ? zone.boss : pick(this.rng, zone.enemies));
-    this.enemy = new Fighter(id, 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || this.elite ? 2 : 0) + (rivalId ? rivalLevelBonus(this.wave) : 0));
+    this.enemy = new Fighter(id, 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || this.elite ? 2 : 0) + (rivalId && !Battle.opts.noRivalLevel ? rivalLevelBonus(this.wave) : 0));
     this.charFoe = HEROES.includes(id);
     if (!this.charFoe) { this.enemy.statMult = enemyScaling(this.wave); this.enemy.hp = this.enemy.maxHp; }
     this.waveFighters = new Set([this.player]);
@@ -181,7 +181,16 @@ export class Battle {
     if (boss) this.enemy.segments = mainBoss ? MAIN_BOSS_SHIELDS : ZONE_BOSS_SHIELDS;
     if (this.elite && !Battle.opts.noEliteTraits) applyElite(this.enemy, pick(this.rng, ELITE_IDS));
     if (Battle.opts.noTraits) { this.enemy.shell = false; }
-    if (rivalId) this.rivalsMet.push(rivalId);
+    if (rivalId) {
+      this.rivalsMet.push(rivalId);
+      if (!Battle.opts.oldRivals) {
+        applyRival(this.enemy);
+        if (Battle.opts.rivalShields !== undefined) this.enemy.segments = Battle.opts.rivalShields;
+        if (Battle.opts.noRivalTraits) { this.enemy.rivalTrait = undefined; this.enemy.stages.atk = 0; this.enemy.sashUsed = false; }
+        if (Battle.opts.onlyTrait && this.enemy.rivalTrait !== Battle.opts.onlyTrait) { this.enemy.rivalTrait = undefined; this.enemy.stages.atk = 0; this.enemy.sashUsed = false; }
+      }
+      if (Battle.opts.rivalElite) applyElite(this.enemy, Battle.opts.rivalElite);
+    }
     if (id === 'eggman' || (boss && !mainBoss && Battle.opts.bossRandomType)) this.enemy.typeOverride = pick(this.rng, FIGHTER_TYPES);
     if (id === 'eggman' && Battle.opts.eggmanLevel) { this.enemy.level += Battle.opts.eggmanLevel; this.enemy.hp = this.enemy.maxHp; }
     this.applyZoneEffect(this.fieldCleared ? undefined : zone.effect);
@@ -191,6 +200,12 @@ export class Battle {
       if (to !== this.player && !to.fainted) this.switchTo(to);
     }
     this.chaoCare();
+    // rival-trucs: Head Start (gratis aanval), Ambush (jij begint verdoofd)
+    if (this.rival && this.enemy.rivalTrait === 'headStart') {
+      const move = this.pickEnemyMove();
+      this.enemy.chargeReady = this.enemy.charged;
+      this.act(this.enemy, this.player, move);
+    } else if (this.rival && this.enemy.rivalTrait === 'ambush') this.player.stun = Math.max(this.player.stun, 1);
   }
 
   private applyZoneEffect(effect?: ZoneEffect) {
@@ -211,14 +226,18 @@ export class Battle {
   private pickRival() {
     const others = RIVAL_HEROES.filter(h => !this.party.some(f => f.def.id === h) && FIGHTERS[h]);
     if (!others.length) return undefined;
-    const fresh = others.filter(h => !this.rivalsMet.includes(h));
-    return pick(this.rng, fresh.length ? fresh : others);
+    if (Battle.opts.oldRivals) {
+      const fresh = others.filter(h => !this.rivalsMet.includes(h));
+      return pick(this.rng, fresh.length ? fresh : others);
+    }
+    return pick(this.rng, rivalOptions(others, this.rivalsMet, () => false));
   }
 
   /** Eén wave spelen. true = gewonnen. */
   private playWave(): boolean {
     this.startWave();
     const kind = this.kind;
+    if (this.player.fainted && !this.handleFaint()) return this.lose(kind, this.enemy.def.id);
     const hpBefore = this.teamHpFrac();
     const foeId = this.enemy.def.id;
     let turns = 0;
@@ -342,6 +361,8 @@ export class Battle {
     if (move.extraHit && this.lastLanded && !att.fainted && !tgt.fainted && this.rng() < move.extraHit) {
       this.doAttack(att, tgt, { ...move, selfStages: undefined, extraHit: undefined }, ally, critBonus, dmgBonus * (Battle.opts.extraMult ?? 1), freeUse);
     }
+    // Chao Revival (rival-Cream): terug met de helft, jouw team ATK -2
+    if (tgt === this.enemy && this.rival && chaoRevival(tgt)) for (const f of this.party) if (!f.fainted) f.raise('atk', RIVAL_REVIVE_ATK);
   }
 
   private lastLanded = false;
@@ -374,6 +395,7 @@ export class Battle {
       const before = tgt.hp;
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
       if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed && !Battle.opts.noSash && before > tgt.maxHp * (Battle.opts.sashMin ?? SASH_MIN_HP)) { tgt.hp = 1; tgt.sashUsed = true; }
+      ironWill(tgt);
       dealt = before - tgt.hp;
       if (isPlayer) {
         this.stat(att).dmg += before - tgt.hp;

@@ -34,8 +34,7 @@ export const SFX_FILES = [
   'explosion', 'explosion2', 'heal1', 'hurtrings', 'jump', 'levelup', 'monitorbreak', 'ringchime',
   'ringcollect', 'spindash', 'statup', 'statdown', 'whoosh', 'punch',
   // Sonic Advance 3 (tools/build_sa3_sfx.py)
-  'spinrelease', 'dash', 'tailsfly', 'piko', 'amyspin', 'cheese', 'creamfly', 'shield', 'spikes',
-  'speedup', 'charge', 'charged', 'freeze', 'charslide',
+  'spinrelease', 'dash', 'cheese', 'creamfly', 'shield', 'spikes', 'speedup', 'charged', 'freeze',
 ] as const;
 export type SfxKey = typeof SFX_FILES[number];
 

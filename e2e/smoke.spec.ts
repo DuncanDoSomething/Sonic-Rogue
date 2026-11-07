@@ -765,6 +765,31 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
+  test('rivals: 2 shields, Tails ambushes you, Cream revives once and lowers your ATK', async ({ page }) => {
+    test.setTimeout(120_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startBattleWith(page, ['sonic']);
+    const rival = async (id: string) => {
+      await setup(page, `delete s.pickEnemyMove; s.forceRival = true; s.pickRival = () => '${id}'; s.wave = 15; s.menu = 'busy'; s.startWave();`);
+      await waitForMenu(page, 'command');
+    };
+    const st = () => page.evaluate(() => {
+      const b = (window as any).game.scene.getScene('Battle');
+      return { foe: b.enemy.def.id, segments: b.enemy.segments, trait: b.enemy.rivalTrait, badge: b.enemyBadge().text, foeHp: b.enemy.hp, foeMax: b.enemy.maxHp,
+        stun: b.player.stun, atk: b.player.stages.atk };
+    });
+    await rival('tails');
+    expect(await st()).toMatchObject({ foe: 'tails', segments: 2, trait: 'ambush', badge: 'RIVAL', stun: 1 });
+    await rival('cream');
+    expect(await st()).toMatchObject({ foe: 'cream', trait: 'chaoRevival' });
+    await turn(page, "s.enemy.hp = 1; s.player.hp = 9999; s.dodgeRoll = () => 1; s.pickEnemyMove = () => ({ ...window.MOVES.spinAttack, accuracy: 0 }); s.runTurn({ ...window.MOVES.spinAttack, accuracy: 1000, priority: 5 });");
+    const after = await st();
+    expect(after.foeHp).toBe(Math.ceil(after.foeMax / 2));
+    expect(after.atk).toBe(-2);
+    expect(errors).toEqual([]);
+  });
+
   test('badniks: elites, Shark Jet, Snow Bot and Shell Tank', async ({ page }) => {
     test.setTimeout(120_000);
     const errors = trackErrors(page);

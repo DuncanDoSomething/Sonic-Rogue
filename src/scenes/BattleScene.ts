@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove } from '../data/fighters';
+import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -73,6 +73,9 @@ interface InfoBox {
   boostPips?: Phaser.GameObjects.Rectangle[];
   badge?: Phaser.GameObjects.Text;
   badgeBg?: Phaser.GameObjects.Graphics;
+  /** jouw kant: tabje boven de box met Sonic Speed's schadebonus van dit moment */
+  speedTag?: Phaser.GameObjects.Text;
+  speedTagBg?: Phaser.GameObjects.Graphics;
   portrait?: Phaser.GameObjects.Image;
   segments?: Phaser.GameObjects.Graphics;
 }
@@ -579,6 +582,21 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       box.badge.on('pointerdown', () => { if (this.hudTip) this.hideHudTip(); else show(); });
     }
     if (isPlayer) {
+      // Sonic Speed: hoeveel extra schade hij nu doet (tabje boven de box, alleen als het er is)
+      box.speedTagBg = this.add.graphics();
+      box.speedTag = this.add.text(w - 10, -11, '', { fontFamily: FONT, fontSize: '8px', color: '#6ad8ff' }).setOrigin(1, 0);
+      root.add([box.speedTagBg, box.speedTag]);
+      box.speedTag.setInteractive({ useHandCursor: true });
+      const showSpeed = () => {
+        const p = this.player, e = this.enemy;
+        if (!p || !e || p.def.passive?.id !== 'speedster') return;
+        const dmg = Math.round((speedBonus(p, e) - 1) * 100), dodge = Math.round(dodgeChance(p, e) * 100);
+        this.showHudTip(root.x + w - 6, root.y - 72, 'SONIC SPEED',
+          `${p.name} is ${(p.spd / Math.max(1, e.spd)).toFixed(1)}x as fast as ${e.name}: +${dmg}% damage and ${dodge}% dodge chance.`, true);
+      };
+      box.speedTag.on('pointerover', showSpeed);
+      box.speedTag.on('pointerout', () => this.hideHudTip());
+      box.speedTag.on('pointerdown', () => { if (this.hudTip) this.hideHudTip(); else showSpeed(); });
       // Boost-meter: 6 blokjes onder de HP-balk
       root.add(this.add.text(8, 30, 'BOOST', { fontFamily: FONT, fontSize: '8px', color: '#6ad8ff' }));
       box.boostPips = Array.from({ length: MAX_BOOST }, (_, i) => this.add.rectangle(52 + i * 9, 31, 7, 6, HUD.pipEmpty).setOrigin(0).setStrokeStyle(1, HUD.outline));
@@ -1416,7 +1434,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (elite) applyElite(this.enemy, this.forceElite ?? Phaser.Utils.Array.GetRandom(ELITE_IDS));
     this.forceFoe = undefined;
     this.forceElite = undefined;
-    if (rivalId) this.rivalsMet.push(rivalId);
+    if (rivalId) { this.rivalsMet.push(rivalId); applyRival(this.enemy); }
     // zone-bosses zijn type-neutraal zolang je maar 1 character hebt (anders is een boss voor sommigen onmogelijk)
     if (boss && BOSS_TYPE_NEUTRAL) this.enemy.typeOverride = this.player.type;
     // Eggman bouwt zijn Egg Mobile elke keer anders: een random type (anders is één type altijd sterk tegen hem)
@@ -1458,10 +1476,12 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     else if (mainBoss) await this.rivalBanner('BOSS!');
     if (id === 'shadow' && boss) audio.voice('shadowlaugh');
     else if (id === 'eggman') audio.voice('eggmanlaugh');
+    const rt = this.rival && this.enemy.rivalTrait ? RIVAL_TRAITS[this.enemy.def.id] : undefined;
     await this.say(this.rival ? `Rival ${this.enemy.name} wants to battle!`
       : id === 'shadow' && boss ? 'Shadow blocks the way! "Show me what you\'ve got."'
       : id === 'eggman' ? `Dr. Eggman appeared in a ${this.enemy.type.toUpperCase()} type Egg Mobile! "Hohoho! You won't get past me!"`
       : boss ? `Watch out! ${this.enemy.name} appeared!` : elite ? `A strong ${this.enemy.name} appeared! It's ${ELITE_TRAITS[this.enemy.elite!].name.toLowerCase()}!` : `A wild ${this.enemy.name} appeared!`, 500);
+    if (rt) await this.say(`${rt.name}! ${rt.desc}`, 600);
     // Battle Style "Switch": voor elke wave (behalve de eerste) gratis wisselen
     if (this.rival) await this.tip('rival');
     else if (boss) await this.tip('boss');
@@ -1474,6 +1494,19 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       }
     }
     await this.chaoCare();
+    // rival-trucs aan het begin: Head Start (Sonic valt meteen aan), Ambush (Tails verdooft je)
+    if (this.rival && this.enemy.rivalTrait === 'headStart') {
+      await this.say(`Rival ${this.enemy.name} is too fast! He attacks before you can move!`, 400);
+      const move = this.pickEnemyMove();
+      this.enemy.chargeReady = this.enemy.charged;
+      await this.act(this.enemy, this.player, move);
+      if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(); return; }
+    } else if (this.rival && this.enemy.rivalTrait === 'ambush') {
+      this.player.stun = Math.max(this.player.stun, 1);
+      this.hitFlash(this.hero);
+      audio.sfx('enemyhit', { volume: 0.5 });
+      await this.say(`Rival ${this.enemy.name} ambushed you! ${this.player.name} is stunned!`, 450);
+    }
     this.openCommand();
   }
 
@@ -1519,6 +1552,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private intentFx?: Phaser.GameObjects.Container;
   private updateStatusFx(dt: number) {
     this.updateIntent();
+    this.updateSpeedTag();
     this.statusClock += dt;
     const pairs: Array<[Phaser.GameObjects.Sprite, Fighter | undefined]> = [[this.hero, this.player], [this.foe, this.enemy]];
     for (const [spr, f] of pairs) {
@@ -1661,6 +1695,24 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (move.extraHit && this.lastLanded && !att.fainted && !tgt.fainted && this.extraRoll() < move.extraHit) {
       await this.doAttack(att, tgt, { ...move, selfStages: undefined, extraHit: undefined }, ally, true);
     }
+    // Chao Revival (rival-Cream): één keer terug, en jouw team ATK -2
+    if (tgt === this.enemy && this.rival && chaoRevival(tgt)) await this.rivalRevive();
+  }
+
+  private async rivalRevive() {
+    const e = this.enemy;
+    await this.wait(300);
+    await cutIn(this, e.def.id, 'Chao Blessing');
+    audio.sfx('heal1');
+    const c = this.center(this.foe);
+    hearts(this, c.x, c.y - 10, 10, 0xffa8d8);
+    this.burst(c.x, c.y, 0xffd2ef, 16);
+    this.foe.setAlpha(1).play(e.anim('idle'));
+    this.popNumber(this.foe.x, this.foe.y - this.bodyHeight(this.foe) - 4, `+${e.hp}`, '#7cf07c');
+    await this.setBox(this.eBox, e, true);
+    await this.say(`The Chao revived Rival ${e.name}!`, 450);
+    for (const f of this.party) if (!f.fainted && f !== this.player) f.raise('atk', RIVAL_REVIVE_ATK);
+    if (!this.player.fainted) await this.changeStage(this.player, 'atk', RIVAL_REVIVE_ATK, 'Chao Revival! ');
   }
   /** De laatste aanval raakte (voor de extra Homing Attack). */
   private lastLanded = false;
@@ -1734,6 +1786,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const status = move.power === 0;
     if (status) hit = { damage: 0, crit: false, missed: false, effect: 1 };
     let hungOn = false;
+    let ironWilled = false;
     // rewards: Invincibility (eerste aanval mist) en Shield (halve schade) beschermen je team
     let guard = '';
     if (!isPlayer && !hit.missed && this.party.includes(tgt)) {
@@ -1780,6 +1833,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       dealt = hpBefore - tgt.hp;
       // Iron Fists: één keer per zone met 1 HP blijven staan, als hij vóór de klap meer dan de helft had
       if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed && hpBefore > tgt.maxHp * SASH_MIN_HP) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
+      // Iron Will (rival-Knuckles): één keer op 1 HP, hoeveel HP hij ook had
+      if (ironWill(tgt)) { hungOn = true; ironWilled = true; }
       // tutorial: niemand van je team gaat neer, en de vijand pas bij de laatste stap
       if (this.tutorialMode && tgt.hp === 0 && (this.party.includes(tgt) || this.tutGuard)) tgt.hp = 1;
       const spr = isPlayer ? this.foe : this.hero;
@@ -1930,7 +1985,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
         await this.say(`${tgt.name} was frozen solid!`, 450);
       }
       if (guard) await this.say(guard, 350);
-      if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (Iron Fists)`, 500);
+      if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (${ironWilled ? 'Iron Will' : 'Iron Fists'})`, 500);
       // Lucky Swing (Amy): elke crit kost haar 5% max-HP, maar ze gaat er zelf nooit van KO
       if (hit.crit && att.def.passive?.id === 'luckySwing' && !move.recoil && !move.selfHeal && !att.fainted) {
         const cost = Math.min(att.hp - 1, Math.ceil(att.maxHp * CRIT_RECOIL));
@@ -3138,6 +3193,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const lines: string[] = [];
     if (elite) lines.push(`${elite.name} elite: ${elite.desc}`);
     if (trait) lines.push(`${trait.name}: ${trait.desc}`);
+    const rt = this.rival && e.rivalTrait ? RIVAL_TRAITS[e.def.id] : undefined;
+    if (rt) lines.push(`${rt.name}: ${rt.desc}`);
+    if (this.rival) lines.push(`Rivals have ${RIVAL_SHIELDS} shields.`);
     const special = e.def.moves.map(m => MOVES[m]).filter(m => m.desc && !this.charFoe && e.def.id !== 'eggman');
     for (const m of special) lines.push(`${m.name}: ${m.desc}`);
     const tip = lines.join('\n');
@@ -3280,9 +3338,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private pickRival(): string | undefined {
     const others = RIVAL_HEROES.filter(h => !this.party.some(f => f.def.id === h) && FIGHTERS[h]);
     if (!others.length) return undefined;
-    const fresh = others.filter(h => !this.rivalsMet.includes(h));
-    const locked = fresh.filter(h => !isUnlocked(h));
-    return Phaser.Utils.Array.GetRandom(locked.length ? locked : fresh.length ? fresh : others);
+    return Phaser.Utils.Array.GetRandom(rivalOptions(others, this.rivalsMet, h => !isUnlocked(h)));
   }
 
   /** Vijand kiest een move. Een genees-move alleen als hij echt geraakt is. */
@@ -3315,7 +3371,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   }
 
   private chargeFx(spr: Phaser.GameObjects.Sprite) {
-    audio.sfx('charge', { volume: 0.7 });
+    audio.sfx('spindash', { volume: 0.6 });
     const c = this.center(spr);
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
@@ -3325,6 +3381,26 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     }
     this.tweens.add({ targets: spr, x: spr.x + 3, duration: 40, yoyo: true, repeat: 5 });
     this.time.delayedCall(380, () => shockwave(this, c.x, c.y, 0xff9a3a, 38, 260));
+  }
+
+  /** Sonic Speed-tabje: "SPEED +38%", bijgewerkt zodra de snelheden veranderen. */
+  private speedTagText = '';
+  private updateSpeedTag() {
+    const tag = this.pBox?.speedTag;
+    if (!tag) return;
+    const p = this.player, e = this.enemy;
+    const bonus = p && e && !e.fainted && p.def.passive?.id === 'speedster' && this.foe?.visible ? Math.round((speedBonus(p, e) - 1) * 100) : 0;
+    const text = bonus > 0 ? `SPEED +${bonus}%` : '';
+    if (text === this.speedTagText) return;
+    this.speedTagText = text;
+    tag.setText(text);
+    const g = this.pBox.speedTagBg!;
+    g.clear();
+    if (!text) return;
+    const bw = tag.width + 8;
+    g.fillStyle(HUD.outline, 0.95).fillRoundedRect(tag.x - bw + 4, tag.y - 2, bw, 12, 3);
+    g.fillStyle(HUD.blueBottom, 0.95).fillRect(tag.x - bw + 5, tag.y - 1, bw - 2, 10);
+    g.lineStyle(1, 0x6ad8ff).strokeRect(tag.x - bw + 5.5, tag.y - 0.5, bw - 3, 9);
   }
 
   /** "!" boven een opgeladen vijand, zodat je ziet dat er een dubbele klap aankomt. */

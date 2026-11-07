@@ -68,10 +68,10 @@ export function expShareAfter(cleared: number) {
 export type PassiveId = 'speedster' | 'weakSpot' | 'flinch' | 'luckySwing' | 'chaoCare' | 'lifeform';
 export interface PassiveDef { id: PassiveId; name: string; desc: string; }
 export const PASSIVES: Record<PassiveId, PassiveDef> = {
-  speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. The faster he is than the foe, the harder he hits (+35% per time as fast, up to +100%) and the more attacks he dodges (up to 35%).' },
+  speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. The faster he is than the foe, the harder he hits (+25% per time as fast, up to +50%) and the more attacks he dodges (up to 35%).' },
   weakSpot:   { id: 'weakSpot', name: 'Weak Spot', desc: 'Stunned foes take 2x damage from Tails.' },
   flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP, if he had more than half his HP.' },
-  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+25% crit chance per ATK stage, and she keeps her ATK raises when she switches out. Crits cost her 5% max HP (not with Hammer Twirl).' },
+  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: '+33% crit chance per ATK stage, and at ATK +6 her crits do 2x damage. She keeps her ATK raises when she switches out. Crits cost her 5% max HP (not with Hammer Twirl).' },
   chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'When a wave starts, the whole team heals 10% HP if Cream is on the field, or 5% if she is on the bench.' },
   lifeform:   { id: 'lifeform', name: 'Ultimate Lifeform', desc: 'Zone effects and stat drops don\'t affect him. Every KO he lands gives him 1 Boost.' },
 };
@@ -145,9 +145,9 @@ export const SUPER_VULNERABLE = 2;
 /** Zo vaak achter elkaar kan Super Shadow Barrage weer gratis worden door een KO. */
 export const ULT_CHAIN_MAX = 2;
 
-/** Sonic Speed: x1 bij gelijke snelheid, +35% per keer zo snel, max +100% (2x zo snel = +35%, 3x = +70%). */
-export const SPEED_BONUS_PER_RATIO = 0.35;
-export const SPEED_BONUS_CAP = 2;
+/** Sonic Speed: x1 bij gelijke snelheid, +25% per keer zo snel, max +50% (2x zo snel = +25%, 3x = +50%). */
+export const SPEED_BONUS_PER_RATIO = 0.25;
+export const SPEED_BONUS_CAP = 1.5;
 /** (de sim zet deze om varianten te testen) */
 export const PASSIVE_TUNING = { perRatio: SPEED_BONUS_PER_RATIO, cap: SPEED_BONUS_CAP };
 export function speedBonus(attacker: Fighter, target: Fighter) {
@@ -169,8 +169,15 @@ export function dodgeChance(target: Fighter, attacker: Fighter) {
 }
 
 /** Critical-kans: 1/16, plus Lucky Swing (Amy). */
+/** Lucky Swing (Amy): crit-kans per ATK-stage, en bij ATK +6 doen haar crits zoveel schade. */
+export const LUCKY_PER_STAGE = 0.33;
+export const LUCKY_MAX_CRIT = 2;
+export const CRIT_MULT = 1.5;
+export function critMult(attacker: Fighter) {
+  return attacker.def.passive?.id === 'luckySwing' && attacker.stage('atk') >= 6 ? LUCKY_MAX_CRIT : CRIT_MULT;
+}
 export function critChance(attacker: Fighter) {
-  const bonus = attacker.def.passive?.id === 'luckySwing' ? 0.25 * Math.max(0, attacker.stage('atk')) : 0;
+  const bonus = attacker.def.passive?.id === 'luckySwing' ? LUCKY_PER_STAGE * Math.max(0, attacker.stage('atk')) : 0;
   // Super Shadow: 100% crit zolang hij super is
   if (attacker.superTurns > 0) return 1;
   return Math.min(1, BASE_CRIT + bonus);
@@ -463,6 +470,9 @@ export class Fighter {
   elite?: EliteId;
   /** Regenerating: hoeveel HP hij dit gevecht nog mag genezen. */
   regenLeft = 0;
+  /** Rival-eigenschap (alleen als rival), en of zijn eenmalige truc al gebruikt is. */
+  rivalTrait?: RivalTraitId;
+  rivalUsed = false;
 
   constructor(id: string, level: number) {
     this.def = FIGHTERS[id];
@@ -584,13 +594,15 @@ export interface HitResult { damage: number; crit: boolean; missed: boolean; eff
 
 /** Pokémon-achtige damage-formule, versimpeld. */
 export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: () => number = Math.random, bonusCrit = 0, dmgMult = 1): HitResult {
-  const effect = typeMultiplier(attacker.type, target.type);
+  let effect = typeMultiplier(attacker.type, target.type);
   // ultimates (hele Boost-meter) raken altijd, ook met een ACC-verlaging; andere moves niet
   const ultimate = (move.cost ?? 0) >= MAX_BOOST;
   const accuracy = move.accuracy * stageMultiplier(attacker.stage('acc'));
   if (!ultimate && rng() * 100 >= accuracy) return { damage: 0, crit: false, missed: true, effect };
   const chance = Math.min(1, critChance(attacker) + bonusCrit);
   const crit = rng() < chance || !!move.alwaysCrit;
+  // een crit negeert een type-nadeel (zoals in Dokkan): nooit "not very effective"
+  if (crit && effect < 1) effect = 1;
   // Tornado Hammer: crit-kans al op 100%? Dan dubbele power
   const power = movePower(move, attacker, target) * (move.critDouble && chance >= 1 ? 2 : 1);
   // Spin Dash: negeert de DEF-boosts van het doelwit (DEF-verlagingen tellen wel)
@@ -601,7 +613,7 @@ export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: 
   const weakSpot = attacker.def.passive?.id === 'weakSpot' && target.stun > 0 ? WEAK_SPOT_BONUS : 1;
   // Chaos Spear en Super Shadow: het doelwit krijgt meer schade
   const exposed = (target.pierced > 0 ? PIERCE_BONUS : 1) * (target.superTurns > 0 ? SUPER_VULNERABLE : 1);
-  const dmg = base * roll * effect * speedBonus(attacker, target) * weakSpot * exposed * dmgMult * (crit ? 1.5 : 1);
+  const dmg = base * roll * effect * speedBonus(attacker, target) * weakSpot * exposed * dmgMult * (crit ? critMult(attacker) : 1);
   return { damage: Math.max(1, Math.floor(dmg)), crit, missed: false, effect };
 }
 
@@ -663,4 +675,50 @@ export function regenTick(e: Fighter) {
   e.regenLeft -= h;
   e.hp += h;
   return h;
+}
+
+// ---------------------------------------------------------------- rivals
+/** Rivals zijn de uitdaging naast de bosses: 2 schilden en elk een eigen truc. */
+export const RIVAL_SHIELDS = 2;
+export type RivalTraitId = 'headStart' | 'ambush' | 'ironWill' | 'chaoRevival' | 'warmedUp';
+export interface RivalTraitDef { id: RivalTraitId; name: string; desc: string; }
+export const RIVAL_TRAITS: Record<string, RivalTraitDef> = {
+  sonic:    { id: 'headStart', name: 'Head Start', desc: 'Too fast: gets a free attack on you before the fight starts.' },
+  tails:    { id: 'ambush', name: 'Ambush', desc: 'Your fighter starts the fight stunned for 1 turn.' },
+  knuckles: { id: 'ironWill', name: 'Iron Will', desc: 'Survives one KO hit with 1 HP, no matter how much HP he had.' },
+  cream:    { id: 'chaoRevival', name: 'Chao Revival', desc: 'Revives once with Chao Blessing (50% HP). Your team gets ATK -2 when she does.' },
+  amy:      { id: 'warmedUp', name: 'Warmed Up', desc: 'Starts the fight with ATK +1.' },
+};
+export const RIVAL_REVIVE_HP = 0.5;
+export const RIVAL_REVIVE_ATK = -2;
+/** Rival klaarzetten (bij de start van de wave): schilden en zijn eigenschap. */
+export function applyRival(e: Fighter) {
+  e.segments = Math.max(e.segments, RIVAL_SHIELDS);
+  e.rivalTrait = RIVAL_TRAITS[e.def.id]?.id;
+  if (e.rivalTrait === 'warmedUp') e.stages.atk = Math.max(e.stages.atk, 1);
+  // Iron Will vervangt zijn gewone Iron Fists (anders overleeft hij twee keer)
+  if (e.rivalTrait === 'ironWill') e.sashUsed = true;
+}
+/** Welke rival: liefst een nieuwe (en een die nog op slot zit), en nooit dezelfde twee keer achter elkaar. */
+export function rivalOptions(others: string[], met: string[], isLocked: (id: string) => boolean): string[] {
+  const last = met[met.length - 1];
+  const notLast = others.filter(h => h !== last);
+  const pool = notLast.length ? notLast : others;
+  const fresh = pool.filter(h => !met.includes(h));
+  const locked = fresh.filter(isLocked);
+  return locked.length ? locked : fresh.length ? fresh : pool;
+}
+/** Iron Will (rival-Knuckles): een klap die hem KO zou slaan laat hem één keer op 1 HP staan. */
+export function ironWill(target: Fighter) {
+  if (target.rivalTrait !== 'ironWill' || target.rivalUsed || target.hp > 0) return false;
+  target.rivalUsed = true;
+  target.hp = 1;
+  return true;
+}
+/** Chao Revival (rival-Cream): één keer terug met de helft van haar HP. */
+export function chaoRevival(target: Fighter) {
+  if (target.rivalTrait !== 'chaoRevival' || target.rivalUsed || !target.fainted) return false;
+  target.rivalUsed = true;
+  target.hp = Math.ceil(target.maxHp * RIVAL_REVIVE_HP);
+  return true;
 }

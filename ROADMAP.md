@@ -35,6 +35,7 @@
 - [x] New animations for every team move (1 Boost and 2-3 Boost), Amy and Shadow buffs
 - [x] Cream rework: Chao Attack (Cheese as a weapon), cheaper Chao Cheer with +1 Boost, Chao Blessing revives and powers up the team
 - [x] Balance simulation (`npm run sim`) and a balance pass from it: Glove Punch stuns once per fight, Sonic dodges and has more HP, Amy is sturdier and keeps her ATK raises, Shadow's Ultimate Lifeform, Iron Fists only from above half HP, stronger 1-Boost moves
+- [x] Rival update: 2 shields, a trick per rival, never the same rival twice in a row
 - [x] Enemy variety: every badnik plays differently (Hard Shell, Charge with an intent icon, Spikes, Piggy Bank, poison, freeze, Boost drain, stat drops, first strike), Shell Tank's Shell Up, and elites with a random trait (Armored, Enraged, Regenerating, Swift)
 
 ## Next

@@ -4,7 +4,7 @@
 // Een echte speler kan beter (of slechter); kijk dus vooral naar VERSCHILLEN tussen characters en
 // naar wat er verandert als je een getal aanpast, niet naar de precieze waves.
 // ---------------------------------------------------------------------------
-import { Fighter, MAX_BOOST, MOVES, MoveDef, ULTIMATE_LEVEL, calcHit, critChance, dodgeChance, shieldCap, typeMultiplier } from '../src/data/fighters';
+import { Fighter, MAX_BOOST, MOVES, MoveDef, ULTIMATE_LEVEL, calcHit, critChance, critMult, dodgeChance, shieldCap, typeMultiplier } from '../src/data/fighters';
 import { isBossWave } from '../src/data/zones';
 import type { RewardDef } from '../src/data/rewards';
 import type { ItemDef } from '../src/data/items';
@@ -26,7 +26,8 @@ export function expDamage(att: Fighter, tgt: Fighter, m: MoveDef, b?: Battle): n
   const acc = (m.cost ?? 0) >= MAX_BOOST ? 1 : Math.min(1, m.accuracy / 100);
   // Homing Attack: kans op een tweede klap
   const extra = 1 + (m.extraHit ?? 0) * (Battle.opts.extraMult ?? 1);
-  const raw = hit.damage * (m.alwaysCrit ? 1.5 : 1 + 0.5 * crit) * acc * extra;
+  const cm = critMult(att);
+  const raw = hit.damage * (m.alwaysCrit ? cm : 1 + (cm - 1) * crit) * acc * extra;
   return shieldCap(tgt, Math.floor(raw)).damage;
 }
 /** Schade zonder crit en met de laagste roll: haalt hij het zeker? */
@@ -36,7 +37,7 @@ function minDamage(att: Fighter, tgt: Fighter, m: MoveDef, b: Battle): number {
   let i = 0;
   const mult = att === b.player && b.buffs.blessTurns > 0 ? 1.5 : 1;
   const hit = calcHit(att, tgt, m, () => seq[i++ % 3], 0, mult);
-  const dmg = hit.damage * (m.alwaysCrit ? 1.5 : 1);
+  const dmg = hit.damage * (m.alwaysCrit ? critMult(att) : 1);
   return shieldCap(tgt, Math.floor(dmg)).damage;
 }
 

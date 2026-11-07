@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { audio } from '../audio';
 import { ELITE_TRAITS, EMERALD_EXP_BONUS, EXP_SHARE_STEPS, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MAX_STAGE, type PassiveDef, START_BOOST, TYPE_STRONG, TYPE_WEAK, ULTIMATE_LEVEL } from '../data/fighters';
-import { EFFECTS, FIRST_RIVAL_WAVE, LATE_RIVAL_WAVE, MAIN_BOSS_BOOST, RIVAL_CHANCE, SHADOW_BOSS_CHANCE, ZONE_BOSS_HEAL, ZONES } from '../data/zones';
+import { EFFECTS, FIRST_RIVAL_WAVE, MAIN_BOSS_BOOST, RIVAL_CHANCE, SHADOW_BOSS_CHANCE, ZONE_BOSS_HEAL, ZONES } from '../data/zones';
 import { BAG_SIZE, ITEMS, ITEMS_PER_FIGHT } from '../data/items';
 import { TIER_COLOR, TIER_NAME, TIERS } from '../data/rewards';
 import { HUD, sonicPanel } from './hud';
@@ -96,8 +96,9 @@ export function categories(): Category[] {
             'move always goes first (like',
             'Homing Attack).',
             '',
-            'Moves can miss, and crits hit',
-            'for 1.5x damage.',
+            'Moves can miss. Crits hit for',
+            '1.5x damage and ignore a type',
+            'disadvantage.',
             'STUNNED fighters skip turns.',
             'A FLINCH skips the next move.',
             '',
@@ -228,9 +229,9 @@ export function categories(): Category[] {
             'You start with Sonic, Tails and',
             `Amy. From wave ${FIRST_RIVAL_WAVE}, on waves`,
             `ending in 5, there is a ${Math.round(RIVAL_CHANCE * 100)}%`,
-            `chance a rival shows up. After`,
-            `wave ${LATE_RIVAL_WAVE} they can show up on`,
-            'other waves too, a bit stronger.',
+            `chance a rival shows up. Rivals`,
+            'have 2 shields and their own',
+            'trick (hover the RIVAL label).',
             '',
             'Beat a rival to unlock them. They',
             'can also join your team right',

@@ -3,7 +3,7 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
-  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, LIFEFORM_KO_BOOST, dodgeChance, DODGE_CAP, DODGE_PER_RATIO, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, LIFEFORM_KO_BOOST, dodgeChance, DODGE_CAP, DODGE_PER_RATIO, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH, critMult, applyRival, RIVAL_SHIELDS, RIVAL_TRAITS, rivalOptions, ironWill, chaoRevival,
   shellHit, traitMove, chargeMult, CHARGE_MULT, spikeRecoil, poisonDamage, applyElite, regenTick, ELITE_REGEN_TOTAL, ELITE_IDS, PIGGY_MAX_DEF,
 } from '../src/data/fighters';
 import { mainBossFor, MAIN_BOSS_SHIELDS, SHADOW_BOSS_CHANCE, enemyScaling, rivalChance, rivalLevelBonus } from '../src/data/zones';
@@ -153,22 +153,38 @@ describe('moves en passives', () => {
     expect(MOVES.homingAttack.selfStages).toEqual({ spd: 1 });
   });
 
-  it('Sonic Speed: +35% per keer zo snel, max +100%', () => {
+  it('Sonic Speed: +25% per keer zo snel, max +50%', () => {
     const sonic = new Fighter('sonic', 20), slow = new Fighter('turtle', 20);
     expect(speedBonus(sonic, sonic)).toBe(1);
-    expect(speedBonus(sonic, slow)).toBeCloseTo(1 + 0.35 * (sonic.spd / slow.spd - 1));
+    expect(speedBonus(sonic, slow)).toBeCloseTo(Math.min(1.5, 1 + 0.25 * (sonic.spd / slow.spd - 1)));
     for (let i = 0; i < 6; i++) sonic.raise('spd');
-    expect(speedBonus(sonic, slow)).toBe(2);
+    expect(speedBonus(sonic, slow)).toBe(1.5);
     expect(speedBonus(new Fighter('tails', 20), slow)).toBe(1);   // alleen Sonic
   });
 
-  it('Lucky Swing: Amy +25% crit per ATK stage', () => {
+  it('Lucky Swing: Amy +33% crit per ATK stage, en bij ATK +6 doen haar crits 2x', () => {
     const amy = new Fighter('amy', 10);
     expect(critChance(amy)).toBe(BASE_CRIT);
     amy.raise('atk'); amy.raise('atk');
-    expect(critChance(amy)).toBeCloseTo(BASE_CRIT + 0.5);
-    const sonic = new Fighter('sonic', 10); sonic.raise('atk'); sonic.raise('atk');
+    expect(critChance(amy)).toBeCloseTo(BASE_CRIT + 0.66);
+    expect(critMult(amy)).toBe(1.5);
+    for (let i = 0; i < 4; i++) amy.raise('atk');
+    expect(critChance(amy)).toBe(1);
+    expect(critMult(amy)).toBe(2);
+    const sonic = new Fighter('sonic', 10); for (let i = 0; i < 6; i++) sonic.raise('atk');
     expect(critChance(sonic)).toBe(BASE_CRIT);
+    expect(critMult(sonic)).toBe(1.5);
+  });
+
+  it('een crit negeert een type-nadeel, maar een type-voordeel blijft', () => {
+    const always = () => 0;   // raakt en crit altijd
+    const knux = new Fighter('knuckles', 20);
+    // zoek een doelwit waar knuckles slecht tegen is en een waar hij goed tegen is
+    const weak = HEROES.map(id => new Fighter(id, 20)).find(t => typeMultiplier(knux.type, t.type) < 1)!;
+    const strong = HEROES.map(id => new Fighter(id, 20)).find(t => typeMultiplier(knux.type, t.type) > 1)!;
+    expect(calcHit(knux, weak, MOVES.spinAttack, always).effect).toBe(1);
+    expect(calcHit(knux, weak, MOVES.spinAttack, () => 0.5).effect).toBeLessThan(1);   // geen crit: wel nadeel
+    expect(calcHit(knux, strong, MOVES.spinAttack, always).effect).toBeGreaterThan(1);
   });
 
   it('elke passive hoort bij het juiste character', () => {
@@ -434,9 +450,9 @@ describe('balans: zones, rivals en EXP', () => {
     expect(b.maxHp).toBeGreaterThan(a.maxHp);
     expect(b.spd).toBe(a.spd);
   });
-  it('rivals: 75% op waves die op 5 eindigen, na wave 30 ook soms op gewone waves, nooit op een boss', () => {
-    expect([10, 14, 15, 16, 25, 31, 35, 40].map(rivalChance)).toEqual([0, 0, 0.75, 0, 0.75, 0.12, 0.75, 0]);
-    expect([15, 30, 49, 50].map(rivalLevelBonus)).toEqual([0, 1, 1, 2]);
+  it('rivals: 75% op waves die op 5 eindigen, nooit op gewone waves of een boss, op jouw level', () => {
+    expect([10, 14, 15, 16, 25, 31, 35, 40].map(rivalChance)).toEqual([0, 0, 0.75, 0, 0.75, 0, 0.75, 0]);
+    expect([15, 30, 49, 50].map(rivalLevelBonus)).toEqual([0, 0, 0, 0]);
   });
   it('Ultimate Lifeform geeft 1 Boost per KO', () => {
     expect(LIFEFORM_KO_BOOST).toBe(1);
@@ -592,5 +608,47 @@ describe('Spin Dash negeert DEF-boosts', () => {
     expect(dmg(lowered)).toBeGreaterThan(dmg(plain));
     // een gewone move merkt de DEF-boost wel
     expect(dmg(boosted, MOVES.spinAttack)).toBeLessThan(dmg(plain, MOVES.spinAttack));
+  });
+});
+
+describe('rivals', () => {
+  it('2 schilden en een eigen truc per character', () => {
+    for (const id of ['sonic', 'tails', 'knuckles', 'cream', 'amy']) {
+      const r = new Fighter(id, 20);
+      applyRival(r);
+      expect(r.segments, id).toBe(RIVAL_SHIELDS);
+      expect(r.rivalTrait, id).toBe(RIVAL_TRAITS[id].id);
+    }
+    const amy = new Fighter('amy', 20); applyRival(amy);
+    expect(amy.stage('atk')).toBe(1);
+  });
+
+  it('nooit twee keer achter elkaar dezelfde rival', () => {
+    const others = ['tails', 'knuckles', 'cream'];
+    expect(rivalOptions(others, ['tails', 'knuckles', 'cream'], () => false)).not.toContain('cream');
+    expect(rivalOptions(others, ['knuckles'], () => false)).toEqual(['tails', 'cream']);
+    expect(rivalOptions(['tails'], ['tails'], () => false)).toEqual(['tails']);   // geen keus
+    expect(rivalOptions(others, [], id => id === 'cream')).toEqual(['cream']);    // op slot gaat voor
+  });
+
+  it('Iron Will: één keer op 1 HP, ook als hij bijna leeg was; daarna niet meer', () => {
+    const k = new Fighter('knuckles', 20); applyRival(k);
+    k.hp = 0;
+    expect(ironWill(k)).toBe(true);
+    expect(k.hp).toBe(1);
+    k.hp = 0;
+    expect(ironWill(k)).toBe(false);
+    expect(k.sashUsed).toBe(true);   // geen extra Iron Fists
+  });
+
+  it('Chao Revival: één keer terug met de helft van haar HP', () => {
+    const c = new Fighter('cream', 20); applyRival(c);
+    c.hp = 0;
+    expect(chaoRevival(c)).toBe(true);
+    expect(c.hp).toBe(Math.ceil(c.maxHp / 2));
+    c.hp = 0;
+    expect(chaoRevival(c)).toBe(false);
+    const normal = new Fighter('cream', 20); normal.hp = 0;
+    expect(chaoRevival(normal)).toBe(false);   // alleen als rival
   });
 });

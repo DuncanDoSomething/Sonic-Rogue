@@ -277,7 +277,7 @@ export async function hammerTwirl(c: HeroCtx) {
       if (Math.random() < 0.35) hearts(scene, s.x + rnd(-10, 10), s.y - rnd(10, 30), 1);
     },
   });
-  const whooshes = scene.time.addEvent({ delay: 170, repeat: 4, callback: () => audio.sfx('amyspin', { volume: 0.4, throttle: 300 }) });
+  const whooshes = scene.time.addEvent({ delay: 170, repeat: 4, callback: () => audio.sfx('whoosh', { volume: 0.5 }) });
   await tween(scene, { targets: s, x: pos.x, y: pos.y, duration: 480, ease: 'Sine.easeIn' });
   // 3. drie klappen terwijl ze tolt (de schade gaat bij de eerste)
   for (let i = 0; i < 3; i++) {
@@ -434,7 +434,7 @@ export async function copterDive(c: HeroCtx) {
   const tc = c.center(c.target);
   // 1. opstijgen met windringen onder hem
   s.play('tails_sbfly');
-  audio.sfx('tailsfly', { volume: 0.7 });
+  audio.sfx('spindash', { volume: 0.5 });
   const wash = scene.time.addEvent({ delay: 60, loop: true, callback: () => c.rotorWash(s.x, s.y) });
   await tween(scene, { targets: s, x: home.x + dir * 20, y: home.y - 90, duration: 300, ease: 'Quad.easeOut' });
   const top = Math.max(tc.y - 74, c.bodyHeight(s) + 24);
@@ -526,7 +526,7 @@ export async function pikoHammer(c: HeroCtx) {
   const head = { x: pos.tc.x - dir * 4, y: pos.tc.y - 6 };
   c.strike();
   if (!c.missed) {
-    audio.sfx('piko');
+    audio.sfx('punch');
     cam.shake(180, 0.01);
     shockwave(scene, head.x, head.y, 0xff8fc8, 56, 280);
     // sterretjes rond de kop van het doelwit, en een hartje dat ervan af springt

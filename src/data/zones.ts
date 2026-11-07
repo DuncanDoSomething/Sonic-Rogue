@@ -116,17 +116,15 @@ export const MAIN_BOSS_BOOST = 3;
 
 /**
  * Rivals kunnen opduiken op wave 15, 25, 35, 45, 55 (elke wave die op 5 eindigt) in plaats van de elite,
- * met RIVAL_CHANCE. Vanaf LATE_RIVAL_WAVE ook op gewone waves, met een kleinere kans.
+ * met RIVAL_CHANCE. Sinds rivals schilden en een eigen truc hebben, komen ze niet meer op gewone waves
+ * en staan ze niet meer boven je level (sim: anders zakte een gemiddelde run van wave 80 naar 57).
  */
 export const FIRST_RIVAL_WAVE = 15;
 export const RIVAL_CHANCE = 0.75;
-export const LATE_RIVAL_WAVE = 30;
-export const LATE_RIVAL_CHANCE = 0.12;
 export function canHaveRival(wave: number) { return wave >= FIRST_RIVAL_WAVE && isEliteWave(wave); }
 export function rivalChance(wave: number) {
   if (isBossWave(wave) || wave < FIRST_RIVAL_WAVE) return 0;
-  if (isEliteWave(wave)) return RIVAL_CHANCE;
-  return wave > LATE_RIVAL_WAVE ? LATE_RIVAL_CHANCE : 0;
+  return isEliteWave(wave) ? RIVAL_CHANCE : 0;
 }
-/** Late rivals staan wat boven je: +1 level vanaf wave 30, +2 vanaf wave 50. */
-export function rivalLevelBonus(wave: number) { return wave >= 50 ? 2 : wave >= 30 ? 1 : 0; }
+/** Rivals staan op jouw niveau (de schilden maken ze al zwaarder). */
+export function rivalLevelBonus(_wave: number) { return 0; }
