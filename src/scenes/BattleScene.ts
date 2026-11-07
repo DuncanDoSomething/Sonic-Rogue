@@ -1290,6 +1290,52 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.tweens.add({ targets: t, alpha: 0, y: y - 22, delay: 750, duration: 350, onComplete: () => t.destroy() });
   }
 
+  /**
+   * Sonic ontwijkt: op het moment van de klap schiet hij als blauwe bal schuin naar achteren, met nabeelden,
+   * een witte flits op de plek waar hij stond en snelheidsstrepen. Daarna landt hij weer op zijn plek.
+   */
+  private async dodgeFx(spr: Phaser.GameObjects.Sprite, f: Fighter, away: number) {
+    const x0 = spr.x, y0 = spr.y, sx = spr.scaleX, sy = spr.scaleY;
+    const c = this.center(spr);
+    audio.sfx('dash', { volume: 0.7 });
+    // witte flits van zijn silhouet, die uitdijt (hier stond hij net nog)
+    const flash = this.add.sprite(x0, y0, spr.texture.key, spr.frame.name).setOrigin(0.5, 1).setScale(sx, sy)
+      .setFlipX(spr.flipX).setTintFill(0xffffff).setAlpha(0.9).setDepth(spr.depth + 1);
+    this.tweens.add({ targets: flash, alpha: 0, scaleX: sx * 1.35, scaleY: sy * 1.2, duration: 280, ease: 'Quad.easeOut', onComplete: () => flash.destroy() });
+    shockwave(this, c.x, c.y, 0x6ad8ff, 30, 240);
+    // snelheidsstrepen die de andere kant op flitsen
+    for (let i = 0; i < 7; i++) {
+      const y = c.y + Phaser.Math.Between(-30, 26);
+      const len = Phaser.Math.Between(28, 64);
+      const line = this.add.image(x0 - away * 10, y, 'px').setOrigin(away > 0 ? 1 : 0, 0.5).setDisplaySize(len, i % 3 ? 1 : 2)
+        .setTint(i % 2 ? 0xffffff : 0x8af0ff).setAlpha(0.9).setDepth(spr.depth - 1).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: line, x: line.x + away * Phaser.Math.Between(50, 90), alpha: 0, duration: 220, delay: i * 18, ease: 'Quad.easeOut', onComplete: () => line.destroy() });
+    }
+    // nabeelden langs zijn pad
+    const trail = this.time.addEvent({ delay: 22, repeat: 14, callback: () => this.ghost(spr, Math.random() < 0.5 ? 0x6ad8ff : 0x3a6aff) });
+    if (this.anims.exists(f.anim('spin'))) spr.play(f.anim('spin'));
+    // DODGE!
+    const t = this.add.text(x0 - away * 4, y0 - this.bodyHeight(spr) - 6, 'DODGE!', {
+      fontFamily: FONT, fontSize: '16px', color: '#8af0ff', stroke: '#0a1450', strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(25).setScale(0.3).setAngle(-6 * away);
+    this.tweens.add({ targets: t, scale: 1, duration: 200, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: t, alpha: 0, y: t.y - 16, delay: 700, duration: 350, onComplete: () => t.destroy() });
+    // wegschieten (schuin naar achteren en omhoog), even hangen met een glinster, terug en landen
+    await this.tween({ targets: spr, x: x0 + away * 46, y: y0 - 34, duration: 120, ease: 'Quad.easeOut' });
+    const apex = this.center(spr);
+    for (let i = 0; i < 4; i++) {
+      const st = this.add.image(apex.x, apex.y, 'star').setTint(0xcff6ff).setDepth(spr.depth + 1).setBlendMode(Phaser.BlendModes.ADD).setScale(1.2);
+      const a = (i / 4) * Math.PI * 2 + 0.4;
+      this.tweens.add({ targets: st, x: apex.x + Math.cos(a) * 18, y: apex.y + Math.sin(a) * 18, scale: 0.2, alpha: 0, duration: 260, onComplete: () => st.destroy() });
+    }
+    await this.wait(110);
+    await this.tween({ targets: spr, x: x0, y: y0, duration: 190, ease: 'Quad.easeIn' });
+    trail.remove();
+    spr.setPosition(x0, y0);
+    if (!f.fainted) spr.play(f.anim('idle'));
+    this.land(spr, sx);
+  }
+
   private hitFlash(target: Phaser.GameObjects.Sprite) {
     return this.tween({ targets: target, alpha: 0.2, duration: 60, yoyo: true, repeat: 2 });
   }
@@ -1702,17 +1748,24 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       }
     }
     // Light Speed Attack: de volgende aanvallen op Sonic missen gegarandeerd
-    if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; }
+    let dodged = false;
+    if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; dodged = true; }
     // Sonic Speed: hoe sneller Sonic is dan de aanvaller, hoe vaker hij ontwijkt (ultimates raken altijd)
     else if (!hit.missed && !status && (move.cost ?? 0) < MAX_BOOST && this.dodgeRoll() < dodgeChance(tgt, att)) {
       hit = { ...hit, missed: true, damage: 0, crit: false };
       guard = 'Sonic Speed!';
+      dodged = true;
     }
+    if (guard.startsWith('The shield')) audio.sfx('shield', { volume: 0.6 });
+    // ontwijken: op het moment van de klap schiet hij weg (zie dodgeFx)
+    let dodgeAnim: Promise<void> | undefined;
+    const dodgeSpr = isPlayer ? this.foe : this.hero;
     let struck = false;
     let shieldsBroken = 0;
     let shellCracked = false;
     let dealt = 0;
     const strike = () => {
+      if (hit.missed && dodged && !dodgeAnim) dodgeAnim = this.dodgeFx(dodgeSpr, tgt, isPlayer ? 1 : -1);
       if (hit.missed || struck) return;
       struck = true;
       if (status) { this.hitFlash(isPlayer ? this.foe : this.hero); return; }
@@ -1768,12 +1821,16 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (isPlayer && (this.charFoe || this.anims.exists(this.enemy.anim('hurt'))) && !hit.missed) { await this.wait(350); if (!this.enemy.fainted) this.foe.play(this.enemy.anim('idle')); }
     this.setActionSpeed(null);
     if (hit.missed) {
-      // MISS naast het doelwit, in plaats van een geluid
+      // MISS naast het doelwit, in plaats van een geluid; ontweken = DODGE! (en wachten tot hij terug is)
       const spr = isPlayer ? this.foe : this.hero;
-      this.popMiss(spr.x + (isPlayer ? -30 : 34), spr.y - this.bodyHeight(spr) * 0.7);
+      if (dodged) {
+        dodgeAnim ??= this.dodgeFx(dodgeSpr, tgt, isPlayer ? 1 : -1);
+        await dodgeAnim;
+      } else this.popMiss(spr.x + (isPlayer ? -30 : 34), spr.y - this.bodyHeight(spr) * 0.7);
       await this.say(guard ? `${guard} ${tgt.name} avoided the attack!` : `${tgt.name} avoided the attack!`, 400);
     }
     if (shellCracked) await this.say(`${this.who(tgt)}'s shell took half the damage!`, 350);
+    if (this.chargedHit && !hit.missed) audio.sfx('charged', { volume: 0.6 });
     if (this.chargedHit && !hit.missed) await this.say(chargeMult(att) >= 2 ? 'The charged attack hit twice as hard!' : 'The charged attack hit extra hard!', 350);
     else if (this.chargedHit) await this.say(`${this.who(att)} wasted its charge!`, 350);
     if (shieldsBroken) {
@@ -1791,6 +1848,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const spikes = isPlayer ? spikeRecoil(tgt, att, dealt) : 0;
     if (spikes > 0) {
       att.hp -= spikes;
+      audio.sfx('spikes', { volume: 0.7 });
       this.hitFlash(this.hero);
       this.popNumber(this.hero.x, this.hero.y - this.bodyHeight(this.hero) - 4, `-${spikes}`, '#ff9a9a');
       await this.setBox(this.pBox, att, true);
@@ -1868,7 +1926,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
         tgt.stun = Math.max(tgt.stun, 1);
         tgt.frozen = true;
         this.burst(this.center(this.hero).x, this.center(this.hero).y, 0xcff0ff, 12);
-        audio.sfx('monitorbreak', { volume: 0.4 });
+        audio.sfx('freeze', { volume: 0.8 });
         await this.say(`${tgt.name} was frozen solid!`, 450);
       }
       if (guard) await this.say(guard, 350);
@@ -2529,7 +2587,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const c = this.center(this.foe);
     const boom = this.add.sprite(c.x, c.y + 10, 'badniks').setOrigin(0.5, 1).setScale(this.enemy.def.scale * 1.1).setDepth(16);
     boom.play('explosion');
-    audio.sfx(isBossWave(this.wave) ? 'bigexplosion' : 'explosion');
+    // badnik kapot: de "poof" uit de Advance-games (boss: grote explosie)
+    audio.sfx(isBossWave(this.wave) ? 'bigexplosion' : 'monitorbreak');
     boom.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => boom.destroy());
     this.burst(c.x, c.y, 0xf2c230, 18);
     this.tween({ targets: this.eBox.root, alpha: 0, duration: 300 });
@@ -2578,6 +2637,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async finishWin(c: { x: number; y: number }) {
     // Sonic Speed: na elke KO SPD +1
     if (this.player.def.passive?.id === 'speedster' && !this.player.fainted) {
+      audio.sfx('speedup', { volume: 0.5 });
       await this.changeStage(this.player, 'spd', 1, 'Sonic Speed! ');
     }
     const kind = isBossWave(this.wave) ? 'boss' : this.elite ? 'elite' : 'normal';
@@ -3255,7 +3315,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   }
 
   private chargeFx(spr: Phaser.GameObjects.Sprite) {
-    audio.sfx('spindash', { volume: 0.6 });
+    audio.sfx('charge', { volume: 0.7 });
     const c = this.center(spr);
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;

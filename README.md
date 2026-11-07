@@ -115,6 +115,7 @@ This project uses community sprite rips from [The Spriters Resource](https://www
 - **Title, menus and intro:** raidlandguy
 - **Character select:** Random Talking Bush, EternalLight
 - **Objects, monitors and shields:** Spitfya, Roj, Flare, Techokami, Gussprint
+- **Sound effects:** Mr Lange ("Sonic Sounds Complete", Sonic Advance 3 rips); the names of the numbered sounds come from the [SAT-R Sonic Advance 3 decompilation](https://github.com/SAT-R/sa3) (`tools/build_sa3_sfx.py`)
 
 Gameplay inspired by [PokéRogue](https://pokerogue.net).
 

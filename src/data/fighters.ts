@@ -250,6 +250,8 @@ export interface MoveDef {
   charge?: boolean;
   /** 'speed'-power met een eigen tabel (Homing Attack 40-80), anders SPEED_POWER. */
   speedTable?: Array<[number, number]>;
+  /** Negeert de DEF-boosts van het doelwit (Spin Dash). */
+  ignoreDefBoost?: boolean;
   /** Kans op nog een gratis klap met dezelfde move (Homing Attack), één keer per beurt. */
   extraHit?: number;
   /** Korte naam van het bijeffect, voor het label onder de vijand-box ("POISON"). */
@@ -260,7 +262,7 @@ export const MOVES: Record<string, MoveDef> = {
   // --- team
   spinAttack:   { id: 'spinAttack', name: 'Spin Attack', power: 40, accuracy: 95, priority: 0, anim: 'spin', boostGain: 1, desc: 'Curls into a ball and rolls into the foe.' },
   homingAttack: { id: 'homingAttack', name: 'Homing Attack', power: 50, scaling: 'speed', speedTable: [[4, 80], [3, 70], [2, 60], [1, 50], [0, 40]], accuracy: 100, priority: 1, anim: 'homing', cost: 1, selfStages: { spd: 1 }, extraHit: 0.5, desc: 'Locks on and strikes first. Raises SPD by 1. Hits harder the faster Sonic is (40-80). 50% chance to home in for a second hit.' },
-  spinDash:     { id: 'spinDash', name: 'Spin Dash', power: 70, scaling: 'speed', accuracy: 100, priority: 0, anim: 'dash', cost: 2, desc: 'Revs up and launches. The faster Sonic is than the foe, the harder it hits (50-150).' },
+  spinDash:     { id: 'spinDash', name: 'Spin Dash', power: 70, scaling: 'speed', accuracy: 100, priority: 0, anim: 'dash', cost: 2, ignoreDefBoost: true, desc: 'Revs up and launches. The faster Sonic is than the foe, the harder it hits (50-150). Ignores the foe\'s DEF boosts.' },
   glovePunch:   { id: 'glovePunch', name: 'Glove Punch', power: 70, accuracy: 100, priority: 0, anim: 'punch', cost: 3, stun: [2, 2], stunOnce: true, desc: 'Pulls a boxing glove out of thin air, swings it on its chain and lets it fly. Stuns the foe for 2 turns (once per fight).' },
   glideAttack:  { id: 'glideAttack', name: 'Glide Attack', power: 45, accuracy: 100, priority: 0, anim: 'glide', cost: 1, selfStages: { atk: 1, def: -1 }, desc: 'Glides in fists first. Raises ATK by 1, lowers DEF by 1.' },
   drillPunch:   { id: 'drillPunch', name: 'Knuckle Punch', power: 80, accuracy: 100, priority: 1, anim: 'punch', cost: 3, desc: 'Rushes in and throws a burning Megaton Hook, the strongest fist on Angel Island. Always strikes first.' },
@@ -489,6 +491,8 @@ export class Fighter {
   }
   get atk() { return Math.floor(this.stat('atk') * stageMultiplier(this.stage('atk'))); }
   get dfn() { return Math.floor(this.stat('def') * stageMultiplier(this.stage('def'))); }
+  /** DEF zonder boosts (verlagingen tellen wel): voor Spin Dash. */
+  get dfnNoBoost() { return Math.floor(this.stat('def') * stageMultiplier(Math.min(0, this.stage('def')))); }
   get spd() { return Math.floor(this.stat('spd') * stageMultiplier(this.stage('spd'))); }
   /** Normaal het type uit de def; een boss kan tijdelijk een ander type krijgen (zie BOSS_TYPE_NEUTRAL). */
   typeOverride?: FighterType;
@@ -589,7 +593,9 @@ export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: 
   const crit = rng() < chance || !!move.alwaysCrit;
   // Tornado Hammer: crit-kans al op 100%? Dan dubbele power
   const power = movePower(move, attacker, target) * (move.critDouble && chance >= 1 ? 2 : 1);
-  const base = (((2 * attacker.level) / 5 + 2) * power * (attacker.atk / target.dfn)) / 50 + 2;
+  // Spin Dash: negeert de DEF-boosts van het doelwit (DEF-verlagingen tellen wel)
+  const dfn = move.ignoreDefBoost ? target.dfnNoBoost : target.dfn;
+  const base = (((2 * attacker.level) / 5 + 2) * power * (attacker.atk / Math.max(1, dfn))) / 50 + 2;
   const roll = 0.85 + rng() * 0.15;
   // Weak Spot (Tails): verdoofde vijanden krijgen extra schade
   const weakSpot = attacker.def.passive?.id === 'weakSpot' && target.stun > 0 ? WEAK_SPOT_BONUS : 1;

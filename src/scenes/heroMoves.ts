@@ -126,7 +126,7 @@ export async function spinDash(c: HeroCtx) {
   // 2. los! schokgolf, vuurstaart en snelheidslijnen
   shockwave(scene, s.x, s.y - 14, 0xffffff, 50, 260);
   cam.shake(120, 0.005);
-  audio.sfx('whoosh', { volume: 0.9 });
+  audio.sfx('spinrelease', { volume: 0.9 });
   if (scene.anims.exists(c.p.anim('dashfire'))) s.play(c.p.anim('dashfire'));
   const stop = speedLines(scene, dir, 360);
   const trail = scene.time.addEvent({ delay: 18, loop: true, callback: () => c.ghost(s, 0xffd23a) });
@@ -277,7 +277,7 @@ export async function hammerTwirl(c: HeroCtx) {
       if (Math.random() < 0.35) hearts(scene, s.x + rnd(-10, 10), s.y - rnd(10, 30), 1);
     },
   });
-  const whooshes = scene.time.addEvent({ delay: 170, repeat: 4, callback: () => audio.sfx('whoosh', { volume: 0.5 }) });
+  const whooshes = scene.time.addEvent({ delay: 170, repeat: 4, callback: () => audio.sfx('amyspin', { volume: 0.4, throttle: 300 }) });
   await tween(scene, { targets: s, x: pos.x, y: pos.y, duration: 480, ease: 'Sine.easeIn' });
   // 3. drie klappen terwijl ze tolt (de schade gaat bij de eerste)
   for (let i = 0; i < 3; i++) {
@@ -403,7 +403,7 @@ export async function homingAttack(c: HeroCtx) {
   await c.lockOn(c.target);
   // 3. de Sonic Ballet-draaikolk, een lichtstreep erachter
   s.play('sonic_ballet');
-  audio.sfx('whoosh', { volume: 0.8 });
+  audio.sfx('dash', { volume: 0.8 });
   const from = { x: s.x, y: s.y - 16 };
   const hit = { x: tc.x - dir * (c.missed ? -30 : 10), y: tc.y + 16 };
   const trail = scene.time.addEvent({ delay: 14, loop: true, callback: () => c.ghost(s, 0x5aa8ff) });
@@ -434,7 +434,7 @@ export async function copterDive(c: HeroCtx) {
   const tc = c.center(c.target);
   // 1. opstijgen met windringen onder hem
   s.play('tails_sbfly');
-  audio.sfx('spindash', { volume: 0.5 });
+  audio.sfx('tailsfly', { volume: 0.7 });
   const wash = scene.time.addEvent({ delay: 60, loop: true, callback: () => c.rotorWash(s.x, s.y) });
   await tween(scene, { targets: s, x: home.x + dir * 20, y: home.y - 90, duration: 300, ease: 'Quad.easeOut' });
   const top = Math.max(tc.y - 74, c.bodyHeight(s) + 24);
@@ -526,7 +526,7 @@ export async function pikoHammer(c: HeroCtx) {
   const head = { x: pos.tc.x - dir * 4, y: pos.tc.y - 6 };
   c.strike();
   if (!c.missed) {
-    audio.sfx('punch');
+    audio.sfx('piko');
     cam.shake(180, 0.01);
     shockwave(scene, head.x, head.y, 0xff8fc8, 56, 280);
     // sterretjes rond de kop van het doelwit, en een hartje dat ervan af springt
@@ -550,7 +550,7 @@ export async function chaoAttack(c: HeroCtx) {
   const tc = c.center(c.target);
   // 1. Cream wijst; Cheese verschijnt in een gloeiende bol naast haar
   s.play('cream_point');
-  audio.sfx('ringchime', { volume: 0.5 });
+  audio.sfx('creamfly', { volume: 0.7 });
   const start = { x: s.x + dir * 26, y: s.y - 40 };
   const orb = scene.add.sprite(start.x, start.y, 'sbmoves', 'sbfx_cheeseorb_0').setDepth(18).setScale(0.3).setAlpha(0.9).setBlendMode(ADD);
   await tween(scene, { targets: orb, scale: 1.4, duration: 160, ease: 'Back.easeOut' });
@@ -558,7 +558,7 @@ export async function chaoAttack(c: HeroCtx) {
   scene.tweens.add({ targets: orb, scale: 0.2, alpha: 0, duration: 180, onComplete: () => orb.destroy() });
   await sleep(scene, 160);
   // 2. de bal schiet in een boogje naar het doelwit, met een spoor van lichtblauwe glinsters
-  audio.sfx('whoosh', { volume: 0.8 });
+  audio.sfx('cheese', { volume: 0.9 });
   const end = { x: tc.x - dir * (c.missed ? -40 : 6), y: tc.y };
   const arc = { t: 0 };
   let last = 0;

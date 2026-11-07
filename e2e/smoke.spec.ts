@@ -30,7 +30,8 @@ test.describe('Sonic Rogue smoke tests', () => {
     const errors = trackErrors(page);
     await openGame(page);
     await startRun(page);
-    await setup(page, 's.enemy.hp = 9999;');   // Sonic is fast enough to one-shot a wave-1 foe now
+    // Sonic is fast enough to one-shot a wave-1 foe now; the foe always hits (no dodge, no Boost-stealing Shark Jet)
+    await setup(page, "s.enemy.hp = 9999; s.dodgeRoll = () => 1; s.pickEnemyMove = () => ({ ...window.MOVES.bodyCheck, accuracy: 1000 });");
     const before = await battle(page);
     await press(page, 'z', 'z');                // Fight > Spin Attack
     await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
@@ -70,7 +71,8 @@ test.describe('Sonic Rogue smoke tests', () => {
     await startRun(page);
     // Sonic on 1 HP, the foe always hits first and Sonic's attack can't land
     // de vijand raakt altijd (anders is de test afhankelijk van zijn accuracy)
-    await setup(page, 's.player.hp = 1; s.enemy.hp = 9999; s.pickEnemyMove = () => ({ ...window.MOVES.bodyCheck, accuracy: 1000 }); s.runTurn({ ...s.player.moves.map((m) => window.MOVES[m])[0], accuracy: 0, priority: -9 });');
+    // (en Sonic Speed ontwijkt niet)
+    await setup(page, 's.player.hp = 1; s.enemy.hp = 9999; s.dodgeRoll = () => 1; s.pickEnemyMove = () => ({ ...window.MOVES.bodyCheck, accuracy: 1000 }); s.runTurn({ ...s.player.moves.map((m) => window.MOVES[m])[0], accuracy: 0, priority: -9 });');
     await waitForMenu(page, 'choice');          // "Who goes next?"
     await press(page, 'z');
     await waitForMenu(page, 'command');
@@ -577,7 +579,8 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(boss).toMatchObject({ id: 'eggman', segments: 5 });
     expect(['speed', 'fly', 'power']).toContain(boss.type);   // Eggman krijgt een random type
     // een veel te sterke klap: stopt op de eerste grens (of een paar verder), maar nooit KO
-    await setup(page, 's.player.level = 45; s.player.stages.atk = 2; s.pickEnemyMove = () => window.MOVES.eggLaugh;');
+    // (zonder de 50% extra Homing Attack, anders zijn het twee klappen)
+    await setup(page, 's.player.level = 45; s.player.stages.atk = 2; s.extraRoll = () => 1; s.pickEnemyMove = () => window.MOVES.eggLaugh;');
     await press(page, 'z', 'z');                 // Fight > de move onder de cursor
     await waitForMenu(page, 'command');
     const hp = await page.evaluate(() => (window as any).game.scene.getScene('Battle').enemy.hp);
@@ -746,6 +749,19 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(await hits()).toEqual({ hits: 2, spd: 1 });
     await turn(page, `${COUNT} ${QUIET} s.extraRoll = () => 0.99; s.runTurn(${HOMING});`);
     expect(await hits()).toEqual({ hits: 1, spd: 2 });
+    expect(errors).toEqual([]);
+  });
+
+  test('Sonic Speed dodge: DODGE! animation, no damage, Sonic lands back on his spot', async ({ page }) => {
+    test.setTimeout(90_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startBattleWith(page, ['sonic']);
+    await meet(page, 'frog');
+    const before = await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { x: b.hero.x, y: b.hero.y }; });
+    await turn(page, "s.enemy.hp = 9999; s.player.hp = 9999; s.dodgeRoll = () => 0; s.pickEnemyMove = () => ({ ...window.MOVES.bodyCheck, accuracy: 1000, priority: 5 }); s.runTurn({ ...window.MOVES.spinAttack, accuracy: 0 });");
+    const after = await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { x: b.hero.x, y: b.hero.y, hp: b.player.hp }; });
+    expect(after).toEqual({ ...before, hp: 9999 });
     expect(errors).toEqual([]);
   });
 

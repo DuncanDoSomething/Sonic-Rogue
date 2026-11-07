@@ -162,7 +162,7 @@ export class CharSelectScene extends Phaser.Scene {
 
   /** cursor verplaatst: tikje + de narrator roept de naam (alleen unlocked characters) */
   private moved() {
-    audio.sfx('cursormove');
+    audio.sfx('charslide', { volume: 0.7 });
     const id = ROSTER[this.cursor];
     if (this.unlocked(id)) audio.voice(`call_${id}` as Parameters<typeof audio.voice>[0], 0.8);
     this.refresh();

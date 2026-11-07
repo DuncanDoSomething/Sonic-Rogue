@@ -579,3 +579,18 @@ describe('badnik-eigenschappen (enemy-variatie)', () => {
     expect(PIGGY_MAX_DEF).toBe(4);
   });
 });
+
+describe('Spin Dash negeert DEF-boosts', () => {
+  it('een vijand met DEF +6 krijgt even veel schade als zonder, DEF-verlagingen tellen wel', () => {
+    const rng = () => 0.5;
+    const sonic = new Fighter('sonic', 20);
+    const plain = new Fighter('pig', 20), boosted = new Fighter('pig', 20), lowered = new Fighter('pig', 20);
+    for (let i = 0; i < 6; i++) boosted.raise('def');
+    lowered.raise('def', -2);
+    const dmg = (t: Fighter, m = MOVES.spinDash) => calcHit(sonic, t, { ...m, accuracy: 1000 }, rng).damage;
+    expect(dmg(boosted)).toBe(dmg(plain));
+    expect(dmg(lowered)).toBeGreaterThan(dmg(plain));
+    // een gewone move merkt de DEF-boost wel
+    expect(dmg(boosted, MOVES.spinAttack)).toBeLessThan(dmg(plain, MOVES.spinAttack));
+  });
+});
