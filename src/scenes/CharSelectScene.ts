@@ -30,7 +30,10 @@ export class CharSelectScene extends Phaser.Scene {
   /** gekozen team, in volgorde (de eerste begint) */
   private picked: string[] = [];
   private badges: Phaser.GameObjects.Text[] = [];
-  private teamText!: Phaser.GameObjects.Text;
+  /** team-balkje linksboven: een vakje per plek, met het hoofdje van wie erin zit */
+  private slots: Array<{ x: number; y: number; num: Phaser.GameObjects.Text; head: Phaser.GameObjects.Image }> = [];
+  /** knipperende rand om het volgende lege vakje */
+  private slotGlow!: Phaser.GameObjects.Graphics;
   /** C: overzicht van alles wat het character kan (passive, moves, ultimate) */
   private detail?: Phaser.GameObjects.Container;
 
@@ -44,6 +47,7 @@ export class CharSelectScene extends Phaser.Scene {
     this.rows = [];
     this.picked = [];
     this.badges = [];
+    this.slots = [];
     this.cameras.main.fadeIn(300, 255, 255, 255);
     // twee character select-tracks, elke keer willekeurig één (loopt door als hij al speelt)
     audio.playMusic(Math.random() < 0.5 ? 'charselect' : 'charselect2');
@@ -63,8 +67,8 @@ export class CharSelectScene extends Phaser.Scene {
     this.art = this.add.image(ART.x, ART.y, 'cs_art_sonic').setScale(2).setOrigin(0.5, 0.75);
     this.tweens.add({ targets: this.art, y: ART.y - 3, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
-    // titel
-    this.add.image(W - 84, 16, 'cs_select_pill');
+    // titel: "PICK YOUR TEAM" in dezelfde pil-stijl als Advance 2's "SELECT A CHARACTER"
+    this.add.image(W - 8, 16, 'cs_team_pill').setOrigin(1, 0.5);
 
     // rijen: banner + icoon + naam
     ROSTER.forEach((id, i) => {
@@ -90,11 +94,9 @@ export class CharSelectScene extends Phaser.Scene {
     // info-paneel
     this.info = this.add.container(PANEL_W + 10, 184);
 
-    this.add.text(PANEL_W + 10, H - 12, 'Z pick  X undo  I info', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
+    this.add.text(PANEL_W + 10, H - 12, 'Z add to team  X undo  I info', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' })
       .setShadow(1, 1, '#000', 0);
-    // team-teller in een Chao Garden-pilletje
-    sonicPanel(this.add.graphics(), PANEL_W + 6, 6, 88, 20, 'blue', 0.95);
-    this.teamText = this.add.text(PANEL_W + 50, 16, '', { fontFamily: FONT, fontSize: '8px', color: HUD.label }).setOrigin(0.5);
+    this.buildTeamTray();
     addMenuButton(this, W - 12, H - 12, () => this.openSettings());
 
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
@@ -170,9 +172,62 @@ export class CharSelectScene extends Phaser.Scene {
   /** Hoeveel je er moet kiezen: 3, of minder als je nog niet zoveel characters hebt. */
   private get teamSize() { return Math.min(MAX_PARTY, ROSTER.filter(id => this.unlocked(id)).length); }
 
+  /**
+   * Team-balkje: "TEAM" en een leeg vakje per plek (meestal 3), zodat je meteen ziet hoeveel je er kiest.
+   * Het volgende lege vakje knippert; gekozen characters vliegen erin.
+   */
+  private buildTeamTray() {
+    const n = this.teamSize;
+    const SLOT = 20, GAP = 3, LABEL = 38;
+    const w = 6 + LABEL + n * SLOT + (n - 1) * GAP + 6;
+    const x0 = PANEL_W + 6, y0 = 4, h = 26;
+    sonicPanel(this.add.graphics(), x0, y0, w, h, 'blue', 0.95);
+    this.add.text(x0 + 8, y0 + h / 2, 'TEAM', { fontFamily: FONT, fontSize: '8px', color: HUD.label }).setOrigin(0, 0.5);
+    const g = this.add.graphics();
+    for (let i = 0; i < n; i++) {
+      const x = x0 + 6 + LABEL + i * (SLOT + GAP), y = y0 + 3;
+      g.fillStyle(HUD.outline).fillRoundedRect(x, y, SLOT, SLOT, 3);
+      g.fillStyle(HUD.pipEmpty).fillRoundedRect(x + 1, y + 1, SLOT - 2, SLOT - 2, 2);
+      const num = this.add.text(x + SLOT / 2, y + SLOT / 2 + 1, `${i + 1}`, { fontFamily: FONT, fontSize: '8px', color: HUD.muted }).setOrigin(0.5);
+      const head = this.add.image(x + SLOT / 2, y + SLOT / 2, 'ui', 'head_sonic').setVisible(false);
+      this.slots.push({ x: x + SLOT / 2, y: y + SLOT / 2, num, head });
+    }
+    // uitleg eronder
+    const what = n === 1 ? 'Pick your character.' : `Pick ${n} characters.\nThe 1st one starts.`;
+    this.add.text(x0 + 4, y0 + h + 6, what, { fontFamily: FONT, fontSize: '8px', color: '#ffffff', lineSpacing: 4, stroke: '#141a6c', strokeThickness: 3 });
+    this.slotGlow = this.add.graphics();
+    this.tweens.add({ targets: this.slotGlow, alpha: 0.25, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  }
+
   private refreshTeam() {
     this.badges.forEach((b, i) => { const n = this.picked.indexOf(ROSTER[i]); b.setText(n >= 0 ? `${n + 1}` : ''); });
-    this.teamText.setText(`TEAM ${this.picked.length}/${this.teamSize}`);
+    this.slots.forEach((sl, i) => {
+      const id = this.picked[i];
+      sl.head.setVisible(!!id);
+      if (id) sl.head.setFrame(`head_${id}`);
+      sl.num.setVisible(!id);
+    });
+    this.slotGlow.clear();
+    const next = this.slots[this.picked.length];
+    if (next) this.slotGlow.lineStyle(2, HUD.gold).strokeRoundedRect(next.x - 11, next.y - 11, 22, 22, 4);
+  }
+
+  /** Het hoofdje vliegt van de rij naar zijn vakje. */
+  private flyToSlot(id: string, slot: number) {
+    const sl = this.slots[slot];
+    const row = this.rows[ROSTER.indexOf(id)];
+    if (!sl || !row) return;
+    sl.head.setVisible(false);
+    const fly = this.add.image(row.x + 18, row.y, 'ui', `head_${id}`).setDepth(5).setScale(1.5);
+    this.tweens.add({
+      targets: fly, x: sl.x, y: sl.y, scale: 1, duration: 260, ease: 'Cubic.easeInOut',
+      onComplete: () => {
+        fly.destroy();
+        if (this.picked[slot] !== id) return;
+        sl.head.setVisible(true).setScale(1.5);
+        this.tweens.add({ targets: sl.head, scale: 1, duration: 160, ease: 'Back.easeOut' });
+      },
+    });
   }
 
   /** Z: character in je team zetten (of eruit halen). Is het team vol, dan begint de run. */
@@ -187,6 +242,7 @@ export class CharSelectScene extends Phaser.Scene {
     if (at >= 0) { this.picked.splice(at, 1); audio.sfx('back'); this.refreshTeam(); return; }
     this.picked.push(id);
     this.refreshTeam();
+    this.flyToSlot(id, this.picked.length - 1);
     if (this.picked.length < this.teamSize) {
       audio.sfx('confirm');
       const lines: Record<string, string> = { sonic: 'sonicalright', tails: 'tailsalright', knuckles: 'knucklesalright', cream: 'creamalright', amy: 'amywohoo', shadow: 'shadowhuh' };
