@@ -790,6 +790,27 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
+  test('rival talk: a short chat with portraits before the fight and after the win', async ({ page }) => {
+    test.setTimeout(120_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startBattleWith(page, ['sonic']);
+    await page.evaluate(() => { (window as any).settings.talk = 0; });   // gesprekjes aan (de andere tests zetten ze uit)
+    const talking = () => page.evaluate(() => !!(window as any).game.scene.getScene('Battle').talkBox);
+    await page.evaluate(() => { const s = (window as any).game.scene.getScene('Battle'); s.forceRival = true; s.pickRival = () => 'knuckles'; s.wave = 15; s.menu = 'busy'; s.startWave(); });
+    await expect.poll(talking, { timeout: 20_000 }).toBe(true);
+    await press(page, 'z', 'z', 'z', 'z');        // regels afmaken / volgende
+    await waitForMenu(page, 'command');
+    expect(await talking()).toBe(false);
+    // winnen: Knuckles praat nog even (X slaat het over)
+    await setup(page, 's.enemy.hp = 1; s.enemy.rivalUsed = true; s.dodgeRoll = () => 1;');
+    await press(page, 'z', 'ArrowRight', 'z');   // Homing Attack
+    await expect.poll(talking, { timeout: 20_000 }).toBe(true);
+    await press(page, 'x');
+    await expect.poll(talking).toBe(false);
+    expect(errors).toEqual([]);
+  });
+
   test('badniks: elites, Shark Jet, Snow Bot and Shell Tank', async ({ page }) => {
     test.setTimeout(120_000);
     const errors = trackErrors(page);

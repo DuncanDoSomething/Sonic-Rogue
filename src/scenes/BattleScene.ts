@@ -16,6 +16,8 @@ import { HUD, RingCounter, checkerBand, sonicPanel, tooltip } from './hud';
 import { richText } from './richText';
 import { audio, MusicKey } from '../audio';
 import { chaoAttack, chaoCheer, chaoFriends, copterDive, glideAttack, glovePunch, hammerTwirl, homingAttack, knucklePunch, pikoHammer, spinDash, type HeroCtx } from './heroMoves';
+import { pickTalk } from '../data/dialogue';
+import { playTalk, type TalkHandle } from './talk';
 import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
 import { chaosControl, chaosSpear, superShadow } from './shadowMoves';
 import { TEST_KEYS, TEST_MODE } from '../data/testMode';
@@ -168,6 +170,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private tutGuard = false;
   /** open tip van Tails (Z of klik sluit hem) */
   private tipBox?: { close(): void };
+  /** rival-gesprekje dat nu in beeld is */
+  private talkBox?: TalkHandle;
 
   private menu: MenuState = 'busy';
   private cursor = 0;
@@ -858,6 +862,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     kb.on('keydown', (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
       // tip van Tails open: Z / X sluit hem, verder niks
+      if (this.talkBox) {
+        if (['z', 'enter', ' '].includes(k)) this.talkBox.next();
+        else if (['x', 'escape', 'backspace'].includes(k)) this.talkBox.skip();
+        return;
+      }
       if (this.tipBox) {
         if (['z', 'enter', ' ', 'x', 'escape', 'backspace'].includes(k)) this.tipBox.close();
         return;
@@ -1472,7 +1481,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.startHover();
     this.tweens.add({ targets: this.eBox.root, alpha: 1, duration: 250 });
     if (boss) this.cameras.main.shake(300, 0.006);
-    if (this.rival) await this.rivalBanner();
+    if (this.rival) { await this.rivalBanner(); await this.rivalTalk('intro'); }
     else if (mainBoss) await this.rivalBanner('BOSS!');
     if (id === 'shadow' && boss) audio.voice('shadowlaugh');
     else if (id === 'eggman') audio.voice('eggmanlaugh');
@@ -2683,6 +2692,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     audio.sfx('bosshit', { volume: 0.7 });
     this.tween({ targets: this.eBox.root, alpha: 0, duration: 300 });
     await this.wait(600);
+    await this.rivalTalk('defeat');
     await this.say(this.rival ? `Rival ${this.enemy.name} was defeated!` : `${this.enemy.name} was defeated!`, 300);
     await this.tween({ targets: this.foe, alpha: 0, x: this.foe.x + 40, duration: 400 });
     this.foe.setVisible(false).setAlpha(1);
@@ -3794,6 +3804,16 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   // ---------------------------------------------------------------- tutorial
   /** Tip van Tails de eerste keer dat iets gebeurt (niet in de tutorial zelf, en uit te zetten in Settings). */
+  /** Rival-gesprekje (voor het gevecht of als hij verslagen is), met jouw character dat in het veld staat. */
+  private async rivalTalk(when: 'intro' | 'defeat') {
+    if (!this.rival || settings.talk !== 0 || this.tutorialMode) return;
+    const lines = pickTalk(this.enemy.def.id, this.player.def.id, when);
+    if (!lines) return;
+    this.talkBox = playTalk(this, lines, this.player.def.id, this.enemy.def.id);
+    await this.talkBox.done;
+    this.talkBox = undefined;
+  }
+
   private async tip(id: TipId) {
     if (this.tutorialMode || !tipDue(id)) return;
     markTip(id);

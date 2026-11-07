@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BATTLE_SPEEDS, BATTLE_STYLES, TEXT_SPEEDS, TIP_OPTIONS, VOLUMES, saveSettings, settings } from '../data/settings';
+import { BATTLE_SPEEDS, BATTLE_STYLES, TALK_OPTIONS, TEXT_SPEEDS, TIP_OPTIONS, VOLUMES, saveSettings, settings } from '../data/settings';
 import { audio } from '../audio';
 import { HUD, checkerBand, sonicPanel } from './hud';
 
@@ -12,6 +12,7 @@ const ROWS = [
   { label: 'Battle Speed', key: 'battleSpeed' as const, options: BATTLE_SPEEDS },
   { label: 'Battle Style', key: 'battleStyle' as const, options: BATTLE_STYLES },
   { label: 'Tails Tips', key: 'tips' as const, options: TIP_OPTIONS },
+  { label: 'Rival Talk', key: 'talk' as const, options: TALK_OPTIONS },
   { label: 'Music', key: 'musicVolume' as const, options: VOLUMES },
   { label: 'Sound FX', key: 'sfxVolume' as const, options: VOLUMES },
 ];
@@ -41,7 +42,7 @@ export class SettingsScene extends Phaser.Scene {
   create() {
     this.add.rectangle(0, 0, W, H, 0x05060c, 0.7).setOrigin(0).setInteractive();
     const g = this.add.graphics();
-    const bx = 90, by = 22, bw = 300, bh = 222;
+    const bx = 90, by = 12, bw = 300, bh = 244;
     // Chao Garden-paneel, met de titel boven een geblokte finish-band
     sonicPanel(g, bx, by, bw, bh, 'blue', 0.97);
     this.add.text(W / 2, by + 15, 'SETTINGS', { fontFamily: FONT, fontSize: '8px', color: HUD.label })
@@ -50,7 +51,7 @@ export class SettingsScene extends Phaser.Scene {
     this.highlight = this.add.graphics();
 
     ROWS.forEach((r, i) => {
-      const y = by + 44 + i * 21;
+      const y = by + 44 + i * 22;
       // waarde in een donker venstertje, zoals de ring-teller
       g.fillStyle(HUD.outline).fillRoundedRect(bx + 168, y - 4, 96, 16, 3);
       g.fillStyle(HUD.pipEmpty).fillRoundedRect(bx + 169, y - 3, 94, 14, 2);

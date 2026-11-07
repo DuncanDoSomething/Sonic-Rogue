@@ -9,12 +9,14 @@ export const BATTLE_STYLES = ['Switch', 'Set'] as const;
 /** volume 0-10, getoond als balkje */
 /** Tails' tips de eerste keer dat iets gebeurt */
 export const TIP_OPTIONS = ['On', 'Off'] as const;
+/** korte gesprekjes voor en na rival-gevechten */
+export const TALK_OPTIONS = ['On', 'Off'] as const;
 export const VOLUMES = Array.from({ length: 11 }, (_, i) => (i === 0 ? 'Off' : '|'.repeat(i)));
 
-export interface Settings { textSpeed: number; battleSpeed: number; musicVolume: number; sfxVolume: number; battleStyle: number; tips: number; }
+export interface Settings { textSpeed: number; battleSpeed: number; musicVolume: number; sfxVolume: number; battleStyle: number; tips: number; talk: number; }
 
 const KEY = 'sonic-rogue-settings';
-const DEFAULTS: Settings = { textSpeed: 1, battleSpeed: 0, musicVolume: 7, sfxVolume: 8, battleStyle: 0, tips: 0 };
+const DEFAULTS: Settings = { textSpeed: 1, battleSpeed: 0, musicVolume: 7, sfxVolume: 8, battleStyle: 0, tips: 0, talk: 0 };
 
 function load(): Settings {
   try {

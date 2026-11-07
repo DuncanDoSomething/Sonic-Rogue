@@ -45,7 +45,7 @@
 - [ ] Rouge as a second legendary
 - [ ] More badniks from Sonic Advance 1, 2 and 3, with unique enemies per zone
 - [ ] Minibosses and a unique boss per zone
-- [ ] Short dialogue before and after rival fights
+- [x] Short dialogue before and after rival fights (per rival and per character on the field, with Sonic Battle portraits)
 
 - [ ] EXP changes: an EXP reward and level caps
 - [ ] Balance pass after the reward revamp: price growth and enemy damage

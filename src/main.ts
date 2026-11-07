@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { settings } from './data/settings';
 import { BootScene } from './scenes/BootScene';
 import { BattleScene } from './scenes/BattleScene';
 import { TitleScene } from './scenes/TitleScene';
@@ -30,7 +31,7 @@ async function start() {
   });
   audio.init(game);
   // handig voor debuggen in de console: game.scene.getScene('Battle')
-  Object.assign(window, { game, MOVES, REWARDS, resetUnlocks, unlock });
+  Object.assign(window, { game, MOVES, REWARDS, resetUnlocks, unlock, settings });
 }
 
 start();
