@@ -799,7 +799,8 @@ test.describe('Sonic Rogue smoke tests', () => {
     const talking = () => page.evaluate(() => !!(window as any).game.scene.getScene('Battle').talkBox);
     await page.evaluate(() => { const s = (window as any).game.scene.getScene('Battle'); s.forceRival = true; s.pickRival = () => 'knuckles'; s.wave = 15; s.menu = 'busy'; s.startWave(); });
     await expect.poll(talking, { timeout: 20_000 }).toBe(true);
-    await press(page, 'z', 'z', 'z', 'z');        // regels afmaken / volgende
+    // regels afmaken / volgende, tot het gesprek klaar is (hoeveel keer hangt af van het gesprek en de snelheid)
+    for (let i = 0; i < 20 && await talking(); i++) await press(page, 'z');
     await waitForMenu(page, 'command');
     expect(await talking()).toBe(false);
     // winnen: Knuckles praat nog even (X slaat het over)

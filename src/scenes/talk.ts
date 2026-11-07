@@ -81,7 +81,7 @@ export function playTalk(scene: Phaser.Scene, lines: Exchange, allyId: string, r
     scene.tweens.add({ targets: speaker, y: PANEL_Y - 3, duration: 90, yoyo: true, ease: 'Quad.easeOut' });
     // naam-tabje aan de kant van wie praat
     const name = FIGHTERS[id].name.toUpperCase();
-    tag.setText(isAlly ? name : `RIVAL ${name}`);
+    tag.setText(name);
     const tx = isAlly ? 20 : W - 20 - tag.width;
     tag.setX(tx);
     tagBg.clear();
