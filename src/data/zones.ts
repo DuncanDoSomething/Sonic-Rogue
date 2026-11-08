@@ -102,14 +102,16 @@ export function mainBossFor(_wave: number, party: string[] = [], rng: () => numb
 export const ENEMY_ZONE_SCALING = 0.08;
 /**
  * Badniks (gewone waves en elites, geen bosses) hebben extra HP en ATK, zodat ze geen voer zijn.
- * Moe koos "heel zwaar". De schalen uit de sim (150 runs per team, nov 2026), voor als we willen bijstellen:
+ * Moe koos eerst "heel zwaar" en daarna 1,5x HP / 1,5x ATK (badniks moeten echt schade doen), met Piggy Bank
+ * tot DEF +2: 1.000 runs per team, gem. wave 54, mediaan 50, 6% haalt wave 90, 3,7 beurten en 8,3% HP per gevecht.
+ * De schalen uit de sim (150 runs per team, nov 2026, nog zonder Kiki/Mirror/Slot), voor als we willen bijstellen:
  *   HP 1x   ATK 1x    -> 3,2 beurten, 6,0% HP-verlies per gevecht, gem. wave 86
  *   HP 1,4x ATK 1,1x  -> 3,9 beurten, 7,5%, gem. wave 73 (midden)
  *   HP 1,6x ATK 1x    -> 4,3 beurten, 7,8%, gem. wave 69
  *   HP 1,5x ATK 1,25x -> 4,0 beurten, 7,9%, gem. wave 66 (zwaar)
  *   HP 2x   ATK 1,5x  -> 4,7 beurten, 9,2%, gem. wave 46 (heel zwaar)
  */
-export const BADNIK_HP_MULT = 2;
+export const BADNIK_HP_MULT = 1.5;
 export const BADNIK_ATK_MULT = 1.5;
 export function enemyScaling(wave: number) {
   const zone = Math.floor((wave - 1) / WAVES_PER_ZONE);

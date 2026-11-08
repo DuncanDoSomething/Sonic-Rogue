@@ -107,7 +107,7 @@ export const TRAITS: Record<TraitId, TraitDef> = {
   hardShell: { id: 'hardShell', name: 'Hard Shell', desc: 'The first hit on it only does half damage.' },
   charger:   { id: 'charger', name: 'Charge', desc: 'Every few turns it charges up. Its next attack does double damage.' },
   spikes:    { id: 'spikes', name: 'Spikes', desc: 'Hitting it hurts: you take 1/8 of the damage you deal (it never KOs you).' },
-  piggyBank: { id: 'piggyBank', name: 'Piggy Bank', desc: 'Its DEF rises every turn (up to +4), so hit it hard and fast. Drops double rings.' },
+  piggyBank: { id: 'piggyBank', name: 'Piggy Bank', desc: 'Its DEF rises every turn (up to +2), so hit it hard and fast. Drops double rings.' },
   shellUp:   { id: 'shellUp', name: 'Shell Up', desc: 'When a shield breaks it hides in its shell (next hit does half) and charges up a Tank Slam that does 1.5x damage.' },
   bomber:    { id: 'bomber', name: 'Bomb Toss', desc: 'It lights a bomb that goes off after 3 of its turns, for 35% of your fighter\'s max HP (DEF doesn\'t help). Beat it first, switch, or Guard the blast.' },
   mirror:    { id: 'mirror', name: 'Mirror Shine', desc: 'Every other turn it shines: hits on it that turn bounce half of the damage back at you. Wait it out, switch, or hit it anyway.' },
@@ -173,7 +173,7 @@ export const ELITE_REGEN = 0.08;
 /** Regenerating geneest per gevecht nooit meer dan dit deel van zijn HP (anders kan een zwak team vast komen te zitten). */
 export const ELITE_REGEN_TOTAL = 0.5;
 /** Piggy Bank: DEF stijgt elke beurt, tot deze stage. */
-export const PIGGY_MAX_DEF = 4;
+export const PIGGY_MAX_DEF = 2;
 export const ELITE_ARMOR_SHIELDS = 2;
 
 // ---------------------------------------------------------------- Shadow

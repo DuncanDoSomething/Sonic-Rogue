@@ -644,7 +644,7 @@ describe('badnik-eigenschappen (enemy-variatie)', () => {
     expect(MOVES[FIGHTERS.sharkjet.moves[0]].drainBoost).toBe(1);
     expect(MOVES[FIGHTERS.penguin.moves[0]].priority).toBe(1);
     expect(FIGHTERS.pig.trait).toBe('piggyBank');
-    expect(PIGGY_MAX_DEF).toBe(4);
+    expect(PIGGY_MAX_DEF).toBe(2);
   });
 });
 
