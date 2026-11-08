@@ -65,27 +65,35 @@ export function expShareAfter(cleared: number) {
 }
 
 // ---------------------------------------------------------------- passives
-export type PassiveId = 'speedster' | 'weakSpot' | 'flinch' | 'luckySwing' | 'chaoCare' | 'lifeform';
+export type PassiveId = 'speedster' | 'weakSpot' | 'flinch' | 'luckySwing' | 'chaoCare' | 'lifeform' | 'guardian';
 export interface PassiveDef { id: PassiveId; name: string; desc: string; }
 export const PASSIVES: Record<PassiveId, PassiveDef> = {
   speedster:  { id: 'speedster', name: 'Sonic Speed', desc: '+1 SPD after every KO. The faster he is than the foe, the harder he hits (+25% per time as fast, up to +50%) and the more attacks he dodges (up to 35%).' },
   weakSpot:   { id: 'weakSpot', name: 'Weak Spot', desc: 'Stunned foes take 2x damage from Tails.' },
   flinch:     { id: 'flinch', name: 'Iron Fists', desc: 'His stat raises are doubled. Hits can make the foe flinch (20%). Once per zone he survives a KO with 1 HP, if he had more than half his HP.' },
-  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: 'ATK +1: 39% crit chance. ATK +2: always crits. ATK +4: crits do 2x. ATK +6: 30% chance to attack again. She keeps her ATK raises when she switches out. Crits cost her 5% max HP (not with Hammer Twirl).' },
-  chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'When a wave starts, the whole team heals 10% HP if Cream is on the field, or 5% if she is on the bench.' },
+  luckySwing: { id: 'luckySwing', name: 'Lucky Swing', desc: 'ATK +1: 39% crit chance. ATK +2: always crits. ATK +4: crits do 2x. ATK +6: 30% chance to attack again. She keeps her ATK raises when she switches out.' },
+  chaoCare:   { id: 'chaoCare', name: 'Chao Care', desc: 'When a wave starts, the whole team heals 5% HP if Cream is on the field, or 1-5% (random) if she is on the bench.' },
+  guardian:   { id: 'guardian', name: 'Guardian', desc: 'Every hit he takes raises his ATK by 1 for this wave (up to +6), and he hits back with a quick counter. Once per zone he has a 50% chance to survive a KO with 1 HP.' },
   lifeform:   { id: 'lifeform', name: 'Ultimate Lifeform', desc: 'Zone effects and stat drops don\'t affect him. Every KO he lands gives him 1 Boost.' },
 };
 export const FLINCH_CHANCE = 0.2;
+/** Guardian (Knuckles): per klap die hij krijgt +1 ATK (tot het max), en hij slaat terug met COUNTER (of GUARD_COUNTER na Guard). */
+export const GUARDIAN_MAX_ATK = 6;
+/** Guardian: kans dat hij een KO-klap met 1 HP overleeft (één keer per zone). */
+export const GUARDIAN_SURVIVE_CHANCE = 0.5;
+export const isGuardian = (f: Fighter) => f.def.passive?.id === 'guardian';
 /** Iron Fists: met 1 HP blijven staan werkt alleen als hij vóór de klap meer dan dit deel van zijn HP had. */
 export const SASH_MIN_HP = 0.5;
 /** Ultimate Lifeform (Shadow): zoveel Boost per KO die hij maakt. */
 export const LIFEFORM_KO_BOOST = 1;
 export const WEAK_SPOT_BONUS = 2;
-/** Lucky Swing: elke crit kost Amy zoveel van haar max-HP (zoals een Life Orb). Ze houdt altijd 1 HP over. */
-export const CRIT_RECOIL = 0.05;
-export const CHAO_CARE_HEAL = 0.1;
-/** Chao Care vanaf de bank: zwakker dan in het veld. */
-export const CHAO_CARE_BENCH = 0.05;
+export const CHAO_CARE_HEAL = 0.05;
+/** Chao Care vanaf de bank: een willekeurig deel tussen 1% en 5% (hele procenten). */
+export const CHAO_CARE_BENCH: [number, number] = [0.01, 0.05];
+export function chaoCareBench(rng: () => number) {
+  const [lo, hi] = CHAO_CARE_BENCH;
+  return (Math.round(lo * 100) + Math.floor(rng() * (Math.round((hi - lo) * 100) + 1))) / 100;
+}
 export const BASE_CRIT = 0.0625;
 
 // ---------------------------------------------------------------- badnik-eigenschappen
@@ -225,7 +233,7 @@ export interface MoveDef {
    * 'speed' = power hangt af van hoeveel sneller je bent dan het doelwit (zie speedPower).
    * 'stages' = power stijgt met elke stat stage van de gebruiker, plus of min (zie stagesPower).
    */
-  scaling?: 'speed' | 'stages';
+  scaling?: 'speed' | 'stages' | 'atk';
   /** Boost-kosten (0 = gratis). Gratis moves geven juist Boost: zie `boostGain`. */
   cost?: number;
   boostGain?: number;
@@ -267,8 +275,18 @@ export interface MoveDef {
   targetStages?: Partial<Record<StageKey, number>>;
   /** Na gebruik verliest de gebruiker dit deel van zijn max-HP (kan hem KO slaan). */
   recoil?: number;
-  /** Na gebruik zijn alle stat stages van de gebruiker weer 0 (Maximum Heat). */
+  /** Na gebruik zijn alle stat stages van de gebruiker weer 0 (oude Maximum Heat, rival-Knuckles). */
   spendStages?: boolean;
+  /** Na gebruik is de ATK-stage van de gebruiker weer 0 (Maximum Heat-duik). */
+  spendAtk?: boolean;
+  /** Twee beurten: eerst opladen (de gebruiker kan geraakt worden), de beurt erna gaat `windup` af. */
+  windup?: string;
+  /** Guard: blokt de volgende klap deze beurt helemaal en countert. Niet twee keer achter elkaar. */
+  guard?: boolean;
+  /** Kan niet ontweken worden (de Maximum Heat-duik). */
+  sure?: boolean;
+  /** Een counter (Guardian): roept zelf geen counter op. */
+  counter?: boolean;
   /** Geneest de gebruiker met dit deel van zijn max-HP als de move raakt (Hammer Twirl). */
   selfHeal?: number;
   /** Kans dat targetStages gebeurt (standaard altijd). */
@@ -309,7 +327,12 @@ export const MOVES: Record<string, MoveDef> = {
   // --- ultimates (kosten de hele Boost-meter, geleerd op ULTIMATE_LEVEL)
   lightSpeed:   { id: 'lightSpeed', name: 'Light Speed Atk', power: 150, accuracy: 100, priority: 1, anim: 'ultimate', cost: MAX_BOOST, evade: 2, selfStages: { spd: 3 }, desc: 'Homing attacks faster than light. Raises SPD by 3, and the foe misses its next 2 attacks on Sonic.' },
   thunderShoot: { id: 'thunderShoot', name: 'Thunder Shoot', power: 80, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, stun: [3, 3], desc: 'Fires himself like a lightning bolt and stuns the foe for 3 turns.' },
-  maximumHeat:  { id: 'maximumHeat', name: 'Maximum Heat', power: 100, scaling: 'stages', accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, spendStages: true, desc: 'A meteor dive. +25 power for every stat stage Knuckles has, up or down; uses them all up.' },
+  maximumHeat:  { id: 'maximumHeat', name: 'Maximum Heat', power: 100, scaling: 'atk', accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, windup: 'heatDive', desc: 'Powers up for a turn (he can still be hit, and still counters), then meteor-dives the next turn: +25 power for every ATK stage. His ATK goes back to 0.' },
+  heatDive:     { id: 'heatDive', name: 'Maximum Heat', power: 100, scaling: 'atk', accuracy: 100, priority: 0, anim: 'ultimate', sure: true, spendAtk: true, desc: '' },
+  maximumHeatClassic: { id: 'maximumHeatClassic', name: 'Maximum Heat', power: 100, scaling: 'stages', accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, spendStages: true, desc: 'A meteor dive. +25 power for every stat stage Knuckles has, up or down; uses them all up.' },
+  guard:        { id: 'guard', name: 'Guard', power: 0, accuracy: 100, priority: 3, anim: 'glide', cost: 2, guard: true, desc: 'Always goes first. Blocks the next hit this turn completely and counters it with a strong punch. Can\'t be used twice in a row.' },
+  counterPunch: { id: 'counterPunch', name: 'Counter', power: 20, accuracy: 100, priority: 0, anim: 'punch', counter: true, desc: '' },
+  guardCounter: { id: 'guardCounter', name: 'Counter', power: 70, accuracy: 100, priority: 0, anim: 'punch', counter: true, desc: '' },
   chaoAttack:   { id: 'chaoAttack', name: 'Chao Blessing', power: 0, accuracy: 100, priority: 1, anim: 'heal', teamHeal: 1, revive: BLESS_REVIVE, blessing: true, clearField: true, cost: MAX_BOOST,
     desc: 'Cheese and friends heal the team to full HP, revive fallen teammates with 50% HP and clear the zone effect. Your team then does 50% more damage for 5 turns.' },
   tornadoHammer:{ id: 'tornadoHammer', name: 'Tornado Hammer', power: 120, accuracy: 100, priority: 0, anim: 'ultimate', cost: MAX_BOOST, alwaysCrit: true, critDouble: true, recoil: 0.5, desc: 'A hammer storm. Always crits; doubles once her crits are guaranteed (ATK +2). Costs Amy 50% max HP (KO if below half).' },
@@ -359,6 +382,8 @@ export interface FighterDef {
   spinGain?: number;
   /** vaste eigenschap van een badnik (zie TRAITS) */
   trait?: TraitId;
+  /** andere moves/passive als hij een rival is */
+  rivalKit?: Partial<Pick<FighterDef, 'moves' | 'passive' | 'ultimate'>>;
 }
 
 export const FIGHTERS: Record<string, FighterDef> = {
@@ -381,11 +406,13 @@ export const FIGHTERS: Record<string, FighterDef> = {
     expYield: 20, // alleen als rival
   },
   knuckles: {
-    type: 'power', ultimate: 'maximumHeat', passive: PASSIVES.flinch,
+    type: 'power', ultimate: 'maximumHeat', passive: PASSIVES.guardian,
     id: 'knuckles', name: 'Knuckles', atlas: 'knuckles', animPrefix: 'knuckles', scale: 2,
-    base: { hp: 28, atk: 15, def: 10, spd: 7 },
-    growth: { hp: 3.6, atk: 2.4, def: 1.6, spd: 1.1 },
-    moves: ['spinAttack', 'glideAttack', 'drillPunch'],
+    base: { hp: 28, atk: 12, def: 10, spd: 7 },
+    growth: { hp: 3.6, atk: 1.9, def: 1.6, spd: 1.1 },
+    moves: ['spinAttack', 'guard', 'drillPunch'],
+    // als rival houdt hij zijn oude set (anders worden de rival-gevechten weer zwaarder)
+    rivalKit: { moves: ['spinAttack', 'glideAttack', 'drillPunch'], passive: PASSIVES.flinch, ultimate: 'maximumHeatClassic' },
     expYield: 20, // alleen als rival
   },
   cream: {
@@ -463,8 +490,14 @@ export class Fighter {
   stun = 0;
   /** Aantal aanvallen op hem die nog gegarandeerd missen (Light Speed Attack). */
   evade = 0;
-  /** Iron Fists (Knuckles): al een keer met 1 HP blijven staan deze zone. */
+  /** Iron Fists / Guardian (Knuckles): al een keer met 1 HP blijven staan deze zone. */
   sashUsed = false;
+  /** Guardian: de vorige move (Guard mag niet twee keer achter elkaar). */
+  lastMove = '';
+  /** Guard staat aan deze beurt. */
+  guarding = false;
+  /** Maximum Heat: aan het opladen, volgende beurt de duik. */
+  windup = '';
   /** Move Chip (reward): Spin Attack heeft +MOVE_CHIP_POWER power. */
   spinChip = false;
   /** Shadow: Chaos Control is gratis (na een KO). */
@@ -545,7 +578,7 @@ export class Fighter {
   costOf(m: MoveDef) { return this.isFree(m) ? 0 : m.cost ?? 0; }
   /** Boost die de move oplevert (Shadow's Spin Attack: +2). */
   gainOf(m: MoveDef) { return m.id === 'spinAttack' && this.def.spinGain ? this.def.spinGain : m.boostGain ?? 0; }
-  canUse(m: MoveDef) { return this.costOf(m) <= this.boost; }
+  canUse(m: MoveDef) { return this.costOf(m) <= this.boost && !(m.guard && this.lastMove === m.id); }
   spendBoost(m: MoveDef) {
     const cost = this.costOf(m);
     // een gratis move is daarna weer gewoon te betalen
@@ -612,6 +645,7 @@ export const MOVE_CHIP_POWER = 30;
 export function movePower(m: MoveDef, user: Fighter, target?: Fighter) {
   if (m.scaling === 'speed' && target) return speedPower(user.spd, target.spd, m.speedTable);
   if (m.scaling === 'stages') return stagesPower(m.power, user);
+  if (m.scaling === 'atk') return Math.min(STAGES_POWER_MAX, m.power + STAGES_POWER_STEP * Math.max(0, user.stage('atk')));
   if (m.id === 'spinAttack' && user.spinChip) return m.power + MOVE_CHIP_POWER;
   return m.power;
 }
@@ -719,6 +753,7 @@ export const RIVAL_REVIVE_HP = 0.5;
 export const RIVAL_REVIVE_ATK = -2;
 /** Rival klaarzetten (bij de start van de wave): schilden en zijn eigenschap. */
 export function applyRival(e: Fighter) {
+  if (e.def.rivalKit) (e as { def: FighterDef }).def = { ...e.def, ...e.def.rivalKit };
   e.segments = Math.max(e.segments, RIVAL_SHIELDS);
   e.rivalTrait = RIVAL_TRAITS[e.def.id]?.id;
   if (e.rivalTrait === 'warmedUp') e.stages.atk = Math.max(e.stages.atk, 1);

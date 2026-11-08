@@ -35,6 +35,9 @@ const EXPERIMENTS: Record<string, () => void> = {
   dodge15: () => { Battle.opts.dodge = [0.15, 0.4]; },
   // Sonic iets meer HP
   sonicHp: () => { Object.assign(FIGHTERS.sonic.base, { hp: 21 }); Object.assign(FIGHTERS.sonic.growth, { hp: 2.7, def: 1.2 }); },
+  // Knuckles (Guardian): kans om een KO te overleven
+  sash30: () => { Battle.opts.sashChance = 0.3; },
+  sash70: () => { Battle.opts.sashChance = 0.7; },
   // Knuckles overleeft geen KO meer met 1 HP
   noSash: () => { Battle.opts.noSash = true; },
   // alleen Amy steviger

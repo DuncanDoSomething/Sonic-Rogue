@@ -3,7 +3,7 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
-  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, LIFEFORM_KO_BOOST, dodgeChance, DODGE_CAP, DODGE_PER_RATIO, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH, critMult, luckyExtraChance, luckyInfo, applyRival, RIVAL_SHIELDS, RIVAL_TRAITS, rivalOptions, ironWill, chaoRevival,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, LIFEFORM_KO_BOOST, dodgeChance, DODGE_CAP, DODGE_PER_RATIO, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, chaoCareBench, isGuardian, GUARDIAN_SURVIVE_CHANCE, critMult, luckyExtraChance, luckyInfo, applyRival, RIVAL_SHIELDS, RIVAL_TRAITS, rivalOptions, ironWill, chaoRevival,
   shellHit, traitMove, chargeMult, CHARGE_MULT, spikeRecoil, poisonDamage, applyElite, regenTick, ELITE_REGEN_TOTAL, ELITE_IDS, PIGGY_MAX_DEF,
 } from '../src/data/fighters';
 import { mainBossFor, MAIN_BOSS_SHIELDS, SHADOW_BOSS_CHANCE, enemyScaling, rivalChance, rivalLevelBonus } from '../src/data/zones';
@@ -208,7 +208,7 @@ describe('moves en passives', () => {
 
   it('elke passive hoort bij het juiste character', () => {
     expect(new Fighter('sonic', 5).def.passive?.id).toBe('speedster');
-    expect(new Fighter('knuckles', 5).def.passive?.id).toBe('flinch');
+    expect(new Fighter('knuckles', 5).def.passive?.id).toBe('guardian');
     expect(new Fighter('amy', 5).def.passive?.id).toBe('luckySwing');
   });
 });
@@ -224,9 +224,11 @@ describe('nieuwe moves en ultimates', () => {
     expect(MOVES.glovePunch.stunOnce).toBe(true);   // een boss elke keer opnieuw verdoven was te sterk
     expect(MOVES.thunderShoot.stun).toEqual([3, 3]);
   });
-  it('Knuckle Punch gaat eerst; Maximum Heat maakt de stages op', () => {
+  it('Knuckle Punch gaat eerst; Maximum Heat laadt op en de duik maakt zijn ATK op', () => {
     expect(MOVES.drillPunch.priority).toBeGreaterThan(0);
-    expect(MOVES.maximumHeat.spendStages).toBe(true);
+    expect(MOVES.maximumHeat.windup).toBe('heatDive');
+    expect(MOVES.heatDive.spendAtk).toBe(true);
+    expect(MOVES.heatDive.sure).toBe(true);
   });
   it('Tornado Hammer kost Amy 50% max-HP; Hammer Twirl geneest haar 25%', () => {
     expect(MOVES.tornadoHammer.recoil).toBe(0.5);
@@ -275,7 +277,7 @@ describe('nieuwe moves en ultimates', () => {
   });
   it('alle zes characters hebben een passive', () => {
     expect(['sonic', 'tails', 'knuckles', 'amy', 'cream', 'shadow'].map(id => FIGHTERS[id].passive?.id))
-      .toEqual(['speedster', 'weakSpot', 'flinch', 'luckySwing', 'chaoCare', 'lifeform']);
+      .toEqual(['speedster', 'weakSpot', 'guardian', 'luckySwing', 'chaoCare', 'lifeform']);
   });
 });
 
@@ -292,8 +294,9 @@ describe('balans-update', () => {
     expect(MOVES.spinDash.cost).toBe(2);
     expect(MOVES.glideAttack.cost).toBe(1);
   });
-  it('Fired Up: Knuckles krijgt stat-verhogingen dubbel, verlagingen niet', () => {
+  it('Fired Up: rival-Knuckles (oude set) krijgt stat-verhogingen dubbel, verlagingen niet', () => {
     const k = new Fighter('knuckles', 10);
+    applyRival(k);
     k.raise('atk', 1); k.raise('def', -1);
     expect([k.stages.atk, k.stages.def]).toEqual([2, -1]);
     const a = new Fighter('amy', 10);
@@ -502,10 +505,40 @@ describe('Cream: Chao Blessing', () => {
   });
 });
 
+describe('Knuckles: Guardian', () => {
+  it('speler-Knuckles heeft Guard en Guardian; als rival houdt hij zijn oude set', () => {
+    const k = new Fighter('knuckles', 10);
+    expect(k.def.moves).toEqual(['spinAttack', 'guard', 'drillPunch']);
+    expect(isGuardian(k)).toBe(true);
+    const r = new Fighter('knuckles', 10);
+    applyRival(r);
+    expect(r.def.moves).toContain('glideAttack');
+    expect(r.def.passive?.id).toBe('flinch');
+    expect(FIGHTERS.knuckles.passive?.id).toBe('guardian');   // de rival verandert de speler-versie niet
+  });
+  it('Guard kan niet twee keer achter elkaar; de counter is zwak, na Guard sterk', () => {
+    const k = new Fighter('knuckles', 10);
+    k.boost = 6;
+    expect(k.canUse(MOVES.guard)).toBe(true);
+    k.lastMove = 'guard';
+    expect(k.canUse(MOVES.guard)).toBe(false);
+    expect(MOVES.counterPunch.power).toBeLessThan(MOVES.guardCounter.power);
+    expect(GUARDIAN_SURVIVE_CHANCE).toBe(0.5);
+  });
+  it('Maximum Heat-duik: +25 power per ATK-stage', () => {
+    const k = new Fighter('knuckles', 10);
+    expect(movePower(MOVES.heatDive, k)).toBe(100);
+    k.raise('atk', 4);
+    expect(movePower(MOVES.heatDive, k)).toBe(200);
+  });
+});
+
 describe('Cream: Chao Care', () => {
-  it('werkt ook vanaf de bank, maar half zo sterk', () => {
-    expect(CHAO_CARE_HEAL).toBe(0.1);
-    expect(CHAO_CARE_BENCH).toBe(0.05);
+  it('5% in het veld, vanaf de bank willekeurig 1% tot 5%', () => {
+    expect(CHAO_CARE_HEAL).toBe(0.05);
+    expect(chaoCareBench(() => 0)).toBe(0.01);
+    expect(chaoCareBench(() => 0.999)).toBe(0.05);
+    expect(chaoCareBench(() => 0.5)).toBe(0.03);
   });
 });
 

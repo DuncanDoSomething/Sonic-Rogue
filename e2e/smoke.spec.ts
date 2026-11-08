@@ -329,7 +329,38 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Amy at ATK +6: Lucky Swing can swing the same attack again, and each crit costs HP', async ({ page }) => {
+  test('Knuckles: Guard blocks and counters hard, hits raise his ATK, Maximum Heat powers up and dives', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startBattleWith(page, ['knuckles', 'tails']);
+    await setup(page, `
+      s.player.boost = 6; s.enemy.hp = 9999; s.dodgeRoll = () => 1;
+      s.pickEnemyMove = () => ({ ...window.MOVES.bodyCheck, accuracy: 1000 });
+      window.__moves = [];
+      const orig = s.doAttack.bind(s);
+      s.doAttack = (a, t, m, al, again) => { window.__moves.push(m.id); return orig(a, t, m, al, again); };
+      s.runTurn(window.MOVES.guard);`);
+    await expect.poll(async () => (await battle(page)).menu, { timeout: 20_000 }).not.toBe('command');
+    await waitForMenu(page, 'command');
+    const k = () => page.evaluate(() => { const s = (window as any).game.scene.getScene('Battle'); return { moves: (window as any).__moves, hp: s.player.hp, max: s.player.maxHp, atk: s.player.stages.atk, foeHp: s.enemy.hp, canGuard: s.player.canUse((window as any).MOVES.guard) }; });
+    let r = await k();
+    expect(r.moves).toEqual(['guard', 'bodyCheck', 'guardCounter']);   // geblokt, en hard terug
+    expect(r.hp).toBe(r.max);
+    expect(r.atk).toBe(1);
+    expect(r.foeHp).toBeLessThan(9999);
+    expect(r.canGuard).toBe(false);                                      // niet twee keer achter elkaar
+    // Maximum Heat: opladen, geraakt worden (counter + ATK), en de beurt erna vanzelf duiken
+    await setup(page, 's.player.boost = 6; window.__moves = []; s.runTurn(window.MOVES.maximumHeat);');
+    await expect.poll(async () => (await k()).moves.includes('heatDive'), { timeout: 30_000 }).toBe(true);
+    await waitForMenu(page, 'command');
+    r = await k();
+    expect(r.moves).toContain('counterPunch');                           // geraakt tijdens het opladen: zwakke counter
+    expect(r.moves.indexOf('maximumHeat')).toBeLessThan(r.moves.indexOf('heatDive'));
+    expect(r.atk).toBeLessThanOrEqual(1);                                // de duik maakte zijn ATK op (daarna kan hij weer geraakt zijn)
+    expect(errors).toEqual([]);
+  });
+
+  test('Amy at ATK +6: Lucky Swing can swing the same attack again, and crits cost her no HP', async ({ page }) => {
     const errors = trackErrors(page);
     await openGame(page);
     await startRun(page);
@@ -346,7 +377,7 @@ test.describe('Sonic Rogue smoke tests', () => {
     await waitForMenu(page, 'command');
     const r = await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { swings: (window as any).__swings, hp: b.player.hp, max: b.player.maxHp }; });
     expect(r.swings.map(([m, again]) => [m, again ?? false])).toEqual([['spinAttack', false], ['spinAttack', 'lucky']]);
-    expect(r.hp).toBe(r.max - 2 * Math.ceil(r.max * 0.05));   // twee crits, twee keer 5%
+    expect(r.hp).toBe(r.max);   // crits kosten geen HP meer
     expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').pBox.speedTag.text)).toBe('CRIT 2x +30%');
     expect(errors).toEqual([]);
   });
@@ -675,7 +706,7 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').player.boost)).toBe(2);
   });
 
-  test('Chao Care also works from the bench, but weaker (5%)', async ({ page }) => {
+  test('Chao Care also works from the bench, but weaker (1-5%, random)', async ({ page }) => {
     await openGame(page);
     await startBattleWith(page, ['sonic', 'cream']);
     await setup(page, 's.enemy.hp = 1; s.runTurn(window.MOVES.homingAttack);');
@@ -683,11 +714,11 @@ test.describe('Sonic Rogue smoke tests', () => {
     await fixReward(page);
     await press(page, 'z');
     await waitForMenu(page, 'choice');          // "Will you switch characters?"
-    await setup(page, 's.party[0].hp = 10; s.party[1].hp = 10;');
+    await setup(page, 's.party[0].hp = 10; s.party[1].hp = 10; s.careRoll = () => 0.5;');   // midden van 1-5% = 3%
     await press(page, 'ArrowDown', 'z');        // No: Sonic blijft, Cream zit op de bank
     await waitForMenu(page, 'command');
     const team = await page.evaluate(() => (window as any).game.scene.getScene('Battle').party.map((f: any) => ({ hp: f.hp, max: f.maxHp })));
-    for (const f of team) expect(f.hp).toBe(10 + Math.ceil(f.max * 0.05));
+    for (const f of team) expect(f.hp).toBe(10 + Math.ceil(f.max * 0.03));
   });
 
   test('everyone who fought in a wave gets the full EXP', async ({ page }) => {

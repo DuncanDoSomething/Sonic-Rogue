@@ -91,7 +91,7 @@ export const goodPlayer: Policy = {
       if (b.party.some(f => f.fainted) || teamHp < 0.55) return { kind: 'move', move: ult! };
     }
     // 2. kan ik hem nu zeker KO slaan? Dan de goedkoopste move die dat doet (eerst slaan als hij sneller is)
-    const kos = usable.filter(m => !m.heal && !m.teamHeal && minDamage(p, e, m, b) >= e.hp)
+    const kos = usable.filter(m => !m.heal && !m.teamHeal && !m.windup && minDamage(p, e, m, b) >= e.hp)
       .filter(m => !(m.recoil && p.hp <= Math.ceil(p.maxHp * m.recoil)));
     if (kos.length) {
       const needFirst = foeFirst && foeHit >= p.hp;
@@ -117,7 +117,7 @@ export const goodPlayer: Policy = {
     // 5. ultimate in een zwaar gevecht, of als het gevecht nog lang duurt
     if (canUlt && !ult!.teamHeal) {
       const safe = !ult!.recoil || p.hp > Math.ceil(p.maxHp * ult!.recoil) + foeHit;
-      if (safe && (hard(b) || turnsLeft > 2.5) && (p.isFree(ult!) || dmg.get(ult!)! > best * 1.4 || ult!.stun)) return { kind: 'move', move: ult! };
+      if (safe && (hard(b) || turnsLeft > 2.5) && (p.isFree(ult!) || dmg.get(ult!)! > best * (ult!.windup ? 2.2 : 1.4) || ult!.stun)) return { kind: 'move', move: ult! };
     }
     // 6. de rest: schade + wat de move later oplevert - wat de Boost waard is
     const spin = dmg.get(MOVES.spinAttack) ?? best * 0.5;
@@ -127,6 +127,8 @@ export const goodPlayer: Policy = {
       if (m.teamHeal || (m.heal && m.ally)) return -1e9;
       if (m.id === p.def.ultimate) return -1e9;
       let v = dmg.get(m)!;
+      // Guard: de klap van de vijand valt weg en de counter is sterker
+      if (m.guard) v = e.stun > 0 ? 0 : foeHit + expDamage(p, e, MOVES.guardCounter) - expDamage(p, e, MOVES.counterPunch);
       if (m.selfStages?.atk && p.stage('atk') < 4) v += best * 0.25 * (p.def.passive?.id === 'flinch' ? 2 : 1) * later;
       if (m.selfStages?.spd && p.def.id === 'sonic' && p.spd < e.spd * 4) v += best * 0.15 * later;
       if (m.selfStages?.def) v -= foeHit * 0.2 * later;

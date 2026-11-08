@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, luckyInfo, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, luckyExtraChance, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove } from '../data/fighters';
+import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, luckyInfo, isGuardian, GUARDIAN_MAX_ATK, GUARDIAN_SURVIVE_CHANCE, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, chaoCareBench, CHAO_CARE_HEAL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, luckyExtraChance, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -1007,6 +1007,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       if (!this.player.canUse(MOVES[id])) {
         audio.sfx('errorclick');
         this.cameras.main.shake(80, 0.002);
+        if (MOVES[id].guard && this.player.lastMove === id) this.flash(`${MOVES[id].name} can't be used twice in a row!`);
         return;
       }
       this.lastMove = this.cursor; this.toggleMoveInfo(false);
@@ -1034,6 +1035,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   }
 
   private openCommand(cursor = 0) {
+    // Maximum Heat: de beurt na het opladen duikt Knuckles vanzelf
+    const dive = this.player && !this.player.fainted ? this.player.windup : '';
+    if (dive && !this.enemy?.fainted) { this.player.windup = ''; void this.runTurn(MOVES[dive]); return; }
+    if (this.player) this.player.windup = '';
     this.menu = 'command';
     this.cursor = cursor;
     this.fightLayer.setVisible(false);
@@ -1407,6 +1412,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.party.forEach(f => {
       f.stun = 0; f.evade = 0; f.pierced = 0; f.poison = 0; f.frozen = false;
       for (const k of Object.keys(f.stages) as StageKey[]) f.stages[k] = Math.max(0, f.stages[k]);
+      if (isGuardian(f)) f.stages.atk = 0;   // Guardian: zijn ATK uit klappen geldt per wave
+      f.windup = ''; f.guarding = false; f.lastMove = '';
     });
     this.stunUsed.clear();
     this.itemsUsed = 0;
@@ -1536,7 +1543,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const onField = cream === this.player;
     const hurt = this.party.filter(f => !f.fainted && f.hp < f.maxHp);
     if (!hurt.length) return;
-    const heal = onField ? CHAO_CARE_HEAL : CHAO_CARE_BENCH;
+    const heal = onField ? CHAO_CARE_HEAL : chaoCareBench(this.careRoll);
     for (const f of hurt) f.hp = Math.min(f.maxHp, f.hp + Math.ceil(f.maxHp * heal));
     audio.sfx('heal1');
     this.sparkles(this.hero);
@@ -1694,6 +1701,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       await this.say(`${this.who(att)} flinched and couldn't move!`, 400);
       return;
     }
+    att.lastMove = move.id;
     // gratis gebruikt (Chaos Control / Super Barrage na een KO)? Dan geen cut-in bij een kettingreactie
     this.freeUse = att.isFree(move);
     if (att === this.player) { this.player.spendBoost(move); this.setBox(this.pBox, this.player, false); }
@@ -1790,6 +1798,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       await this.act(att, tgt, move, att === this.player ? ally : undefined);
     }
     this.flinched.clear();
+    this.player.guarding = false;
     await this.tickSuper();
 
     if (this.enemy.fainted) return this.winWave();
@@ -1799,11 +1808,13 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.openCommand();
   }
 
-  private async doAttack(att: Fighter, tgt: Fighter, move: MoveDef, ally?: Fighter, again: boolean | 'lucky' = false) {
+  private async doAttack(att: Fighter, tgt: Fighter, move: MoveDef, ally?: Fighter, again: boolean | 'lucky' | 'counter' = false) {
     const isPlayer = att === this.player;
-    await this.say(again === 'lucky' ? `Lucky Swing! ${this.who(att)} swung again!` : again ? `${this.who(att)} homed in again!` : `${this.who(att)} used ${move.name}!`, 150);
+    await this.say(again === 'counter' ? `${this.who(att)} hit back${move.power >= MOVES.guardCounter.power ? ' hard' : ''}!` : again === 'lucky' ? `Lucky Swing! ${this.who(att)} swung again!` : again ? `${this.who(att)} homed in again!` : move.id === 'heatDive' ? `${this.who(att)} dives down with Maximum Heat!` : `${this.who(att)} used ${move.name}!`, 150);
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
     if (move.charge) return this.doCharge(att);
+    if (move.guard) return this.doGuard(att);
+    if (move.windup) return this.doWindup(att, move);
     let hit = calcHit(att, tgt, move, Math.random, isPlayer ? this.critBonus : 0, this.dmgBonus);
     // status-move (Chaos Spear): raakt altijd en doet geen schade, alleen het effect
     const status = move.power === 0;
@@ -1827,12 +1838,15 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     let dodged = false;
     if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; dodged = true; }
     // Sonic Speed: hoe sneller Sonic is dan de aanvaller, hoe vaker hij ontwijkt (ultimates raken altijd)
-    else if (!hit.missed && !status && (move.cost ?? 0) < MAX_BOOST && this.dodgeRoll() < dodgeChance(tgt, att)) {
+    else if (!hit.missed && !status && !move.sure && (move.cost ?? 0) < MAX_BOOST && this.dodgeRoll() < dodgeChance(tgt, att)) {
       hit = { ...hit, missed: true, damage: 0, crit: false };
       guard = 'Sonic Speed!';
       dodged = true;
     }
     if (guard.startsWith('The shield')) audio.sfx('shield', { volume: 0.6 });
+    // Guard (Knuckles): de klap wordt helemaal geblokt
+    let blocked = false;
+    if (tgt.guarding && !hit.missed && !status) { tgt.guarding = false; blocked = true; guard = ''; hit = { ...hit, damage: 0, crit: false }; }
     // ontwijken: op het moment van de klap schiet hij weg (zie dodgeFx)
     let dodgeAnim: Promise<void> | undefined;
     const dodgeSpr = isPlayer ? this.foe : this.hero;
@@ -1845,6 +1859,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       if (hit.missed || struck) return;
       struck = true;
       if (status) { this.hitFlash(isPlayer ? this.foe : this.hero); return; }
+      if (blocked) { this.blockFx(isPlayer ? this.foe : this.hero); return; }
       // Hard Shell / Shell Up: de schelp vangt de helft op
       const shell = shellHit(tgt, hit.damage);
       if (shell.cracked) { hit = { ...hit, damage: shell.damage }; shellCracked = true; }
@@ -1854,7 +1869,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       const hpBefore = tgt.hp;
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
       dealt = hpBefore - tgt.hp;
-      // Iron Fists: één keer per zone met 1 HP blijven staan, als hij vóór de klap meer dan de helft had
+      // Guardian (Knuckles): één keer per zone een kans om met 1 HP te blijven staan
+      if (tgt.hp === 0 && isGuardian(tgt) && !tgt.sashUsed && this.surviveRoll() < GUARDIAN_SURVIVE_CHANCE) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
+      // Iron Fists (oude Knuckles): één keer per zone met 1 HP blijven staan, als hij vóór de klap meer dan de helft had
       if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed && hpBefore > tgt.maxHp * SASH_MIN_HP) { tgt.hp = 1; tgt.sashUsed = true; hungOn = true; }
       // Iron Will (rival-Knuckles): één keer op 1 HP, hoeveel HP hij ook had
       if (ironWill(tgt)) { hungOn = true; ironWilled = true; }
@@ -1895,7 +1912,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     else if (this.charFoe) await this.charAttack(this.foe, this.enemy, this.hero, this.foeHome, -1, move, strike, hit.missed);
     else await this.foeAttack(move, strike, hit.missed);
 
-    if (!isPlayer && !hit.missed) { await this.wait(350); if (!this.player.fainted) this.hero.play(this.player.anim('idle')); }
+    if (!isPlayer && !hit.missed && !blocked) { await this.wait(350); if (!this.player.fainted) this.hero.play(this.player.anim('idle')); }
+    if (blocked) await this.say(`${this.who(tgt)} blocked the attack!`, 350);
     if (isPlayer && (this.charFoe || this.anims.exists(this.enemy.anim('hurt'))) && !hit.missed) { await this.wait(350); if (!this.enemy.fainted) this.foe.play(this.enemy.anim('idle')); }
     this.setActionSpeed(null);
     if (hit.missed) {
@@ -1908,7 +1926,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       await this.say(guard ? `${guard} ${tgt.name} avoided the attack!` : `${tgt.name} avoided the attack!`, 400);
     }
     if (shellCracked) await this.say(`${this.who(tgt)}'s shell took half the damage!`, 350);
-    if (this.chargedHit && !hit.missed) await this.say(chargeMult(att) >= 2 ? 'The charged attack hit twice as hard!' : 'The charged attack hit extra hard!', 350);
+    if (this.chargedHit && !hit.missed && !blocked) await this.say(chargeMult(att) >= 2 ? 'The charged attack hit twice as hard!' : 'The charged attack hit extra hard!', 350);
     else if (this.chargedHit) await this.say(`${this.who(att)} wasted its charge!`, 350);
     if (shieldsBroken) {
       audio.sfx('monitorbreak', { volume: 0.7 });
@@ -1930,6 +1948,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       this.popNumber(this.hero.x, this.hero.y - this.bodyHeight(this.hero) - 4, `-${spikes}`, '#ff9a9a');
       await this.setBox(this.pBox, att, true);
       await this.say(`${att.name} got hurt by the spikes! (-${spikes})`, 350);
+    }
+    if (move.spendAtk && att.stages.atk !== 0) {
+      att.stages.atk = 0;
+      this.statArrows(isPlayer ? this.hero : this.foe, false);
+      await this.say(`${att.name} burned up his ATK!`, 400);
     }
     if (move.spendStages && Object.values(att.stages).some(v => v !== 0)) {
       att.stages = { atk: 0, def: 0, spd: 0, acc: 0 };
@@ -2007,17 +2030,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
         await this.say(`${tgt.name} was frozen solid!`, 450);
       }
       if (guard) await this.say(guard, 350);
-      if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (${ironWilled ? 'Iron Will' : 'Iron Fists'})`, 500);
-      // Lucky Swing (Amy): elke crit kost haar 5% max-HP, maar ze gaat er zelf nooit van KO
-      if (hit.crit && att.def.passive?.id === 'luckySwing' && !move.recoil && !move.selfHeal && !att.fainted) {
-        const cost = Math.min(att.hp - 1, Math.ceil(att.maxHp * CRIT_RECOIL));
-        if (cost > 0) {
-          att.hp -= cost;
-          this.hitFlash(isPlayer ? this.hero : this.foe);
-          await this.setBox(isPlayer ? this.pBox : this.eBox, att, true);
-          await this.say(`${this.who(att)} lost ${cost} HP from the swing!`, 300);
-        }
-      }
+      if (hungOn) await this.say(`${this.who(tgt)} hung on with 1 HP! (${ironWilled ? 'Iron Will' : tgt.def.passive?.name ?? 'Iron Fists'})`, 500);
       // Iron Fists (Knuckles): kans dat het doelwit zijn beurt verliest
       if (att.def.passive?.id === 'flinch' && !tgt.fainted && Math.random() < FLINCH_CHANCE) this.flinched.add(tgt);
       // verdoven (Glove Punch één keer per gevecht, Thunder Shoot altijd)
@@ -2063,6 +2076,14 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       await this.say(`${att.name} has Super power! 100% crit, but he takes double damage for ${move.superTurns} turns (this one included).`, 450);
     }
     await this.shadowAfter(att, tgt, move, isPlayer);
+    // Guardian (Knuckles): geraakt (of geblokt) = +1 ATK voor deze wave, en meteen terugslaan
+    if (isGuardian(tgt) && !move.counter && !status && !hit.missed && !tgt.fainted && !att.fainted && !this.enemy.fainted) {
+      if (tgt.stage('atk') < GUARDIAN_MAX_ATK) await this.changeStage(tgt, 'atk', 1, 'Guardian! ');
+      const saved = [this.dmgBonus, this.critBonus, this.chargedHit] as const;
+      this.dmgBonus = 1; this.critBonus = 0; this.chargedHit = false;
+      await this.doAttack(tgt, att, MOVES[blocked ? 'guardCounter' : 'counterPunch'], undefined, 'counter');
+      [this.dmgBonus, this.critBonus, this.chargedHit] = saved;
+    }
   }
 
   /**
@@ -3102,6 +3123,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (resetStages) prev.stages = { ...emptyStages(), atk: prev.def.passive?.id === 'luckySwing' && !prev.fainted ? prev.stages.atk : 0 };
     prev.stun = 0;
     prev.frozen = false;
+    prev.windup = '';
+    prev.guarding = false;
     if (!prev.fainted) {
       await this.say(`Come back, ${prev.name}!`, 150);
       await this.tween({ targets: this.hero, x: -60, alpha: 0, duration: 220, ease: 'Quad.easeIn' });
@@ -3385,6 +3408,51 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   }
 
   /** Copter Octo laadt op: gloed, vonkjes die naar hem toe trekken, en het "!" erboven. */
+  /** Guard (Knuckles): de volgende klap deze beurt wordt geblokt en hard teruggegeven. */
+  private async doGuard(att: Fighter) {
+    att.guarding = true;
+    const spr = att === this.player ? this.hero : this.foe;
+    this.guardFx(spr);
+    await this.wait(350);
+    await this.say(`${this.who(att)} raised his fists and is on guard!`, 400);
+  }
+  private guardFx(spr: Phaser.GameObjects.Sprite) {
+    audio.sfx('shield', { volume: 0.6 });
+    const c = this.center(spr);
+    const ring = this.add.graphics().setDepth(spr.depth + 1).setBlendMode(Phaser.BlendModes.ADD);
+    ring.lineStyle(3, 0xff6a5a, 1).strokeCircle(0, 0, 30);
+    ring.lineStyle(1, 0xffd23a, 1).strokeCircle(0, 0, 34);
+    ring.setPosition(c.x, c.y).setScale(0.4).setAlpha(0);
+    this.tweens.add({ targets: ring, scale: 1, alpha: 1, duration: 200, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: ring, alpha: 0, delay: 650, duration: 250, onComplete: () => ring.destroy() });
+    spr.setTint(0xffb0a0);
+    this.time.delayedCall(220, () => spr.clearTint());
+  }
+  /** Een geblokte klap: rood schild-flitsje en BLOCK in plaats van een getal. */
+  private blockFx(spr: Phaser.GameObjects.Sprite) {
+    audio.sfx('shield', { volume: 0.7 });
+    const c = this.center(spr);
+    this.burst(c.x, c.y, 0xff6a5a, 12);
+    shockwave(this, c.x, c.y, 0xff9a8a, 30, 220);
+    this.popNumber(spr.x, spr.y - this.bodyHeight(spr) - 4, 'BLOCK', '#ff9a8a');
+    this.cameras.main.shake(80, 0.003);
+  }
+  /** Maximum Heat (Knuckles): een beurt opladen; de beurt erna duikt hij vanzelf. */
+  private async doWindup(att: Fighter, move: MoveDef) {
+    if (att === this.player) await cutIn(this, att.def.id, move.name);
+    att.windup = move.windup!;
+    const spr = att === this.player ? this.hero : this.foe;
+    this.chargeFx(spr);
+    spr.setTint(0xffa060);
+    this.time.delayedCall(500, () => spr.clearTint());
+    await this.wait(450);
+    await this.say(`${this.who(att)} is powering up! Every hit he takes now makes the dive stronger.`, 500);
+  }
+  /** Dobbelsteen voor Chao Care vanaf de bank (1-5%; de tests zetten hem vast). */
+  private careRoll = () => Math.random();
+  /** Dobbelsteen voor Guardian's KO-overleven (de tests zetten hem vast). */
+  private surviveRoll = () => Math.random();
+
   private async doCharge(att: Fighter) {
     const spr = att === this.player ? this.hero : this.foe;
     this.chargeFx(spr);
@@ -3408,7 +3476,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /**
    * Passive-tabje boven de HP-box, bijgewerkt zodra er iets verandert:
-   * Sonic Speed "SPEED +38%", Lucky Swing "CRIT 39%" / "CRIT 100%" / "CRIT 2x" / "CRIT 2x +30%".
+   * Sonic Speed "SPEED +38%", Lucky Swing (vanaf ATK +2) "CRIT 100%" / "CRIT 2x" / "CRIT 2x +30%".
    */
   private speedTagText = '';
   private updateSpeedTag() {
@@ -3418,7 +3486,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const live = !!p && !!e && !e.fainted && !!this.foe?.visible;
     let text = '', color = 0x6ad8ff;
     const l = live ? luckyInfo(p!) : null;
-    if (l) {
+    if (l && l.crit >= 1) {   // pas vanaf ATK +2 (altijd crit)
       text = l.mult > 1.5 ? `CRIT ${l.mult}x${l.extra ? ` +${Math.round(l.extra * 100)}%` : ''}` : `CRIT ${Math.round(l.crit * 100)}%`;
       color = 0xff8ac8;
     } else if (live && p!.def.passive?.id === 'speedster') {

@@ -7,10 +7,10 @@
 // De keuzes van de speler (welke move, wie erin, welke reward) maakt een `Policy` (zie policy.ts).
 // ---------------------------------------------------------------------------
 import {
-  BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, FIGHTER_TYPES, FLINCH_CHANCE,
+  BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, BOSS_REVIVE_HP, chaoCareBench, CHAO_CARE_HEAL, FIGHTER_TYPES, FLINCH_CHANCE,
   Fighter, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MOVES, MoveDef, LIFEFORM_KO_BOOST, RIVAL_HEROES, SASH_MIN_HP, dodgeChance, StageKey, ULT_CHAIN_MAX,
   benchExpRate, calcHit, emptyStages, expShareAfter, shieldCap,
-  CHARGE_MULT, chargeMult, luckyExtraChance, ELITE_IDS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, type EliteId, PIGGY_MAX_DEF, regenTick, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove,
+  CHARGE_MULT, chargeMult, luckyExtraChance, isGuardian, GUARDIAN_MAX_ATK, GUARDIAN_SURVIVE_CHANCE, ELITE_IDS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, type EliteId, PIGGY_MAX_DEF, regenTick, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove,
 } from '../src/data/fighters';
 import {
   EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZoneEffect,
@@ -112,7 +112,7 @@ export class Battle {
   log: RunLog;
 
   /** Experimenten met regels die niet in src/data staan (zie run.ts --exp). */
-  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number]; noTraits?: boolean; noEliteTraits?: boolean; tankNoShell?: boolean; extraMult?: number; oldRivals?: boolean; rivalElite?: EliteId; rivalShields?: number; noRivalTraits?: boolean; onlyTrait?: string; noRivalLevel?: boolean; lateRivalMult?: number } = {};
+  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number]; noTraits?: boolean; noEliteTraits?: boolean; tankNoShell?: boolean; extraMult?: number; oldRivals?: boolean; rivalElite?: EliteId; rivalShields?: number; noRivalTraits?: boolean; onlyTrait?: string; noRivalLevel?: boolean; lateRivalMult?: number; guardMax?: number; sashChance?: number } = {};
 
   constructor(partyIds: string[], private policy: Policy, seed: number, private maxWave = 200) {
     this.rng = seeded(seed);
@@ -150,8 +150,9 @@ export class Battle {
   // ------------------------------------------------------------------ wave
   private startWave() {
     this.party.forEach(f => {
-      f.stun = 0; f.evade = 0; f.pierced = 0; f.poison = 0; f.frozen = false;
+      f.stun = 0; f.evade = 0; f.pierced = 0; f.poison = 0; f.frozen = false; f.windup = ''; f.guarding = false; f.lastMove = '';
       for (const k of Object.keys(f.stages) as StageKey[]) f.stages[k] = Math.max(0, f.stages[k]);
+      if (isGuardian(f)) f.stages.atk = 0;   // Guardian: zijn ATK geldt per wave
     });
     this.stunUsed.clear();
     this.itemsUsed = 0;
@@ -219,7 +220,7 @@ export class Battle {
   private chaoCare() {
     const cream = this.party.find(f => f.def.passive?.id === 'chaoCare' && !f.fainted);
     if (!cream) return;
-    const heal = cream === this.player ? CHAO_CARE_HEAL : CHAO_CARE_BENCH;
+    const heal = cream === this.player ? CHAO_CARE_HEAL : chaoCareBench(this.rng);
     for (const f of this.party) if (!f.fainted && f.hp < f.maxHp) f.hp = Math.min(f.maxHp, f.hp + Math.ceil(f.maxHp * heal));
   }
 
@@ -254,7 +255,10 @@ export class Battle {
           this.log.itemsUsed++;
         }
       }
-      const a = this.policy.action(this);
+      // Maximum Heat: de beurt na het opladen gaat de duik vanzelf
+      const dive = this.player.windup;
+      this.player.windup = '';
+      const a: Action = dive ? { kind: 'move', move: MOVES[dive] } : this.policy.action(this);
       if (a.kind === 'switch') {
         this.stat(this.player).switches++;
         this.switchTo(a.to);
@@ -334,6 +338,7 @@ export class Battle {
       this.act(att, tgt, move, att === this.player ? ally : undefined);
     }
     this.flinched.clear();
+    this.player.guarding = false;
     this.tickSuper();
   }
 
@@ -341,6 +346,7 @@ export class Battle {
     if (att === this.player) this.stat(att).turns++;
     if (att.stun > 0) { att.stun--; if (att.stun === 0) att.frozen = false; return; }
     if (this.flinched.has(att)) return;
+    att.lastMove = move.id;
     const freeUse = att.isFree(move);
     if (att === this.player) {
       const mv = this.stat(att).moves;
@@ -374,6 +380,8 @@ export class Battle {
     const isPlayer = att === this.player;
     if (move.heal || move.teamHeal) return this.doHeal(att, move, ally ?? att);
     if (move.charge) { att.charged = true; return; }
+    if (move.guard) { att.guarding = true; return; }
+    if (move.windup) { att.windup = move.windup; return; }
     let hit = calcHit(att, tgt, move, this.rng, isPlayer ? critBonus : 0, dmgBonus);
     const status = move.power === 0;
     if (status) hit = { damage: 0, crit: false, missed: false, effect: 1 };
@@ -387,7 +395,10 @@ export class Battle {
       }
     }
     if (tgt.evade > 0) { tgt.evade--; hit = { ...hit, missed: true, damage: 0, crit: false }; }
-    else if (!hit.missed && !status && (move.cost ?? 0) < MAX_BOOST && this.rng() < this.dodge(tgt, att)) hit = { ...hit, missed: true, damage: 0, crit: false };
+    else if (!hit.missed && !status && !move.sure && (move.cost ?? 0) < MAX_BOOST && this.rng() < this.dodge(tgt, att)) hit = { ...hit, missed: true, damage: 0, crit: false };
+    // Guard (Knuckles): de klap wordt helemaal geblokt
+    let blocked = false;
+    if (tgt.guarding && !hit.missed && !status) { tgt.guarding = false; blocked = true; hit = { ...hit, damage: 0, crit: false }; }
     // strike
     let broken = 0;
     let dealt = 0;
@@ -398,7 +409,7 @@ export class Battle {
       broken = cap.broken;
       const before = tgt.hp;
       tgt.hp = Math.max(0, tgt.hp - hit.damage);
-      if (tgt.hp === 0 && tgt.def.passive?.id === 'flinch' && !tgt.sashUsed && !Battle.opts.noSash && before > tgt.maxHp * (Battle.opts.sashMin ?? SASH_MIN_HP)) { tgt.hp = 1; tgt.sashUsed = true; }
+      if (tgt.hp === 0 && !tgt.sashUsed && !Battle.opts.noSash && ((isGuardian(tgt) && this.rng() < (Battle.opts.sashChance ?? GUARDIAN_SURVIVE_CHANCE)) || (tgt.def.passive?.id === 'flinch' && before > tgt.maxHp * (Battle.opts.sashMin ?? SASH_MIN_HP)))) { tgt.hp = 1; tgt.sashUsed = true; }
       ironWill(tgt);
       dealt = before - tgt.hp;
       if (isPlayer) {
@@ -412,6 +423,7 @@ export class Battle {
     if (broken && tgt.def.trait === 'shellUp' && !tgt.fainted && !Battle.opts.noTraits) { tgt.shell = !Battle.opts.tankNoShell; tgt.charged = true; }
     if (isPlayer && !Battle.opts.noTraits) att.hp -= spikeRecoil(tgt, att, dealt);
     if (move.spendStages) att.stages = emptyStages();
+    if (move.spendAtk) att.stages.atk = 0;
     if (move.recoil && !att.fainted) {
       att.hp = Math.max(0, att.hp - Math.ceil(att.maxHp * move.recoil));
       if (att.fainted && isPlayer) this.stat(att).downs++;
@@ -431,10 +443,6 @@ export class Battle {
         tgt.stun = Math.max(tgt.stun, 1);
         tgt.frozen = true;
       }
-      if (hit.crit && att.def.passive?.id === 'luckySwing' && !move.recoil && !move.selfHeal && !att.fainted) {
-        const cost = Math.min(att.hp - 1, Math.ceil(att.maxHp * CRIT_RECOIL));
-        if (cost > 0) att.hp -= cost;
-      }
       if (att.def.passive?.id === 'flinch' && !tgt.fainted && this.rng() < FLINCH_CHANCE) this.flinched.add(tgt);
       const stunKey = isPlayer ? `p:${move.id}` : 'e:any';
       const once = move.stunOnce || !isPlayer;
@@ -452,6 +460,12 @@ export class Battle {
     }
     if (move.superTurns && !att.fainted && att.superTurns <= 0) att.superTurns = move.superTurns;
     this.shadowAfter(att, tgt, move, freeUse);
+    // Guardian (Knuckles): geraakt (of geblokt) = +1 ATK en meteen terugslaan
+    if (isGuardian(tgt) && !move.counter && !status && !hit.missed && !tgt.fainted && !att.fainted) {
+      if (tgt.stage('atk') < (Battle.opts.guardMax ?? GUARDIAN_MAX_ATK)) tgt.raise('atk', 1);
+      const cm = MOVES[blocked ? 'guardCounter' : 'counterPunch'];
+      if (cm.power > 0) this.doAttack(tgt, att, cm, undefined, 0, 1, false);
+    }
   }
 
   private dodge(tgt: Fighter, att: Fighter) {
@@ -518,6 +532,8 @@ export class Battle {
     if (resetStages) prev.stages = { ...emptyStages(), atk: prev.def.passive?.id === 'luckySwing' && !prev.fainted ? prev.stages.atk : 0 };
     prev.stun = 0;
     prev.frozen = false;
+    prev.windup = '';
+    prev.guarding = false;
     this.player = next;
   }
 
