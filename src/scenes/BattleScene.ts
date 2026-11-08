@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, luckyExtraChance, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove } from '../data/fighters';
+import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, luckyInfo, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, CHAO_CARE_BENCH, CHAO_CARE_HEAL, CRIT_RECOIL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, luckyExtraChance, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove } from '../data/fighters';
 import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
@@ -586,14 +586,24 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       box.badge.on('pointerdown', () => { if (this.hudTip) this.hideHudTip(); else show(); });
     }
     if (isPlayer) {
-      // Sonic Speed: hoeveel extra schade hij nu doet (tabje boven de box, alleen als het er is)
+      // Passive-tabje boven de box, alleen als het iets doet: Sonic Speed (extra schade) en Lucky Swing (Amy's crits)
       box.speedTagBg = this.add.graphics();
       box.speedTag = this.add.text(w - 10, -11, '', { fontFamily: FONT, fontSize: '8px', color: '#6ad8ff' }).setOrigin(1, 0);
       root.add([box.speedTagBg, box.speedTag]);
       box.speedTag.setInteractive({ useHandCursor: true });
       const showSpeed = () => {
         const p = this.player, e = this.enemy;
-        if (!p || !e || p.def.passive?.id !== 'speedster') return;
+        if (!p || !e) return;
+        const l = luckyInfo(p);
+        if (l) {
+          const parts = [`${Math.round(l.crit * 100)}% crit chance`];
+          if (l.mult > 1.5) parts.push(`crits do ${l.mult}x`);
+          if (l.extra) parts.push(`${Math.round(l.extra * 100)}% chance to swing again`);
+          const next = l.next ? ` At ATK +${l.next.at}: ${l.next.what}.` : '';
+          this.showHudTip(root.x + w - 6, root.y - 72, 'LUCKY SWING', `ATK +${l.atk}: ${parts.join(', ')}.${next}`, true);
+          return;
+        }
+        if (p.def.passive?.id !== 'speedster') return;
         const dmg = Math.round((speedBonus(p, e) - 1) * 100), dodge = Math.round(dodgeChance(p, e) * 100);
         this.showHudTip(root.x + w - 6, root.y - 72, 'SONIC SPEED',
           `${p.name} is ${(p.spd / Math.max(1, e.spd)).toFixed(1)}x as fast as ${e.name}: +${dmg}% damage and ${dodge}% dodge chance.`, true);
@@ -3396,24 +3406,35 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.time.delayedCall(380, () => shockwave(this, c.x, c.y, 0xff9a3a, 38, 260));
   }
 
-  /** Sonic Speed-tabje: "SPEED +38%", bijgewerkt zodra de snelheden veranderen. */
+  /**
+   * Passive-tabje boven de HP-box, bijgewerkt zodra er iets verandert:
+   * Sonic Speed "SPEED +38%", Lucky Swing "CRIT 39%" / "CRIT 100%" / "CRIT 2x" / "CRIT 2x +30%".
+   */
   private speedTagText = '';
   private updateSpeedTag() {
     const tag = this.pBox?.speedTag;
     if (!tag) return;
     const p = this.player, e = this.enemy;
-    const bonus = p && e && !e.fainted && p.def.passive?.id === 'speedster' && this.foe?.visible ? Math.round((speedBonus(p, e) - 1) * 100) : 0;
-    const text = bonus > 0 ? `SPEED +${bonus}%` : '';
+    const live = !!p && !!e && !e.fainted && !!this.foe?.visible;
+    let text = '', color = 0x6ad8ff;
+    const l = live ? luckyInfo(p!) : null;
+    if (l) {
+      text = l.mult > 1.5 ? `CRIT ${l.mult}x${l.extra ? ` +${Math.round(l.extra * 100)}%` : ''}` : `CRIT ${Math.round(l.crit * 100)}%`;
+      color = 0xff8ac8;
+    } else if (live && p!.def.passive?.id === 'speedster') {
+      const bonus = Math.round((speedBonus(p!, e!) - 1) * 100);
+      if (bonus > 0) text = `SPEED +${bonus}%`;
+    }
     if (text === this.speedTagText) return;
     this.speedTagText = text;
-    tag.setText(text);
+    tag.setText(text).setColor(`#${color.toString(16)}`);
     const g = this.pBox.speedTagBg!;
     g.clear();
     if (!text) return;
     const bw = tag.width + 8;
     g.fillStyle(HUD.outline, 0.95).fillRoundedRect(tag.x - bw + 4, tag.y - 2, bw, 12, 3);
     g.fillStyle(HUD.blueBottom, 0.95).fillRect(tag.x - bw + 5, tag.y - 1, bw - 2, 10);
-    g.lineStyle(1, 0x6ad8ff).strokeRect(tag.x - bw + 5.5, tag.y - 0.5, bw - 3, 9);
+    g.lineStyle(1, color).strokeRect(tag.x - bw + 5.5, tag.y - 0.5, bw - 3, 9);
   }
 
   /** "!" boven een opgeladen vijand, zodat je ziet dat er een dubbele klap aankomt. */

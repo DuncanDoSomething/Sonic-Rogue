@@ -192,6 +192,16 @@ export function critChance(attacker: Fighter) {
   if (atk >= LUCKY_SURE_STAGE) return 1;
   return Math.min(1, BASE_CRIT + LUCKY_PER_STAGE * Math.max(0, atk));
 }
+/** Waar Amy nu staat met Lucky Swing (voor het tabje boven haar HP-box), of null als het niks doet. */
+export function luckyInfo(f: Fighter) {
+  if (!lucky(f)) return null;
+  const atk = f.stage('atk');
+  if (atk <= 0) return null;
+  const next = atk < LUCKY_SURE_STAGE ? { at: LUCKY_SURE_STAGE, what: 'she always crits' }
+    : atk < LUCKY_DOUBLE_STAGE ? { at: LUCKY_DOUBLE_STAGE, what: `her crits do ${LUCKY_MAX_CRIT}x` }
+    : atk < LUCKY_EXTRA_STAGE ? { at: LUCKY_EXTRA_STAGE, what: `${Math.round(LUCKY_EXTRA_CHANCE * 100)}% chance to swing again` } : null;
+  return { atk, crit: critChance(f), mult: critMult(f), extra: atk >= LUCKY_EXTRA_STAGE ? LUCKY_EXTRA_CHANCE : 0, next };
+}
 /** Lucky Swing bij ATK +6: kans dat Amy nog een keer aanvalt met dezelfde move (niet met haar ultimate). */
 export function luckyExtraChance(attacker: Fighter, move: MoveDef) {
   if (!lucky(attacker) || attacker.stage('atk') < LUCKY_EXTRA_STAGE) return 0;

@@ -3,7 +3,7 @@ import {
   Fighter, MAX_BOOST, MAX_STAGE, MOVES, START_BOOST, ULTIMATE_LEVEL,
   calcHit, stageMultiplier, typeMultiplier, TYPE_STRONG, TYPE_WEAK, speedPower, movePower,
   speedBonus, critChance, BASE_CRIT, stagesPower, STAGES_POWER_MAX, WEAK_SPOT_BONUS, FIGHTERS,
-  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, LIFEFORM_KO_BOOST, dodgeChance, DODGE_CAP, DODGE_PER_RATIO, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH, critMult, luckyExtraChance, applyRival, RIVAL_SHIELDS, RIVAL_TRAITS, rivalOptions, ironWill, chaoRevival,
+  PIERCE_BONUS, SUPER_VULNERABLE, HEROES, RIVAL_HEROES, ULT_CHAIN_MAX, LIFEFORM_KO_BOOST, dodgeChance, DODGE_CAP, DODGE_PER_RATIO, shieldCap, benchExpRate, BLESS_BONUS, CHAO_CARE_HEAL, CHAO_CARE_BENCH, critMult, luckyExtraChance, luckyInfo, applyRival, RIVAL_SHIELDS, RIVAL_TRAITS, rivalOptions, ironWill, chaoRevival,
   shellHit, traitMove, chargeMult, CHARGE_MULT, spikeRecoil, poisonDamage, applyElite, regenTick, ELITE_REGEN_TOTAL, ELITE_IDS, PIGGY_MAX_DEF,
 } from '../src/data/fighters';
 import { mainBossFor, MAIN_BOSS_SHIELDS, SHADOW_BOSS_CHANCE, enemyScaling, rivalChance, rivalLevelBonus } from '../src/data/zones';
@@ -178,6 +178,18 @@ describe('moves en passives', () => {
     expect(luckyExtraChance(amy, MOVES.hammerSmash)).toBe(0.3);
     expect(luckyExtraChance(amy, MOVES.tornadoHammer)).toBe(0);   // niet met haar ultimate
     expect(luckyExtraChance(new Fighter('knuckles', 10), MOVES.spinAttack)).toBe(0);
+  });
+
+  it('Lucky Swing-tabje: niks op +0, daarna crit-kans, 2x en de extra klap, met de volgende trede', () => {
+    const amy = new Fighter('amy', 10);
+    expect(luckyInfo(amy)).toBeNull();
+    amy.raise('atk');
+    expect(luckyInfo(amy)).toMatchObject({ atk: 1, mult: 1.5, extra: 0, next: { at: 2 } });
+    amy.raise('atk'); amy.raise('atk'); amy.raise('atk');
+    expect(luckyInfo(amy)).toMatchObject({ atk: 4, crit: 1, mult: 2, extra: 0, next: { at: 6 } });
+    amy.raise('atk'); amy.raise('atk');
+    expect(luckyInfo(amy)).toMatchObject({ atk: 6, extra: 0.3, next: null });
+    expect(luckyInfo(new Fighter('sonic', 10))).toBeNull();
     const sonic = new Fighter('sonic', 10); for (let i = 0; i < 6; i++) sonic.raise('atk');
     expect(critChance(sonic)).toBe(BASE_CRIT);
     expect(critMult(sonic)).toBe(1.5);

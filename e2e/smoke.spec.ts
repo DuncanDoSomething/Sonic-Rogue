@@ -347,6 +347,7 @@ test.describe('Sonic Rogue smoke tests', () => {
     const r = await page.evaluate(() => { const b = (window as any).game.scene.getScene('Battle'); return { swings: (window as any).__swings, hp: b.player.hp, max: b.player.maxHp }; });
     expect(r.swings.map(([m, again]) => [m, again ?? false])).toEqual([['spinAttack', false], ['spinAttack', 'lucky']]);
     expect(r.hp).toBe(r.max - 2 * Math.ceil(r.max * 0.05));   // twee crits, twee keer 5%
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').pBox.speedTag.text)).toBe('CRIT 2x +30%');
     expect(errors).toEqual([]);
   });
 
