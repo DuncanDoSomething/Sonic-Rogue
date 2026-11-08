@@ -37,6 +37,11 @@ const EXPERIMENTS: Record<string, () => void> = {
   sonicHp: () => { Object.assign(FIGHTERS.sonic.base, { hp: 21 }); Object.assign(FIGHTERS.sonic.growth, { hp: 2.7, def: 1.2 }); },
   // Knuckles (Guardian): kans om een KO te overleven
   sash30: () => { Battle.opts.sashChance = 0.3; },
+  b1: () => { Battle.opts.badnikHp = 1; Battle.opts.badnikAtk = 1; },
+  h16: () => { Battle.opts.badnikHp = 1.6; Battle.opts.badnikAtk = 1; },
+  h14a11: () => { Battle.opts.badnikHp = 1.4; Battle.opts.badnikAtk = 1.1; },
+  b18: () => { Battle.opts.badnikHp = 1.8; Battle.opts.badnikAtk = 1.4; },
+  b2: () => { Battle.opts.badnikHp = 2; Battle.opts.badnikAtk = 1.5; },
   sash70: () => { Battle.opts.sashChance = 0.7; },
   // Knuckles overleeft geen KO meer met 1 HP
   noSash: () => { Battle.opts.noSash = true; },

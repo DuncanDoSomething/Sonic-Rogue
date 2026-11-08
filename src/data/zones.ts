@@ -39,14 +39,14 @@ export interface ZoneDef {
 /** Alle zones in hun vaste volgorde (oude saves zonder `zoneOrder` gebruiken die nog). */
 export const ZONES: ZoneDef[] = [
   { id: 'route99', name: 'Route 99', backdrop: 'route99', enemies: ['beetle', 'sharkjet', 'octo'], boss: 'turtle' },
-  { id: 'leafforest', name: 'Leaf Forest', backdrop: 'leafforest', enemies: ['frog', 'bee', 'beetle'], boss: 'turtle' },
-  { id: 'sunset', name: 'Sunset Hill', backdrop: 'sunset', enemies: ['frog', 'bee', 'beetle'], boss: 'turtle' },
-  { id: 'hotcrater', name: 'Hot Crater', backdrop: 'hotcrater', enemies: ['mine', 'octo', 'beetle'], boss: 'turtle', effect: EFFECTS.heat },
-  { id: 'toy', name: 'Toy Kingdom', backdrop: 'toy', enemies: ['pig', 'soldier', 'beetle'], boss: 'turtle', effect: EFFECTS.joy },
-  { id: 'musicplant', name: 'Music Plant', backdrop: 'musicplant', enemies: ['soldier', 'bee', 'pig'], boss: 'turtle', effect: EFFECTS.joy },
+  { id: 'leafforest', name: 'Leaf Forest', backdrop: 'leafforest', enemies: ['frog', 'bee', 'kiki'], boss: 'turtle' },
+  { id: 'sunset', name: 'Sunset Hill', backdrop: 'sunset', enemies: ['frog', 'slot', 'mirror'], boss: 'turtle' },
+  { id: 'hotcrater', name: 'Hot Crater', backdrop: 'hotcrater', enemies: ['mine', 'octo', 'kiki'], boss: 'turtle', effect: EFFECTS.heat },
+  { id: 'toy', name: 'Toy Kingdom', backdrop: 'toy', enemies: ['pig', 'soldier', 'slot'], boss: 'turtle', effect: EFFECTS.joy },
+  { id: 'musicplant', name: 'Music Plant', backdrop: 'musicplant', enemies: ['soldier', 'mirror', 'pig'], boss: 'turtle', effect: EFFECTS.joy },
   { id: 'twinkle', name: 'Twinkle Snow', backdrop: 'twinkle', enemies: ['penguin', 'snowman', 'mine'], boss: 'turtle', effect: EFFECTS.freezing },
   { id: 'iceparadise', name: 'Ice Paradise', backdrop: 'iceparadise', enemies: ['penguin', 'snowman', 'sharkjet'], boss: 'turtle', effect: EFFECTS.freezing },
-  { id: 'skycanyon', name: 'Sky Canyon', backdrop: 'skycanyon', enemies: ['sharkjet', 'bee', 'octo'], boss: 'turtle', effect: EFFECTS.clouds },
+  { id: 'skycanyon', name: 'Sky Canyon', backdrop: 'skycanyon', enemies: ['sharkjet', 'slot', 'octo'], boss: 'turtle', effect: EFFECTS.clouds },
 ];
 
 export const EMERALDS = ['red', 'blue', 'yellow', 'green', 'white', 'cyan', 'purple'] as const;
@@ -100,6 +100,17 @@ export function mainBossFor(_wave: number, party: string[] = [], rng: () => numb
 }
 /** Vijanden (behalve rivals) worden vanaf de derde zone elke zone zoveel sterker (HP, ATK, DEF). */
 export const ENEMY_ZONE_SCALING = 0.08;
+/**
+ * Badniks (gewone waves en elites, geen bosses) hebben extra HP en ATK, zodat ze geen voer zijn.
+ * Moe koos "heel zwaar". De schalen uit de sim (150 runs per team, nov 2026), voor als we willen bijstellen:
+ *   HP 1x   ATK 1x    -> 3,2 beurten, 6,0% HP-verlies per gevecht, gem. wave 86
+ *   HP 1,4x ATK 1,1x  -> 3,9 beurten, 7,5%, gem. wave 73 (midden)
+ *   HP 1,6x ATK 1x    -> 4,3 beurten, 7,8%, gem. wave 69
+ *   HP 1,5x ATK 1,25x -> 4,0 beurten, 7,9%, gem. wave 66 (zwaar)
+ *   HP 2x   ATK 1,5x  -> 4,7 beurten, 9,2%, gem. wave 46 (heel zwaar)
+ */
+export const BADNIK_HP_MULT = 2;
+export const BADNIK_ATK_MULT = 1.5;
 export function enemyScaling(wave: number) {
   const zone = Math.floor((wave - 1) / WAVES_PER_ZONE);
   return 1 + ENEMY_ZONE_SCALING * Math.max(0, zone - 1);

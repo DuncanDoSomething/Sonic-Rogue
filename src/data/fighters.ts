@@ -101,7 +101,7 @@ export const BASE_CRIT = 0.0625;
  * Elke badnik speelt anders: een vaste eigenschap (trait) per soort. Moves met een bijeffect
  * (gif, bevriezen, Boost stelen) staan bij de moves zelf.
  */
-export type TraitId = 'hardShell' | 'charger' | 'spikes' | 'piggyBank' | 'shellUp';
+export type TraitId = 'hardShell' | 'charger' | 'spikes' | 'piggyBank' | 'shellUp' | 'bomber' | 'mirror' | 'thief';
 export interface TraitDef { id: TraitId; name: string; desc: string; }
 export const TRAITS: Record<TraitId, TraitDef> = {
   hardShell: { id: 'hardShell', name: 'Hard Shell', desc: 'The first hit on it only does half damage.' },
@@ -109,7 +109,42 @@ export const TRAITS: Record<TraitId, TraitDef> = {
   spikes:    { id: 'spikes', name: 'Spikes', desc: 'Hitting it hurts: you take 1/8 of the damage you deal (it never KOs you).' },
   piggyBank: { id: 'piggyBank', name: 'Piggy Bank', desc: 'Its DEF rises every turn (up to +4), so hit it hard and fast. Drops double rings.' },
   shellUp:   { id: 'shellUp', name: 'Shell Up', desc: 'When a shield breaks it hides in its shell (next hit does half) and charges up a Tank Slam that does 1.5x damage.' },
+  bomber:    { id: 'bomber', name: 'Bomb Toss', desc: 'It lights a bomb that goes off after 3 of its turns, for 35% of your fighter\'s max HP (DEF doesn\'t help). Beat it first, switch, or Guard the blast.' },
+  mirror:    { id: 'mirror', name: 'Mirror Shine', desc: 'Every other turn it shines: hits on it that turn bounce half of the damage back at you. Wait it out, switch, or hit it anyway.' },
+  thief:     { id: 'thief', name: 'Ring Thief', desc: 'Every turn it steals some of your rings, and after 3 turns it flies off with them. Beat it in time to get them back with a bonus.' },
 };
+/** Bomb Toss (Kiki): na zoveel beurten van de vijand ontploft de bom, voor dit deel van de max-HP van je character. */
+export const BOMB_FUSE = 3;
+export const BOMB_DAMAGE = 0.35;
+/** Mirror Shine (Mirror): zoveel van de schade kaatst terug als hij glimt. */
+export const MIRROR_REFLECT = 0.5;
+/** Ring Thief (Slot): steelt per beurt dit deel van je rings (minstens THIEF_MIN), vlucht na THIEF_TURNS beurten; terug met bonus. */
+export const THIEF_STEAL = 0.1;
+export const THIEF_MIN = 10;
+export const THIEF_TURNS = 3;
+export const THIEF_BONUS = 1.5;
+export function thiefSteal(rings: number) { return Math.min(rings, Math.max(THIEF_MIN, Math.floor(rings * THIEF_STEAL))); }
+/**
+ * Einde van de beurt voor Kiki, Mirror en Slot (game en sim): de lont brandt, de spiegel gaat aan/uit,
+ * de dief steelt (en vlucht na zijn laatste beurt). `fuse` = beurten tot de bom (-1 = geen bom).
+ */
+export function traitEndOfTurn(e: Fighter, rings: number) {
+  const out = { fuse: -1, shine: undefined as boolean | undefined, stole: 0, fled: false };
+  if (e.def.trait === 'bomber' && e.fuse > 0) { e.fuse--; out.fuse = e.fuse; }
+  if (e.def.trait === 'mirror') { e.shining = !e.shining; out.shine = e.shining; }
+  if (e.def.trait === 'thief' && e.thiefTurns > 0) {
+    out.stole = thiefSteal(rings);
+    e.stolen += out.stole;
+    e.thiefTurns--;
+    out.fled = e.thiefTurns === 0;
+  }
+  return out;
+}
+/** Mirror Shine: zoveel van je schade kaatst terug (nooit KO). */
+export function mirrorReflect(target: Fighter, attacker: Fighter, dealt: number) {
+  if (!target.shining || dealt <= 0) return 0;
+  return Math.max(0, Math.min(attacker.hp - 1, Math.ceil(dealt * MIRROR_REFLECT)));
+}
 /** Hard Shell / Shell Up: zoveel schade komt er door de schelp. */
 export const SHELL_FACTOR = 0.5;
 /** Spikes: de aanvaller krijgt dit deel van zijn schade terug. */
@@ -287,6 +322,8 @@ export interface MoveDef {
   sure?: boolean;
   /** Een counter (Guardian): roept zelf geen counter op. */
   counter?: boolean;
+  /** Vaste schade: dit deel van de max-HP van het doelwit, DEF en type tellen niet (Kiki's bom). */
+  fixedFrac?: number;
   /** Geneest de gebruiker met dit deel van zijn max-HP als de move raakt (Hammer Twirl). */
   selfHeal?: number;
   /** Kans dat targetStages gebeurt (standaard altijd). */
@@ -351,6 +388,10 @@ export const MOVES: Record<string, MoveDef> = {
   chargeUp:   { id: 'chargeUp', name: 'Charge Up', power: 0, accuracy: 100, priority: 0, anim: 'charge', charge: true, desc: 'Its next attack does double damage.' },
   tongueLash: { id: 'tongueLash', tag: 'ATK DOWN', name: 'Tongue Lash', power: 34, accuracy: 95, priority: 0, anim: 'lash', targetStages: { atk: -1 }, desc: 'Lowers your ATK by 1 (until the fight ends).' },
   trumpetBlast:{ id: 'trumpetBlast', tag: 'ACC DOWN', name: 'Trumpet Blast', power: 36, accuracy: 92, priority: 0, anim: 'shoot', targetStages: { acc: -1 }, targetChance: 0.5, desc: '50% chance to lower your ACC by 1 (until the fight ends).', tint: 0xffe070 },
+  bombToss:   { id: 'bombToss', name: 'Bomb Toss', power: 30, accuracy: 95, priority: 0, anim: 'shoot', desc: '' },
+  bombBlast:  { id: 'bombBlast', name: 'Bomb', power: 1, accuracy: 100, priority: 0, anim: 'shoot', fixedFrac: BOMB_DAMAGE, desc: '' },
+  ringSnatch: { id: 'ringSnatch', name: 'Ring Snatch', power: 28, accuracy: 95, priority: 0, anim: 'tackle', desc: '' },
+  prismBeam:  { id: 'prismBeam', name: 'Prism Beam', power: 34, accuracy: 92, priority: 0, anim: 'shoot', desc: '' },
   spikeBurst: { id: 'spikeBurst', name: 'Spike Burst', power: 44, accuracy: 88, priority: 0, anim: 'lash', desc: '' },
   shellCannon:{ id: 'shellCannon', name: 'Shell Cannon', power: 40, accuracy: 92, priority: 0, anim: 'shoot', desc: '', tint: 0x6aa8ff },
   tankSlam:   { id: 'tankSlam', name: 'Tank Slam', power: 55, accuracy: 85, priority: 0, anim: 'slam', desc: '' },
@@ -462,6 +503,13 @@ export const FIGHTERS: Record<string, FighterDef> = {
     base: { hp: 16, atk: 8, def: 6, spd: 9 }, growth: { hp: 2.7, atk: 1.4, def: 1.0, spd: 1.2 }, moves: ['bellySlide'], expYield: 10 },
   mine:     { type: 'power', id: 'mine', name: 'Spike Mine', atlas: 'badniks', animPrefix: 'mine', scale: 1.6, hover: 16,
     base: { hp: 14, atk: 9, def: 8, spd: 4 }, growth: { hp: 2.4, atk: 1.5, def: 1.3, spd: 0.7 }, moves: ['spikeBurst'], expYield: 10, trait: 'spikes' },
+  // Sonic Advance 1: badniks waar je op moet reageren
+  kiki:     { type: 'speed', id: 'kiki', name: 'Kiki', atlas: 'badniks', animPrefix: 'kiki', scale: 1.7,
+    base: { hp: 14, atk: 7, def: 6, spd: 8 }, growth: { hp: 2.5, atk: 1.3, def: 1.0, spd: 1.1 }, moves: ['bombToss'], expYield: 10, trait: 'bomber' },
+  mirror:   { type: 'power', id: 'mirror', name: 'Mirror', atlas: 'badniks', animPrefix: 'mirror', scale: 1.7, hover: 18,
+    base: { hp: 15, atk: 7, def: 7, spd: 6 }, growth: { hp: 2.6, atk: 1.3, def: 1.1, spd: 0.9 }, moves: ['prismBeam'], expYield: 10, trait: 'mirror' },
+  slot:     { type: 'fly', id: 'slot', name: 'Slot', atlas: 'badniks', animPrefix: 'slot', scale: 1.5, hover: 22,
+    base: { hp: 13, atk: 6, def: 5, spd: 10 }, growth: { hp: 2.4, atk: 1.1, def: 0.9, spd: 1.3 }, moves: ['ringSnatch'], expYield: 10, trait: 'thief' },
   // ------------------------------------------------------------- boss
   // ------------------------------------------------------------- main bosses (wave 20, 40, 60, 80)
   eggman:   { type: 'power', id: 'eggman', name: 'Dr. Eggman', atlas: 'eggman', animPrefix: 'eggman', scale: 2, facesRight: true, hover: 26,
@@ -517,6 +565,13 @@ export class Fighter {
   shell = false;
   /** Charge (Copter Octo, Shell Tank): de volgende aanval doet CHARGE_MULT schade. */
   charged = false;
+  /** Bomb Toss: beurten tot de bom ontploft. */
+  fuse = 0;
+  /** Mirror Shine: glimt deze beurt (schade kaatst terug). */
+  shining = false;
+  /** Ring Thief: gestolen rings en beurten tot hij vlucht. */
+  stolen = 0;
+  thiefTurns = 0;
   /** Was hij al opgeladen toen hij zijn move van deze beurt koos? Alleen dan telt de lading (Shell Up laadt midden in een beurt op). */
   chargeReady = false;
   /** Hoeveel beurten deze vijand al gekozen heeft (voor het oplaad-ritme). */
@@ -538,17 +593,25 @@ export class Fighter {
     this.level = level;
     this.hp = this.maxHp;
     this.shell = this.def.trait === 'hardShell';
+    if (this.def.trait === 'bomber') this.fuse = BOMB_FUSE;
+    if (this.def.trait === 'thief') this.thiefTurns = THIEF_TURNS;
   }
   get trait(): TraitDef | undefined { return this.def.trait ? TRAITS[this.def.trait] : undefined; }
 
   get name() { return this.def.name; }
-  anim(name: string) { return `${this.def.animPrefix}_${name}`; }
+  anim(name: string) {
+    // Mirror Shine: zolang hij glimt staat hij open (zijn 'attack'-frames)
+    if (name === 'idle' && this.shining) name = 'attack';
+    return `${this.def.animPrefix}_${name}`;
+  }
   /** Vijanden worden per zone sterker (HP, ATK, DEF; niet SPD), zie enemyScaling in zones.ts. */
   statMult = 1;
   private stat(k: keyof Stats) {
     const v = this.def.base[k] + this.def.growth[k] * (this.level - 1);
-    return Math.floor(k === 'spd' ? v : v * this.statMult);
+    return Math.floor(k === 'spd' ? v : v * this.statMult * (k === 'atk' ? this.atkMult : 1));
   }
+  /** Badniks: extra ATK (zie BADNIK_ATK_MULT in zones.ts). */
+  atkMult = 1;
   /** Boss-versie van een character (Shadow): meer HP. */
   hpMult = 1;
   get maxHp() { return Math.floor(this.stat('hp') * this.hpMult); }
@@ -655,6 +718,7 @@ export interface HitResult { damage: number; crit: boolean; missed: boolean; eff
 /** Pokémon-achtige damage-formule, versimpeld. */
 export function calcHit(attacker: Fighter, target: Fighter, move: MoveDef, rng: () => number = Math.random, bonusCrit = 0, dmgMult = 1): HitResult {
   let effect = typeMultiplier(attacker.type, target.type);
+  if (move.fixedFrac) return { damage: Math.max(1, Math.ceil(target.maxHp * move.fixedFrac)), crit: false, missed: false, effect: 1 };
   // ultimates (hele Boost-meter) raken altijd, ook met een ACC-verlaging; andere moves niet
   const ultimate = (move.cost ?? 0) >= MAX_BOOST;
   const accuracy = move.accuracy * stageMultiplier(attacker.stage('acc'));
@@ -705,6 +769,7 @@ export function shieldCap(target: Fighter, damage: number): { damage: number; br
 /** Vijand kiest zijn move met het ritme van zijn eigenschap: Charge laadt op beurt 2, 5, 8 ... op; Shell Up slaat na het opladen met Tank Slam. */
 export function traitMove(e: Fighter, normal: () => MoveDef): MoveDef {
   e.foeTurns++;
+  if (e.def.trait === 'bomber' && e.fuse <= 0) { e.fuse = BOMB_FUSE; return MOVES.bombBlast; }
   if (e.def.trait === 'shellUp' && e.charged) return MOVES.tankSlam;
   if (e.def.trait === 'charger' && !e.charged && e.foeTurns % CHARGE_EVERY === 2) return MOVES.chargeUp;
   return normal();

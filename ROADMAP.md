@@ -37,6 +37,8 @@
 - [x] Balance simulation (`npm run sim`) and a balance pass from it: Glove Punch stuns once per fight, Sonic dodges and has more HP, Amy is sturdier and keeps her ATK raises, Shadow's Ultimate Lifeform, Iron Fists only from above half HP, stronger 1-Boost moves
 - [x] Rival update: 2 shields, a trick per rival, never the same rival twice in a row
 - [x] Enemy variety: every badnik plays differently (Hard Shell, Charge with an intent icon, Spikes, Piggy Bank, poison, freeze, Boost drain, stat drops, first strike), Shell Tank's Shell Up, and elites with a random trait (Armored, Enraged, Regenerating, Swift)
+- [x] Badniks that make you react, from Sonic Advance 1: Kiki's bomb counts down, Mirror bounces hits back every other turn, Slot steals your rings and flies off. Badniks have 2x HP and 1.5x ATK so they are a real threat
+- [x] Type advantage arrow next to your type, a toss-item button in the reward screen, and a calmer kit screen (a short list, details for the line under your cursor)
 
 ## Next
 - [ ] More main bosses (Chaos, more Eggman robots) with boss charms, and a super boss at wave 90 after all seven Chaos Emeralds

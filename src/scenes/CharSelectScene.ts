@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BOSS_HEROES, FIGHTERS, Fighter, MAX_PARTY, MOVES } from '../data/fighters';
-import { buildCharacterInfo } from './characterInfo';
+import { buildCharacterInfo, type InfoView } from './characterInfo';
 import { addMenuButton } from './ui';
 import { HUD, sonicPanel } from './hud';
 import { audio } from '../audio';
@@ -35,7 +35,7 @@ export class CharSelectScene extends Phaser.Scene {
   /** knipperende rand om het volgende lege vakje */
   private slotGlow!: Phaser.GameObjects.Graphics;
   /** C: overzicht van alles wat het character kan (passive, moves, ultimate) */
-  private detail?: Phaser.GameObjects.Container;
+  private detail?: InfoView;
 
   constructor() { super('CharSelect'); }
 
@@ -102,7 +102,10 @@ export class CharSelectScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
       if (this.leaving) return;
       const k = e.key.toLowerCase();
-      if (['arrowup', 'w'].includes(k)) { this.cursor = Phaser.Math.Wrap(this.cursor - 1, 0, ROSTER.length); this.moved(); }
+      // kit open: omhoog/omlaag door de regels, links/rechts naar een ander character
+      if (this.detail && ['arrowup', 'w', 'arrowdown', 's'].includes(k)) { audio.sfx('cursormove'); this.detail.moveRow(['arrowup', 'w'].includes(k) ? -1 : 1); }
+      else if (this.detail && ['arrowleft', 'a', 'arrowright', 'd'].includes(k)) { this.cursor = Phaser.Math.Wrap(this.cursor + (['arrowleft', 'a'].includes(k) ? -1 : 1), 0, ROSTER.length); this.moved(); }
+      else if (['arrowup', 'w'].includes(k)) { this.cursor = Phaser.Math.Wrap(this.cursor - 1, 0, ROSTER.length); this.moved(); }
       else if (['arrowdown', 's'].includes(k)) { this.cursor = Phaser.Math.Wrap(this.cursor + 1, 0, ROSTER.length); this.moved(); }
       else if (k === 'c' || k === 'i') this.toggleDetail();
       else if (['x', 'escape', 'backspace'].includes(k) && this.detail) this.toggleDetail(false);
@@ -292,11 +295,13 @@ export class CharSelectScene extends Phaser.Scene {
 
   /** Passive, moves en ultimate van het character waar de cursor op staat. */
   private buildDetail() {
+    const row = this.detail?.row ?? 0;
     this.detail?.destroy();
     const id = ROSTER[this.cursor];
     this.detail = buildCharacterInfo(this, id, {
+      row,
       locked: !this.unlocked(id),
-      footer: 'I / X close    Up / Down other characters',
+      footer: 'Up/Down: details  Left/Right: characters  X: close',
       onClose: () => this.toggleDetail(false),
     });
   }

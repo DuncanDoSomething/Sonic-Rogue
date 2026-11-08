@@ -120,6 +120,40 @@
  "turtle_attack": [
   "turtle_attack_0"
  ],
+ "kiki_idle": [
+  "kiki_idle_0",
+  "kiki_idle_1",
+  "kiki_idle_2",
+  "kiki_idle_3"
+ ],
+ "kiki_attack": [
+  "kiki_attack_0",
+  "kiki_attack_1",
+  "kiki_attack_2"
+ ],
+ "bomb_idle": [
+  "bomb_idle_0"
+ ],
+ "slot_idle": [
+  "slot_idle_0",
+  "slot_idle_1",
+  "slot_idle_2"
+ ],
+ "slot_attack": [
+  "slot_attack_0",
+  "slot_attack_1",
+  "slot_attack_2"
+ ],
+ "mirror_idle": [
+  "mirror_idle_0",
+  "mirror_idle_1",
+  "mirror_idle_2"
+ ],
+ "mirror_attack": [
+  "mirror_attack_0",
+  "mirror_attack_1",
+  "mirror_attack_2"
+ ],
  "explosion_idle": [
   "explosion_idle_0",
   "explosion_idle_1",

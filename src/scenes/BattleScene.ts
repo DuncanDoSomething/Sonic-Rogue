@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, luckyInfo, isGuardian, GUARDIAN_MAX_ATK, GUARDIAN_SURVIVE_CHANCE, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, chaoCareBench, CHAO_CARE_HEAL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, luckyExtraChance, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove } from '../data/fighters';
-import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
+import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, luckyInfo, isGuardian, GUARDIAN_MAX_ATK, GUARDIAN_SURVIVE_CHANCE, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, chaoCareBench, CHAO_CARE_HEAL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, luckyExtraChance, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove, traitEndOfTurn, mirrorReflect, THIEF_BONUS } from '../data/fighters';
+import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, BADNIK_HP_MULT, BADNIK_ATK_MULT, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
 import type { ZoneEffect } from '../data/zones';
@@ -72,6 +72,8 @@ interface InfoBox {
   /** level waarvoor de EXP-balk nu getekend is; zolang de animatie loopt blijft setBox eraf */
   expAnimating?: boolean;
   typeIcon: Phaser.GameObjects.Image;
+  /** jouw kant: groen pijltje omhoog / oranje omlaag naast je type bij type-voordeel of -nadeel */
+  typeArrow?: Phaser.GameObjects.Triangle;
   boostPips?: Phaser.GameObjects.Rectangle[];
   badge?: Phaser.GameObjects.Text;
   badgeBg?: Phaser.GameObjects.Graphics;
@@ -432,6 +434,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (p?.poison > 0 && !p.fainted) out.push({ key: 'poison', icon: 'badniks:bee_idle_0', tint: 0xc07aff, name: 'Poisoned', desc: `${p.name} loses ${poisonDamage(p)} HP at the end of every turn. ${n(p.poison, 'turn')} left.`, count: p.poison });
     if (p?.frozen && p.stun > 0) out.push({ key: 'frozen', icon: 'badniks:snowman_idle_0', tint: 0x9ad8ff, name: 'Frozen', desc: `${p.name} is frozen and skips the next turn.` });
     const e = this.enemy;
+    if (e && !e.fainted && e.def.trait === 'bomber') out.push({ key: 'bomb', icon: 'badniks:bomb_idle_0', tint: 0xffffff, name: e.fuse === 0 ? 'Bomb incoming!' : 'Lit bomb', desc: e.fuse === 0 ? `The bomb goes off on its next turn, for 35% of your fighter's max HP. Beat it, switch, or Guard it!` : `The bomb goes off in ${n(e.fuse, 'turn')}, then it lights a new one.`, count: e.fuse });
+    if (e && !e.fainted && e.shining) out.push({ key: 'shine', icon: 'badniks:mirror_attack_0', tint: 0xffffff, name: 'Shining!', desc: 'Hits on it this turn bounce half of the damage back at you. It stops shining after its turn.' });
+    if (e && !e.fainted && e.def.trait === 'thief') out.push({ key: 'thief', icon: 'badniks:slot_idle_0', tint: 0xffffff, name: 'Ring thief', desc: `It has ${e.stolen} of your rings and flies off in ${n(e.thiefTurns, 'turn')}. Beat it to get them back with a bonus!`, count: e.thiefTurns });
     if (e && !e.fainted && e.charged) out.push({ key: 'charged', icon: `${e.def.atlas}:${e.def.animPrefix}_idle_0`, tint: 0xff9a3a, name: 'Charged up!', desc: `The foe's next attack does ${chargeMult(e)}x damage. Dodge it, switch, or finish it first!` });
     if (e && !e.fainted && e.shell) out.push({ key: 'shell', icon: `${e.def.atlas}:${e.def.animPrefix}_idle_0`, tint: 0x8ad8ff, name: 'Shell', desc: `The next hit on the foe only does ${Math.round(SHELL_FACTOR * 100)}% damage.` });
     return out;
@@ -492,7 +497,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
    */
   private refreshHudExtras() {
     const buffs = this.activeBuffs();
-    const sig = JSON.stringify([buffs.map(b => b.key + (b.count ?? '')), this.bag, this.itemsUsed]);
+    const sig = JSON.stringify([buffs.map(b => b.key + (b.count ?? '')), this.bag, this.itemsUsed, this.menu === 'reward']);
     if (sig === this.hudSig) return;
     this.hudSig = sig;
     this.hideHudTip();
@@ -533,6 +538,15 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     }
     const hit = this.add.zone(0, 0, RingCounter.W, 24).setOrigin(0).setInteractive({ useHandCursor: true });
     tray.add(hit);
+    // in het reward-scherm: zichtbaar knopje om een item weg te gooien (C of klik)
+    if (this.menu === 'reward' && items.length) {
+      const tag = this.add.text(RingCounter.W / 2, 27, 'C: toss item', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', stroke: '#281060', strokeThickness: 3 }).setOrigin(0.5, 0);
+      const tagBg = this.add.graphics();
+      tagBg.fillStyle(HUD.outline, 0.95).fillRoundedRect(tag.x - tag.width / 2 - 5, 25, tag.width + 10, 13, 3);
+      tagBg.fillStyle(0xc02c4a, 0.95).fillRoundedRect(tag.x - tag.width / 2 - 4, 26, tag.width + 8, 11, 2);
+      tag.setInteractive({ useHandCursor: true }).on('pointerdown', () => { if (this.menu === 'reward') { this.hideHudTip(); void this.tossItem(); } });
+      tray.add([tagBg, tag]);
+    }
     // uitleg links van de tas: per item het icoontje met wat het doet (de namen zeggen weinig)
     const show = () => this.showBagTip(tx - 3, ty, items, used);
     hit.on('pointerover', show);
@@ -1408,6 +1422,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async startWave() {
     this.autoSave();
     this.menu = 'busy';
+    this.foeFled = false;
     // gif, ijs en stat-verlagingen van badniks duren maar één gevecht
     this.party.forEach(f => {
       f.stun = 0; f.evade = 0; f.pierced = 0; f.poison = 0; f.frozen = false;
@@ -1448,7 +1463,11 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.enemy = new Fighter(id, this.tutorialMode ? 3 : 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || elite ? 2 : 0) + (rivalId ? rivalLevelBonus(this.wave) : 0));
     this.charFoe = HEROES.includes(id);
     // badniks en bosses worden per zone sterker (rivals en boss-Shadow hebben al character-stats)
-    if (!this.charFoe && !this.tutorialMode) { this.enemy.statMult = enemyScaling(this.wave); this.enemy.hp = this.enemy.maxHp; }
+    if (!this.charFoe && !this.tutorialMode) {
+      this.enemy.statMult = enemyScaling(this.wave);
+      if (!boss) { this.enemy.hpMult = BADNIK_HP_MULT; this.enemy.atkMult = BADNIK_ATK_MULT; }
+      this.enemy.hp = this.enemy.maxHp;
+    }
     // wie deze wave meevecht, krijgt de volle EXP
     this.waveFighters = new Set([this.player]);
     this.foeUltUsed = false;
@@ -1579,6 +1598,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private updateStatusFx(dt: number) {
     this.updateIntent();
     this.updateSpeedTag();
+    this.updateTypeArrow();
     this.statusClock += dt;
     const pairs: Array<[Phaser.GameObjects.Sprite, Fighter | undefined]> = [[this.hero, this.player], [this.foe, this.enemy]];
     for (const [spr, f] of pairs) {
@@ -1805,6 +1825,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(); return; }
     await this.endOfTurn();
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(); return; }
+    if (this.foeFled) return this.fleeWave();
     this.openCommand();
   }
 
@@ -1948,6 +1969,16 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       this.popNumber(this.hero.x, this.hero.y - this.bodyHeight(this.hero) - 4, `-${spikes}`, '#ff9a9a');
       await this.setBox(this.pBox, att, true);
       await this.say(`${att.name} got hurt by the spikes! (-${spikes})`, 350);
+    }
+    // Mirror Shine: glimt hij, dan kaatst de helft terug (nooit KO)
+    const reflect = isPlayer ? mirrorReflect(tgt, att, dealt) : 0;
+    if (reflect > 0) {
+      att.hp -= reflect;
+      audio.sfx('shield', { volume: 0.6 });
+      this.hitFlash(this.hero);
+      this.popNumber(this.hero.x, this.hero.y - this.bodyHeight(this.hero) - 4, `-${reflect}`, '#9adfff');
+      await this.setBox(this.pBox, att, true);
+      await this.say(`The mirror bounced the hit back! (-${reflect})`, 350);
     }
     if (move.spendAtk && att.stages.atk !== 0) {
       att.stages.atk = 0;
@@ -2677,6 +2708,21 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.startHover();
   }
 
+  /** Ring Thief (Slot): na zijn laatste beurt vliegt hij weg met je rings. De wave is voorbij, zonder EXP. */
+  private foeFled = false;
+  private async fleeWave() {
+    this.foeHover?.stop();
+    const c = this.center(this.foe);
+    this.foe.play(this.enemy.anim('attack'));
+    audio.sfx('dash', { volume: 0.6 });
+    this.tween({ targets: this.foe, y: this.foe.y - 140, x: this.foe.x + 60, alpha: 0, duration: 600, ease: 'Quad.easeIn' });
+    this.tween({ targets: this.eBox.root, alpha: 0, duration: 300 });
+    await this.wait(650);
+    this.foe.setVisible(false);
+    await this.say(`${this.enemy.name} flew off with ${this.enemy.stolen} of your rings!`, 500);
+    await this.finishWin(c);
+  }
+
   private async winWave() {
     this.tut?.event('win');
     this.foeHover?.stop();
@@ -2744,7 +2790,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.minTier = this.alarmWave && !this.rival ? 'uncommon' : 'common';
     // Piggy Bank: dubbele rings
     const piggy = this.enemy.def.trait === 'piggyBank' ? 2 : 1;
-    const gained = Math.round(waveRings(this.wave, kind) * piggy * (this.waveMagnet ? 1 + MAGNET_BONUS : 1));
+    const fled = this.foeFled;
+    // Ring Thief verslagen: je gestolen rings terug, met bonus
+    const back = !fled && this.enemy.stolen ? Math.round(this.enemy.stolen * THIEF_BONUS) : 0;
+    const gained = fled ? 0 : Math.round(waveRings(this.wave, kind) * piggy * (this.waveMagnet ? 1 + MAGNET_BONUS : 1)) + back;
     // na een boss: een eigen, grotere overwinning als die er is (Sonic: breakdance en duim omhoog)
     const bossWin = this.player.anim('bosswin');
     if (!this.player.fainted) this.hero.play(isBossWave(this.wave) && this.anims.exists(bossWin) ? bossWin : this.player.anim('victory'));
@@ -2752,11 +2801,12 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (isBossWave(this.wave)) audio.playJingle('victory', zoneForWave(this.wave + 1, this.zoneOrder).backdrop as MusicKey);
     this.spillRings(c.x, c.y, gained);
 
-    const exp = this.enemy.def.expYield + this.enemy.level * 3;
+    const exp = fled ? 0 : this.enemy.def.expYield + this.enemy.level * 3;
     const before = { level: this.player.level, exp: this.player.exp };
     const ups = this.player.gainExp(exp);
     this.pBox.expAnimating = true;
-    this.say(`${this.player.name} got ${exp} EXP and ${gained} rings!`, 0);
+    if (back) await this.say(`Got your ${this.enemy.stolen} rings back, plus a bonus!`, 400);
+    this.say(fled ? `It got away, so no EXP this time.` : `${this.player.name} got ${exp} EXP and ${gained} rings!`, 0);
     await this.animateExp(before.level, before.exp);
     if (ups) await this.say(`${this.player.name} grew to Lv.${this.player.level}!`, 500);
     await this.teamExp(exp);
@@ -3157,6 +3207,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(1); return; }
     await this.endOfTurn();
     if (this.player.fainted) { if (await this.handleFaint()) this.openCommand(1); return; }
+    if (this.foeFled) return this.fleeWave();
     this.openCommand(1);
   }
 
@@ -3378,6 +3429,21 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       await this.setBox(this.eBox, e, true);
       await this.say(`${this.who(e)} regenerated ${h} HP!`, 300);
     }
+    // Kiki, Mirror, Slot
+    const ev = traitEndOfTurn(e, this.rings);
+    if (ev.fuse === 0) await this.say(`${this.who(e)}'s bomb is about to blow!`, 400);
+    if (ev.shine !== undefined) {
+      this.foe.play(e.anim('idle'));
+      if (ev.shine) { audio.sfx('shield', { volume: 0.5 }); await this.say(`${this.who(e)} is shining! Hits on it will bounce back.`, 400); }
+    }
+    if (ev.stole > 0) {
+      this.rings -= ev.stole;
+      this.ringText.setText(`${this.rings}`);
+      audio.sfx('hurtrings', { volume: 0.5 });
+      this.popNumber(this.hero.x, this.hero.y - this.bodyHeight(this.hero) - 4, `-${ev.stole}`, '#f2c230');
+      await this.say(`${this.who(e)} stole ${ev.stole} rings!`, 350);
+    }
+    if (ev.fled) this.foeFled = true;
   }
 
   /** Kies een rival: liefst iemand die nog op slot zit en die je deze run nog niet tegenkwam. */
@@ -3478,6 +3544,26 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
    * Passive-tabje boven de HP-box, bijgewerkt zodra er iets verandert:
    * Sonic Speed "SPEED +38%", Lucky Swing (vanaf ATK +2) "CRIT 100%" / "CRIT 2x" / "CRIT 2x +30%".
    */
+  /** Pijltje naast het type-icoon van je character: groen omhoog = type-voordeel, oranje omlaag = nadeel (zoals in het fight-menu). */
+  private typeArrowState = 0;
+  private updateTypeArrow() {
+    const box = this.pBox;
+    if (!box) return;
+    const p = this.player, e = this.enemy;
+    const eff = p && e && !e.fainted && this.foe?.visible ? typeMultiplier(p.type, e.type) : 1;
+    const state = eff > 1 ? 1 : eff < 1 ? -1 : 0;
+    const x = box.typeIcon.x + box.typeIcon.width + 3, y = box.typeIcon.y + box.typeIcon.height / 2;
+    if (state === this.typeArrowState && box.typeArrow?.x === x) return;
+    this.typeArrowState = state;
+    box.typeArrow?.destroy();
+    box.typeArrow = undefined;
+    if (!state) return;
+    box.typeArrow = (state > 0
+      ? this.add.triangle(x, y, 0, 6, 8, 6, 4, 0, 0x3cd85a)
+      : this.add.triangle(x, y, 0, 0, 8, 0, 4, 6, 0xff8a2a)).setOrigin(0, 0.5).setStrokeStyle(1, HUD.outline);
+    box.root.add(box.typeArrow);
+  }
+
   private speedTagText = '';
   private updateSpeedTag() {
     const tag = this.pBox?.speedTag;
@@ -3508,7 +3594,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   /** "!" boven een opgeladen vijand, zodat je ziet dat er een dubbele klap aankomt. */
   private updateIntent() {
     const e = this.enemy;
-    const show = !!e && e.charged && !e.fainted && this.foe?.visible;
+    const show = !!e && (e.charged || (e.def.trait === 'bomber' && e.fuse === 0)) && !e.fainted && this.foe?.visible;
     if (!show) { this.intentFx?.destroy(); this.intentFx = undefined; return; }
     if (!this.intentFx) {
       const g = this.add.graphics();
@@ -3789,7 +3875,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (!isReroll && bagCount(this.bag) >= BAG_SIZE) {
       const nowUseless = it.revive ? !this.party.some(f => f.fainted) : !this.party.some(f => !f.fainted && f.hp < f.maxHp);
       if (nowUseless) {
-        this.msg.setText(`Your bag is full (${BAG_SIZE}/${BAG_SIZE}) and nobody\nneeds a ${it.name} right now.`);
+        this.msg.setText(`Your bag is full (${BAG_SIZE}/${BAG_SIZE}) and nobody needs\na ${it.name} right now. Press C to toss an item.`);
         audio.sfx('errorclick');
         this.tweens.add({ targets: btn, x: btn.x + 3, duration: 40, yoyo: true, repeat: 2 });
         return;

@@ -110,7 +110,7 @@ This project uses community sprite rips from [The Spriters Resource](https://www
 - **X-Zone and XX backgrounds:** Παρατηρητής
 - **Power type icon:** based on the POW icon ripped by Taels (Sonic Battle)
 - **Cut-in art and effects:** QuadFactor (Sonic Battle)
-- **Badniks:** SkyLights (Sonic Advance 3), Fatazz / Turtle474 (Sonic Advance 2)
+- **Badniks:** SkyLights (Sonic Advance 3), Fatazz / Turtle474 (Sonic Advance 2), Spitfya and Techokami (Sonic Advance)
 - **Backgrounds:** Παρατηρητής, Ice
 - **Title, menus and intro:** raidlandguy
 - **Character select:** Random Talking Bush, EternalLight

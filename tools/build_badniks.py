@@ -1,6 +1,6 @@
 """Snijdt badniks + explosie uit de enemy-sheets en bouwt één Phaser atlas.
 
-Gebruik: python3 build_badniks.py <advance3_enemies.png> <advance2_enemies.png> <out_dir>
+Gebruik: python3 build_badniks.py <advance3_enemies.png> <advance2_enemies.png> <advance1_enemies.png> <out_dir>
 
 Elke animatie is een 'strip': een rechthoek (x0, y0, x1, y1) op de sheet. Binnen die
 rechthoek wordt de achtergrond weggehaald (alleen achtergrond die met de rand verbonden is,
@@ -12,10 +12,12 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-adv3_path, adv2_path, out_dir = sys.argv[1:4]
+adv3_path, adv2_path, adv1_path, out_dir = sys.argv[1:5]
 SHEETS = {'adv3': np.array(Image.open(adv3_path).convert('RGBA')),
-          'adv2': np.array(Image.open(adv2_path).convert('RGBA'))}
-BG = {'adv3': [(255, 255, 255)], 'adv2': [(88, 200, 80)]}
+          'adv2': np.array(Image.open(adv2_path).convert('RGBA')),
+          'adv1': np.array(Image.open(adv1_path).convert('RGBA'))}
+# Sonic Advance 1 (rip van Spitfya en Techokami): elke sprite in een eigen lichtblauw vakje
+BG = {'adv3': [(255, 255, 255)], 'adv2': [(88, 200, 80)], 'adv1': [(110, 225, 255)]}
 
 # id -> {anim: (sheet, rect, keep)}; keep = welke frames (indexen) te gebruiken, None = alle
 ENEMIES = {
@@ -38,6 +40,14 @@ ENEMIES = {
                  'attack': ('adv3', (790, 124, 925, 163), None)},
     'turtle':   {'idle':   ('adv2', (10, 222, 182, 268), None),
                  'attack': ('adv2', (182, 222, 228, 268), None)},
+    # Sonic Advance 1: per vakje een frame
+    'kiki':     {'idle':   ('adv1', [(32, 32, 64, 72), (80, 32, 112, 72), (114, 32, 146, 72), (148, 32, 180, 72)], None),
+                 'attack': ('adv1', [(192, 32, 224, 72), (226, 32, 258, 72), (260, 32, 292, 72)], None)},
+    'bomb':     {'idle':   ('adv1', [(304, 32, 320, 48)], None)},
+    'slot':     {'idle':   ('adv1', [(32, 496, 80, 536), (82, 496, 130, 536), (132, 496, 180, 536)], None),
+                 'attack': ('adv1', [(192, 496, 240, 536), (242, 496, 290, 536), (292, 496, 340, 536)], None)},
+    'mirror':   {'idle':   ('adv1', [(32, 1088, 64, 1120), (66, 1088, 98, 1120), (100, 1088, 132, 1120)], None),
+                 'attack': ('adv1', [(144, 1088, 184, 1120), (186, 1088, 226, 1120), (228, 1088, 268, 1120)], None)},
     # losse rechthoeken: deze frames staan te dicht op elkaar om automatisch te splitsen
     'explosion': {'idle':  ('adv3', [(310, 440, 342, 482), (342, 440, 374, 482), (375, 440, 408, 482),
                                      (409, 440, 441, 482), (443, 440, 474, 482)], None)},
@@ -129,7 +139,7 @@ for key, px, py, cw, ch, im in placed:
                    'spriteSourceSize': {'x': 0, 'y': 0, 'w': cw, 'h': ch}, 'sourceSize': {'w': cw, 'h': ch}}
 atlas.save(os.path.join(out_dir, 'badniks.png'))
 json.dump({'frames': frames, 'meta': {'image': 'badniks.png', 'size': {'w': atlas.width, 'h': atlas.height}, 'scale': '1',
-           'credits': 'Sonic Advance 3 enemies ripped by SkyLights; Sonic Advance 2 enemies ripped by Fatazz (Turtle474)'}},
+           'credits': 'Sonic Advance 3 enemies ripped by SkyLights; Sonic Advance 2 enemies ripped by Fatazz (Turtle474); Sonic Advance enemies ripped by Spitfya and Techokami'}},
           open(os.path.join(out_dir, 'badniks.json'), 'w'), indent=1)
 json.dump(anims, open(os.path.join(out_dir, 'badnik_anims.json'), 'w'), indent=1)
 print('atlas', atlas.size)

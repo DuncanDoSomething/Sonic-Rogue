@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { audio } from '../audio';
 import type { Fighter } from '../data/fighters';
-import { buildCharacterInfo } from './characterInfo';
+import { buildCharacterInfo, type InfoView } from './characterInfo';
 
 /**
  * I midden in een run: de kit van je team (passive, moves, ultimate).
@@ -11,7 +11,7 @@ export class TeamScene extends Phaser.Scene {
   private from = '';
   private party: Fighter[] = [];
   private index = 0;
-  private view?: Phaser.GameObjects.Container;
+  private view?: InfoView;
 
   constructor() { super('Team'); }
 
@@ -25,8 +25,10 @@ export class TeamScene extends Phaser.Scene {
     this.draw();
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      if (['arrowleft', 'arrowup', 'a', 'w'].includes(k)) this.step(-1);
-      else if (['arrowright', 'arrowdown', 'd', 's'].includes(k)) this.step(1);
+      if (['arrowleft', 'a'].includes(k)) this.step(-1);
+      else if (['arrowright', 'd'].includes(k)) this.step(1);
+      else if (['arrowup', 'w'].includes(k)) { audio.sfx('cursormove'); this.view?.moveRow(-1); }
+      else if (['arrowdown', 's'].includes(k)) { audio.sfx('cursormove'); this.view?.moveRow(1); }
       else if (['i', 'c', 'x', 'escape', 'backspace', 'z', 'enter', ' '].includes(k)) this.close();
     });
   }
@@ -39,12 +41,14 @@ export class TeamScene extends Phaser.Scene {
   }
 
   private draw() {
+    const row = this.view?.row ?? 0;
     this.view?.destroy();
     const f = this.party[this.index];
     this.view = buildCharacterInfo(this, f.def.id, {
+      row,
       fighter: f,
       tabs: { ids: this.party.map(p => p.def.id), index: this.index, fainted: this.party.map(p => p.fainted) },
-      footer: this.party.length > 1 ? 'I / X close    Arrows: teammates' : 'I / X close',
+      footer: this.party.length > 1 ? 'Up/Down: details  Left/Right: team  X: close' : 'Up/Down: details    X: close',
       onClose: () => this.close(),
     });
   }
