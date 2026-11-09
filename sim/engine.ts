@@ -14,7 +14,7 @@ import {
 } from '../src/data/fighters';
 import {
   EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZoneEffect,
-  enemyScaling, BADNIK_HP_MULT, BADNIK_ATK_MULT, isBossWave, isEliteWave, isMainBossWave, mainBossFor, rivalChance, rivalLevelBonus, rollZoneOrder, zoneForWave,
+  enemyScaling, BADNIK_HP_MULT, BADNIK_ATK_MULT, START_RINGS, isBossWave, isEliteWave, isMainBossWave, mainBossFor, rivalChance, rivalLevelBonus, rollZoneOrder, zoneForWave,
 } from '../src/data/zones';
 import { BOSS_TIER_ODDS, HAMMER_CRIT, MAGNET_BONUS, RewardCtx, RewardDef, RunBuffs, SHIELD_FACTOR, TIER_ODDS, Tier, emptyBuffs, rollRewards } from '../src/data/rewards';
 import { BAG_SIZE, ITEMS, ITEMS_PER_FIGHT, ItemDef, bagCount, shopStock, waveRings } from '../src/data/items';
@@ -84,7 +84,7 @@ export class Battle {
   player: Fighter;
   enemy!: Fighter;
   wave = 1;
-  rings = 0;
+  rings = START_RINGS;
   /** Ring Thief is deze wave gevlucht. */
   foeFled = false;
   bag: Record<string, number> = {};

@@ -100,6 +100,8 @@ export function mainBossFor(_wave: number, party: string[] = [], rng: () => numb
 }
 /** Vijanden (behalve rivals) worden vanaf de derde zone elke zone zoveel sterker (HP, ATK, DEF). */
 export const ENEMY_ZONE_SCALING = 0.08;
+/** Rings waarmee een run begint (een eerste item in de shop). */
+export const START_RINGS = 100;
 /**
  * Badniks (gewone waves en elites, geen bosses) hebben extra HP en ATK, zodat ze geen voer zijn.
  * Moe koos eerst "heel zwaar" en daarna 1,5x HP / 1,5x ATK (badniks moeten echt schade doen), met Piggy Bank

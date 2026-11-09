@@ -58,10 +58,12 @@ export function playTalk(scene: Phaser.Scene, lines: Exchange, allyId: string, r
   let resolve!: () => void;
   const done = new Promise<void>(r => { resolve = r; });
 
+  let first: Phaser.Time.TimerEvent | undefined;
   const close = () => {
     if (finished) return;
     finished = true;
     timer?.remove();
+    first?.remove();
     scene.tweens.add({
       targets: parts, alpha: 0, duration: 140,
       onComplete: () => { parts.forEach(p => p.destroy()); resolve(); },
@@ -69,6 +71,8 @@ export function playTalk(scene: Phaser.Scene, lines: Exchange, allyId: string, r
   };
 
   const show = () => {
+    // al gesloten (X / Backspace in de eerste fractie van een seconde): niks meer tekenen
+    if (finished) return;
     i++;
     if (i >= lines.length) return close();
     const line = lines[i];
@@ -98,7 +102,7 @@ export function playTalk(scene: Phaser.Scene, lines: Exchange, allyId: string, r
     timer?.remove();
     timer = scene.time.addEvent({
       delay: d * scene.time.timeScale, repeat: full.length - 1,
-      callback: () => { n++; text.setText(full.slice(0, n)); if (n >= full.length) typing = false; },
+      callback: () => { if (finished) return; n++; text.setText(full.slice(0, n)); if (n >= full.length) typing = false; },
     });
   };
 
@@ -109,6 +113,6 @@ export function playTalk(scene: Phaser.Scene, lines: Exchange, allyId: string, r
   };
   dim.on('pointerdown', next);
   skipHint.setInteractive({ useHandCursor: true }).on('pointerdown', () => close());
-  scene.time.delayedCall(200, show);
+  first = scene.time.delayedCall(200, show);
   return { next, skip: close, done };
 }

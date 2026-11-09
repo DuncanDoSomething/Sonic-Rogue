@@ -651,9 +651,14 @@ test.describe('Sonic Rogue smoke tests', () => {
     await setup(page, "s.enemy.hp = 1; s.bag = { healthRing: 1 };");
     await press(page, 'z', 'ArrowRight', 'z');
     await waitForMenu(page, 'reward');
-    await press(page, 'c');                       // toss
-    await waitForMenu(page, 'choice');
-    await press(page, 'z');                       // Health Ring
+    await press(page, 'c');                       // tas open in weggooi-stand
+    await waitForMenu(page, 'bag');
+    await press(page, 'x');                       // terug zonder iets weg te gooien
+    await waitForMenu(page, 'reward');
+    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').bag)).toEqual({ healthRing: 1 });
+    await press(page, 'c');
+    await waitForMenu(page, 'bag');
+    await press(page, 'z');                       // Health Ring weg
     await waitForMenu(page, 'reward');
     expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').bag)).toEqual({});
   });
@@ -864,6 +869,19 @@ test.describe('Sonic Rogue smoke tests', () => {
     await expect.poll(talking, { timeout: 20_000 }).toBe(true);
     await press(page, 'x');
     await expect.poll(talking).toBe(false);
+    expect(errors).toEqual([]);
+  });
+
+  test('rival talk: skipping right away (Backspace) does not freeze the game', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startBattleWith(page, ['sonic']);
+    await page.evaluate(() => { (window as any).settings.talk = 0; });
+    const talking = () => page.evaluate(() => !!(window as any).game.scene.getScene('Battle').talkBox);
+    await page.evaluate(() => { const s = (window as any).game.scene.getScene('Battle'); s.forceRival = true; s.pickRival = () => 'knuckles'; s.wave = 15; s.menu = 'busy'; s.startWave(); });
+    await expect.poll(talking, { timeout: 20_000, intervals: [25] }).toBe(true);
+    await page.keyboard.press('Backspace');   // nog voor de eerste regel er staat
+    await waitForMenu(page, 'command');
     expect(errors).toEqual([]);
   });
 

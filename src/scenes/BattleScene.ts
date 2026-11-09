@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, luckyInfo, isGuardian, GUARDIAN_MAX_ATK, GUARDIAN_SURVIVE_CHANCE, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, chaoCareBench, CHAO_CARE_HEAL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, luckyExtraChance, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove, traitEndOfTurn, mirrorReflect, THIEF_BONUS } from '../data/fighters';
-import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, BADNIK_HP_MULT, BADNIK_ATK_MULT, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
+import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, BADNIK_HP_MULT, BADNIK_ATK_MULT, START_RINGS, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
 import type { ZoneEffect } from '../data/zones';
@@ -202,6 +202,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private bagItems: Phaser.GameObjects.Container[] = [];
   private bagIds: string[] = [];
   private bagInfo!: Phaser.GameObjects.Text;
+  private bagHint!: Phaser.GameObjects.Text;
+  /** De tas is open vanuit het reward-scherm om een item weg te gooien (Z gooit weg, X terug). */
+  private tossMode = false;
+  private tossReturn = { cursor: 0, row: 0 };
 
   /** stats-paneel (C in het hoofdmenu) */
 
@@ -274,7 +278,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.pierceFx = new Map();
     this.idleState = new Map();
     this.wave = 1;
-    this.rings = 0;
+    this.rings = START_RINGS;
     this.emeralds = 0;
     this.emeraldSlots = [];
     this.shieldFx = undefined;
@@ -540,12 +544,13 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     tray.add(hit);
     // in het reward-scherm: zichtbaar knopje om een item weg te gooien (C of klik)
     if (this.menu === 'reward' && items.length) {
-      const tag = this.add.text(RingCounter.W / 2, 27, 'C: toss item', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', stroke: '#281060', strokeThickness: 3 }).setOrigin(0.5, 0);
-      const tagBg = this.add.graphics();
-      tagBg.fillStyle(HUD.outline, 0.95).fillRoundedRect(tag.x - tag.width / 2 - 5, 25, tag.width + 10, 13, 3);
-      tagBg.fillStyle(0xc02c4a, 0.95).fillRoundedRect(tag.x - tag.width / 2 - 4, 26, tag.width + 8, 11, 2);
-      tag.setInteractive({ useHandCursor: true }).on('pointerdown', () => { if (this.menu === 'reward') { this.hideHudTip(); void this.tossItem(); } });
-      tray.add([tagBg, tag]);
+      const btn = this.add.container(0, 26);
+      btn.add(sonicPanel(this.add.graphics(), 0, 0, RingCounter.W, 15, 'blue', 0.92));
+      btn.add(this.add.text(RingCounter.W / 2, 4, 'C  Toss item', { fontFamily: FONT, fontSize: '8px', color: '#ffffff' }).setOrigin(0.5, 0));
+      const bh = this.add.zone(0, 0, RingCounter.W, 15).setOrigin(0).setInteractive({ useHandCursor: true });
+      bh.on('pointerdown', () => { if (this.menu === 'reward') { this.hideHudTip(); this.openTossBag(); } });
+      btn.add(bh);
+      tray.add(btn);
     }
     // uitleg links van de tas: per item het icoontje met wat het doet (de namen zeggen weinig)
     const show = () => this.showBagTip(tx - 3, ty, items, used);
@@ -744,6 +749,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const toss = this.add.text(324, PANEL_Y + 25, 'Z use  C toss', { fontFamily: FONT, fontSize: '8px', color: HUD.inkMuted })
       .setOrigin(1, 0).setInteractive({ useHandCursor: true });
     toss.on('pointerdown', () => { if (this.menu === 'bag') void this.tossItem(); });
+    this.bagHint = toss;
     this.bagLayer.add([bg, this.bagInfo, toss]);
 
     // cursor: een draaiend ringetje
@@ -917,7 +923,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       else if (['x', 'escape', 'backspace'].includes(k)) this.back();
       else if (k === 'c' && this.menu === 'fight') this.toggleMoveInfo();
       else if (k === 'c' && this.menu === 'command') this.toggleStats();
-      else if (k === 'c' && (this.menu === 'bag' || this.menu === 'reward')) void this.tossItem();
+      else if (k === 'c' && this.menu === 'reward') this.openTossBag();
+      else if (k === 'c' && this.menu === 'bag') void this.tossItem();
       else if (k === 'i' && (this.menu === 'command' || this.menu === 'reward')) this.openTeam();
       else if (k === 'v' && (this.menu === 'command' || this.menu === 'fight')) this.toggleField();
       else if (k === 'h') this.openHelp();
@@ -1030,7 +1037,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       else this.runTurn(move);
     } else if (this.menu === 'bag') {
       const id = this.bagIds[this.cursor];
-      if (id) this.useItem(id);
+      if (id && this.tossMode) void this.tossItem();
+      else if (id) this.useItem(id);
     } else if (this.menu === 'reward') {
       if (this.rewardRow === 0) this.pickReward(this.cursor);
       else this.buyItem(this.cursor);
@@ -1045,6 +1053,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (this.menu === 'command' && this.statsLayer.visible) this.toggleStats(false);
     else if (this.menu === 'fight' && this.infoLayer.visible) this.toggleMoveInfo(false);
     else if (this.menu === 'fight') this.openCommand(0);
+    else if (this.menu === 'bag' && this.tossMode) this.closeTossBag();
     else if (this.menu === 'bag') this.openCommand(2);
   }
 
@@ -1095,8 +1104,43 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
    * Een item weggooien (C in de tas, of in het reward-scherm). In de tas het item onder de cursor,
    * in het reward-scherm kies je welk. Daarna terug naar waar je was.
    */
+  /** Reward-scherm: de tas onderin openen om een item weg te gooien. */
+  private openTossBag() {
+    if (!bagCount(this.bag)) { audio.sfx('errorclick'); return; }
+    audio.sfx('confirm');
+    this.tossMode = true;
+    this.tossReturn = { cursor: this.cursor, row: this.rewardRow };
+    this.openBag();
+    // boven de teamstrook van het reward-scherm
+    this.bagLayer.setDepth(47);
+    this.pointer.setDepth(48);
+    this.bagHint.setText('Z toss  X back');
+  }
+  private closeTossBag(tossed?: string) {
+    this.tossMode = false;
+    this.bagHint.setText('Z use  C toss');
+    this.bagLayer.setVisible(false).setDepth(32);
+    this.pointer.setDepth(35);
+    this.msg.setVisible(true);
+    this.menu = 'reward';
+    this.cursor = this.tossReturn.cursor;
+    this.rewardRow = this.tossReturn.row;
+    this.refreshCursor();
+    if (tossed) this.msg.setText(`Tossed the ${ITEMS[tossed].name}.\n(${bagCount(this.bag)}/${BAG_SIZE} in bag)`);
+  }
+
   private async tossItem() {
     const from = this.menu;
+    // vanuit het reward-scherm (tas in "weggooi"-stand): meteen weg, geen extra vraag
+    if (from === 'bag' && this.tossMode) {
+      const id = this.bagIds[this.cursor];
+      if (!id) return;
+      this.bag[id]--;
+      if (this.bag[id] <= 0) delete this.bag[id];
+      audio.sfx('back');
+      this.closeTossBag(id);
+      return;
+    }
     const ids = Object.keys(ITEMS).filter(id => (this.bag[id] ?? 0) > 0);
     if (!ids.length) { audio.sfx('errorclick'); return; }
     if (from === 'bag') this.bagLayer.setVisible(false);

@@ -161,6 +161,8 @@ export class CharSelectScene extends Phaser.Scene {
     this.info.add(this.add.text(138, 8, f.def.moves.map(m => MOVES[m].name).join('\n'),
       { fontFamily: FONT, fontSize: '8px', color: '#ffffff', lineSpacing: 5 }));
     if (f.def.passive) this.info.add(this.add.text(138, 47, f.def.passive.name, { fontFamily: FONT, fontSize: '8px', color: '#f2c230' }));
+    // type-icoontje rechtsboven in het vak (naast de eerste move, die altijd Spin Attack is)
+    this.info.add(this.add.image(W - PANEL_W - 20 - 6, 5, `type_${f.def.type}`).setOrigin(1, 0));
   }
 
   /** cursor verplaatst: tikje + de narrator roept de naam (alleen unlocked characters) */
