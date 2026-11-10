@@ -2896,6 +2896,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     await this.wait(600);
     await this.say('Super Egg Robo Z was destroyed!', 500);
     await this.say('Dr. Eggman\'s plans are ruined for good!', 700);
+    // de overwinnings-animatie helemaal laten uitspelen voordat de ending begint
+    await this.waitForVictoryPose(true);
     clearRun();
     this.menu = 'busy';
     this.toSummary(true);
@@ -3018,9 +3020,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   /**
    * De overwinnings-animatie helemaal laten uitspelen voordat de rewards komen
    * (behalve op Battle Speed 3x: dan gaat het meteen door). Max een paar seconden, voor de zekerheid.
+   * `always`: ook op 3x wachten (na de eindbaas, voor de ending).
    */
-  private async waitForVictoryPose() {
-    if (settings.battleSpeed >= 2 || this.player.fainted) return;
+  private async waitForVictoryPose(always = false) {
+    if ((settings.battleSpeed >= 2 && !always) || this.player.fainted) return;
     const anim = this.hero.anims;
     const key = anim.currentAnim?.key;
     if (!key || !anim.isPlaying || (key !== this.player.anim('victory') && key !== this.player.anim('bosswin'))) return;
