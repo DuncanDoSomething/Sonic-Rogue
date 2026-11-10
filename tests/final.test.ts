@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { FINAL_PHASE_TYPES, Fighter, MOVES, enterFinalPhase, finalPhaseFor, shieldCap, traitMove } from '../src/data/fighters';
 import { FINAL_BOSS_SHIELDS, FINAL_WAVE, isBossWave, isFinalWave } from '../src/data/zones';
 import { buildSummary, formatRunTime } from '../src/data/summary';
+import { FINAL_TALK, pickFinalTalk } from '../src/data/dialogue';
+import { HEROES } from '../src/data/fighters';
 
 describe('final boss: Super Egg Robo Z (wave 90)', () => {
   it('wave 90 is de laatste wave, en een boss-wave', () => {
@@ -61,6 +63,20 @@ describe('final boss: Super Egg Robo Z (wave 90)', () => {
     const cap = shieldCap(e, e.maxHp);
     expect(cap.damage).toBeLessThan(e.maxHp);
     expect(e.hp - cap.damage).toBeGreaterThan(0);
+  });
+});
+
+describe('Eggman op wave 90', () => {
+  it('heeft een gesprekje voor elk speelbaar character, en Eggman begint', () => {
+    for (const id of HEROES) {
+      expect(FINAL_TALK[id]?.length, id).toBeGreaterThan(0);
+      for (const ex of FINAL_TALK[id]) {
+        expect(ex[0].who).toBe('rival');
+        for (const l of ex) expect(l.text.length).toBeLessThanOrEqual(100);
+      }
+    }
+    expect(pickFinalTalk('sonic', () => 0)).toBe(FINAL_TALK.sonic[0]);
+    expect(pickFinalTalk('nobody')).toBeUndefined();
   });
 });
 

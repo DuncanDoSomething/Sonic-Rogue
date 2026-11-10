@@ -53,8 +53,8 @@ export class EndingScene extends Phaser.Scene {
 
   create() {
     this.add.rectangle(0, 0, W, H, 0x000000).setOrigin(0);
-    // het overwinningsliedje één keer, niet in een loop
-    audio.playMusic('victory', false);
+    // ending-muziek (loopt, ook nog in de summary)
+    audio.playMusic('ending');
     // groepsfoto: langzaam van boven naar beneden pannen
     const art = this.add.image(W / 2, 0, 'ending_group').setOrigin(0.5, 0);
     art.setScale(W / art.width);

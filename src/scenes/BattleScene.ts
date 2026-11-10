@@ -17,7 +17,7 @@ import { HUD, RingCounter, checkerBand, sonicPanel, tooltip } from './hud';
 import { richText } from './richText';
 import { audio, MusicKey } from '../audio';
 import { chaoAttack, chaoCheer, chaoFriends, copterDive, glideAttack, glovePunch, hammerTwirl, homingAttack, knucklePunch, pikoHammer, spinDash, type HeroCtx } from './heroMoves';
-import { pickTalk } from '../data/dialogue';
+import { pickTalk, pickFinalTalk } from '../data/dialogue';
 import { playTalk, type TalkHandle } from './talk';
 import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
 import { chaosControl, chaosSpear, superShadow } from './shadowMoves';
@@ -1549,7 +1549,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.setBackdrop(id === 'eggrobo' ? 'finalspace' : mainBoss ? space : boss ? 'chaosangel' : zone.backdrop, this.wave === 1 ? 0 : 600);
     // de eindbaas vecht zonder zone-effect (alleen jij tegen hem)
     this.applyZoneEffect(this.fieldCleared || id === 'eggrobo' ? undefined : zone.effect);
-    audio.playMusic(id === 'eggman' || id === 'eggrobo' ? 'eggman' : boss || this.rival ? 'boss' : (zone.backdrop as MusicKey));
+    audio.playMusic(id === 'eggrobo' ? 'finalboss' : id === 'eggman' ? 'eggman' : boss || this.rival ? 'boss' : (zone.backdrop as MusicKey));
     const zoneName = id === 'eggrobo' ? 'Final Battle' : zone.name;
     this.waveText.setText(`${zoneName} - Wave ${this.wave}`);
     this.hero.play(this.player.anim('idle'));
@@ -1577,14 +1577,14 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.tweens.add({ targets: this.eBox.root, alpha: 1, duration: 250 });
     if (boss) this.cameras.main.shake(300, 0.006);
     if (this.rival) { await this.rivalBanner(); await this.rivalTalk('intro'); }
-    else if (id === 'eggrobo') await this.rivalBanner('FINAL BOSS!');
+    else if (id === 'eggrobo') { await this.rivalBanner('FINAL BOSS!'); await this.finalTalk(); }
     else if (mainBoss) await this.rivalBanner('BOSS!');
     if (id === 'shadow' && boss) audio.voice('shadowlaugh');
     else if (id === 'eggman') audio.voice('eggmanlaugh');
     const rt = this.rival && this.enemy.rivalTrait ? RIVAL_TRAITS[this.enemy.def.id] : undefined;
     await this.say(this.rival ? `Rival ${this.enemy.name} wants to battle!`
       : id === 'shadow' && boss ? 'Shadow blocks the way! "Show me what you\'ve got."'
-      : id === 'eggrobo' ? `Dr. Eggman's ultimate weapon: Super Egg Robo Z! "This time, I'll crush you for good!"`
+      : id === 'eggrobo' ? 'Super Egg Robo Z, Dr. Eggman\'s ultimate weapon, attacks!'
       : id === 'eggman' ? `Dr. Eggman appeared in a ${this.enemy.type.toUpperCase()} type Egg Mobile! "Hohoho! You won't get past me!"`
       : boss ? `Watch out! ${this.enemy.name} appeared!` : elite ? `A strong ${this.enemy.name} appeared! It's ${ELITE_TRAITS[this.enemy.elite!].name.toLowerCase()}!` : `A wild ${this.enemy.name} appeared!`, 500);
     if (rt) await this.say(`${rt.name}! ${rt.desc}`, 600);
@@ -2886,6 +2886,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     }
     this.cameras.main.shake(1700, 0.012);
     this.tweens.add({ targets: this.foe, x: this.foe.x + 6, duration: 50, yoyo: true, repeat: 16 });
+    audio.voice('eggmandefeat');
     await this.wait(1700);
     audio.sfx('bigexplosion');
     this.cameras.main.flash(500, 255, 255, 255);
@@ -4160,6 +4161,17 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.talkBox = playTalk(this, lines, this.player.def.id, this.enemy.def.id);
     await this.talkBox.done;
     this.talkBox = undefined;
+  }
+
+  /** Wave 90: Eggman praat vanuit Super Egg Robo Z met wie er in het veld staat. */
+  private async finalTalk() {
+    if (settings.talk !== 0 || this.tutorialMode) return;
+    const lines = pickFinalTalk(this.player.def.id);
+    if (!lines) return;
+    this.talkBox = playTalk(this, lines, this.player.def.id, 'eggman');
+    await this.talkBox.done;
+    this.talkBox = undefined;
+    audio.voice('eggmanlaugh');
   }
 
   private async tip(id: TipId) {

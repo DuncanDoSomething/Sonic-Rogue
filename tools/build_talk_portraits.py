@@ -17,6 +17,8 @@ BOXES = {
     'amy':      [(364, 1, 436, 74), (364, 76, 436, 135), (364, 142, 436, 201), (373, 208, 437, 273)],
     'cream':    [(481, 14, 546, 83), (481, 93, 546, 159), (481, 163, 546, 229)],
     'shadow':   [(598, 3, 675, 82), (598, 90, 675, 164), (590, 174, 675, 260)],
+    # Eggman: armen omhoog (boos / opgewonden) en wijzend (normaal / smug); voor het gesprek op wave 90
+    'eggman':   [(1098, 0, 1203, 110), (1098, 110, 1203, 215)],
 }
 # stemming -> plaatje
 MOODS = {
@@ -26,6 +28,7 @@ MOODS = {
     'amy':      {'normal': 0, 'happy': 1, 'smug': 0, 'angry': 3, 'sad': 2},
     'cream':    {'normal': 1, 'happy': 0, 'smug': 0, 'angry': 1, 'sad': 2},
     'shadow':   {'normal': 0, 'happy': 0, 'smug': 0, 'angry': 2, 'sad': 1},
+    'eggman':   {'normal': 1, 'happy': 0, 'smug': 1, 'angry': 0, 'sad': 0},
 }
 out = os.path.join(ROOT, 'src', 'assets', 'menu')
 for who, boxes in BOXES.items():

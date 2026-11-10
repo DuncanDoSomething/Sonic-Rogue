@@ -476,11 +476,16 @@ test.describe('Sonic Rogue smoke tests', () => {
     const errors = trackErrors(page);
     await openGame(page);
     await startRun(page);
-    await setup(page, 's.party.forEach(f => { f.level = 60; f.hp = f.maxHp; }); s.wave = 89; s.enemy.hp = 1;');
+    await setup(page, 's.party.forEach(f => { f.level = 60; f.hp = f.maxHp; }); s.wave = 89; s.enemy.hp = 1; window.settings.talk = 0;');
     await press(page, 'z', 'ArrowRight', 'z');  // Homing Attack
     await waitForMenu(page, 'reward');
     await fixReward(page);
     await press(page, 'z');
+    // Eggman praat eerst (gesprekjes staan aan voor deze test), daarna de wissel-vraag
+    const talking = () => page.evaluate(() => !!(window as any).game.scene.getScene('Battle').talkBox);
+    await expect.poll(talking, { timeout: 20_000 }).toBe(true);
+    for (let i = 0; i < 20 && await talking(); i++) await press(page, 'z');
+    expect(await talking()).toBe(false);
     await waitForMenu(page, 'choice');
     await press(page, 'ArrowDown', 'z');
     await waitForMenu(page, 'command');

@@ -286,6 +286,66 @@ export const RIVAL_TALK: Record<string, Record<string, RivalTalk>> = {
   },
 };
 
+// ------------------------------------------------------- Wave 90: Dr. Eggman
+// Voor het gevecht met Super Egg Robo Z praat Eggman (vanuit zijn robot) met wie er in het veld staat.
+// r(...) = Eggman, a(...) = jouw character.
+export const FINAL_TALK: Record<string, Exchange[]> = {
+  sonic: [
+    [r('smug', 'So you made it all the way here, Sonic. Hope you enjoyed the tour, because it ends now!'),
+      a('smug', "Eighty-nine waves of your junk, and you think one bigger robot will do the trick?"),
+      r('angry', 'Bigger AND better! Behold, Super Egg Robo Z! Crush that hedgehog!')],
+    [r('angry', 'Every badnik, every boss... you smashed them all! But this one is different, Sonic!'),
+      a('happy', "You say that every time, Egghead. Let's get this over with, I've got places to be!"),
+      r('smug', 'Hohoho! The only place you are going is the scrapyard!')],
+  ],
+  tails: [
+    [r('smug', 'Well, if it isn\'t the little fox. Still following Sonic around like a lost puppy?'),
+      a('angry', "I'm not following anyone! I got here on my own, and I'm taking you down!"),
+      r('angry', "Big words! Let's see that brain of yours beat Super Egg Robo Z!")],
+    [r('smug', 'My finest creation, Tails! Even a genius like you won\'t find a weak spot in this armor!'),
+      a('normal', 'Every machine has a weak spot. Six layers of shields... I just break them one by one!'),
+      r('angry', 'Grr... Stop analyzing my robot and get crushed already!')],
+  ],
+  knuckles: [
+    [r('smug', 'Knuckles! Did you come all this way just to get tricked by me one more time?'),
+      a('angry', 'Not this time, Eggman! No tricks, no lies. Just my fists against your scrap heap!'),
+      r('angry', 'Scrap heap?! Super Egg Robo Z will flatten you like a pancake!')],
+    [r('smug', "This armor is ten times tougher than anything you've ever punched, Knuckles!"),
+      a('smug', 'Good. I was getting bored of punching tin cans.'),
+      r('angry', 'Tin cans?! Get him, Super Egg Robo Z!')],
+  ],
+  amy: [
+    [r('normal', 'Amy Rose! Shouldn\'t you be out chasing that hedgehog instead of ruining my plans?'),
+      a('angry', "Stopping you IS a date with Sonic! Now get ready for my Piko Piko Hammer!"),
+      r('smug', "Hohoho! That toy hammer won't even scratch Super Egg Robo Z!")],
+    [r('smug', 'A little girl with a hammer, here to stop my ultimate weapon? How adorable!'),
+      a('angry', 'Little girl?! I smashed every single one of your robots to get here!'),
+      r('angry', "Then let's see you smash THIS one!")],
+  ],
+  cream: [
+    [r('normal', "A rabbit and her Chao, all the way out here? You should've stayed home with your mother."),
+      a('normal', "Mr. Eggman, please stop this! Cheese and I won't let you hurt anyone else!"),
+      r('smug', 'Such good manners! It almost makes me feel bad. ...Almost! Hohoho!')],
+    [r('smug', 'Hohoho! Did you get lost, little one? This is no place for a picnic!'),
+      a('angry', "We're not lost! We came here to stop you, Mr. Eggman. Right, Cheese?"),
+      r('angry', 'Grr! Super Egg Robo Z, show them what a real battle looks like!')],
+  ],
+  shadow: [
+    [r('normal', "Shadow! My grandfather's ultimate creation against MY ultimate creation. How fitting!"),
+      a('smug', "There's only one Ultimate Lifeform, Doctor. And it isn't your toy."),
+      r('angry', 'Toy?! Super Egg Robo Z, teach him some respect!')],
+    [r('smug', 'Why not join me, Shadow? Together, nothing in this world could stop us!'),
+      a('angry', 'I serve no one. Least of all you.'),
+      r('angry', "Then you'll end up as scrap, just like the rest of them!")],
+  ],
+};
+
+/** Eggmans gesprekje voor wave 90 met dit character (of niks als er geen tekst voor is). */
+export function pickFinalTalk(ally: string, rng: () => number = Math.random): Exchange | undefined {
+  const list = FINAL_TALK[ally];
+  return list?.length ? list[Math.floor(rng() * list.length)] : undefined;
+}
+
 /** Een random gesprekje voor deze rival tegen dit character (of niks als er geen tekst voor is). */
 export function pickTalk(rival: string, ally: string, when: 'intro' | 'defeat', rng: () => number = Math.random): Exchange | undefined {
   const list = RIVAL_TALK[rival]?.[ally]?.[when];

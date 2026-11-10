@@ -26,6 +26,8 @@ export const MUSIC = {
   boss: 'music/boss.mp3',
   eggman: 'music/eggman.mp3',
   victory: 'music/victory.mp3',
+  finalboss: 'music/finalboss.mp3',
+  ending: 'music/ending.mp3',
 } as const;
 export type MusicKey = keyof typeof MUSIC;
 

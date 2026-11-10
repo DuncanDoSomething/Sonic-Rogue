@@ -33,7 +33,7 @@ export class SummaryScene extends Phaser.Scene {
     bg.setScale(Math.max(W / bg.width, H / bg.height));
     this.add.rectangle(0, 0, W, H, 0x05060c, d.victory ? 0.45 : 0.6).setOrigin(0);
     this.cameras.main.fadeIn(400, 0, 0, 0);
-    // na de ending loopt het overwinningsliedje nog (één keer); bij game over wordt het stil
+    // na de ending loopt de ending-muziek door; bij game over wordt het stil
     if (!d.victory) audio.stopMusic(600);
 
     this.buildLeft(d);
