@@ -20,6 +20,9 @@ import shadowAnims from '../assets/shadow_anims.json';
 import eggmanPng from '../assets/eggman.png';
 import eggmanAtlas from '../assets/eggman.json';
 import eggmanAnims from '../assets/eggman_anims.json';
+import eggroboPng from '../assets/eggrobo.png';
+import eggroboAtlas from '../assets/eggrobo.json';
+import eggroboAnims from '../assets/eggrobo_anims.json';
 import sbMovesPng from '../assets/sbmoves.png';
 import sbMovesAtlas from '../assets/sbmoves.json';
 import sbMovesAnims from '../assets/sbmoves_anims.json';
@@ -95,6 +98,7 @@ const CHARACTERS: Array<[string, string, unknown, Record<string, CharAnim>]> = [
   ['shadow', shadowPng, shadowAtlas, shadowAnims as Record<string, CharAnim>],
   // Eggman (main boss): zelfde opzet als de characters
   ['eggman', eggmanPng, eggmanAtlas, eggmanAnims as Record<string, CharAnim>],
+  ['eggrobo', eggroboPng, eggroboAtlas, eggroboAnims as Record<string, CharAnim>],
   // Sonic Battle-moves van het team en hun effecten ('knuckles_windmill', 'sbfx_kboom', ...; tools/build_sb_moves.py)
   ['sbmoves', sbMovesPng, sbMovesAtlas, sbMovesAnims as Record<string, CharAnim>],
 ];

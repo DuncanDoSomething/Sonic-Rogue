@@ -37,11 +37,13 @@
 - [x] Balance simulation (`npm run sim`) and a balance pass from it: Glove Punch stuns once per fight, Sonic dodges and has more HP, Amy is sturdier and keeps her ATK raises, Shadow's Ultimate Lifeform, Iron Fists only from above half HP, stronger 1-Boost moves
 - [x] Rival update: 2 shields, a trick per rival, never the same rival twice in a row
 - [x] Enemy variety: every badnik plays differently (Hard Shell, Charge with an intent icon, Spikes, Piggy Bank, poison, freeze, Boost drain, stat drops, first strike), Shell Tank's Shell Up, and elites with a random trait (Armored, Enraged, Regenerating, Swift)
-- [x] Badniks that make you react, from Sonic Advance 1: Kiki's bomb counts down, Mirror bounces hits back every other turn, Slot steals your rings and flies off. Badniks have 2x HP and 1.5x ATK so they are a real threat
+- [x] Badniks that make you react, from Sonic Advance 1: Kiki's bomb counts down, Mirror bounces hits back every other turn, Slot steals your rings and flies off. Badniks have 1.3x HP and 1.5x ATK so they are a real threat
 - [x] Type advantage arrow next to your type, a toss-item button in the reward screen, and a calmer kit screen (a short list, details for the line under your cursor)
+- [x] Classic mode ends at wave 90: Super Egg Robo Z as the final boss (6 shields, 3 phases that change its type, a broken head in the last phase), the Sonic Advance 3 ending art with a short team chat, and a PokéRogue-style run summary after a win or a game over
 
 ## Next
-- [ ] More main bosses (Chaos, more Eggman robots) with boss charms, and a super boss at wave 90 after all seven Chaos Emeralds
+- [ ] Villain gauntlet on waves 81-89 before Super Egg Robo Z (Metal Sonic, Chaos, ...), more main bosses with boss charms
+- [ ] Endless mode after beating classic
 - [ ] More enemy patterns: status moves for Eggman and rivals, minibosses with phases
 - [ ] Team ultimates
 - [ ] Rouge as a second legendary
@@ -53,7 +55,6 @@
 - [ ] Balance pass after the reward revamp: price growth and enemy damage
 
 ## Later
-- [ ] Run summary after a game over
 - [ ] Chao Garden with eggs to work towards
 - [ ] Point cost for picking your team
 - [ ] Mobile testing and polish

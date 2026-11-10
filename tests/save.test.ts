@@ -22,6 +22,13 @@ describe('auto-save', () => {
     expect([back.def.id, back.level, back.hp, back.exp, back.boost, back.stages.atk]).toEqual(['amy', 17, 12, 40, 5, 1]);
   });
 
+  it('run-statistieken (voor de run summary) blijven bewaard', () => {
+    const f = new Fighter('tails', 12);
+    f.runDmg = 900; f.runKos = 14; f.runDowns = 2;
+    const back = fighterFromSave(fighterToSave(f));
+    expect([back.runDmg, back.runKos, back.runDowns]).toEqual([900, 14, 2]);
+  });
+
   it('Iron Fists (al gebruikt deze zone) blijft bewaard', () => {
     const k = new Fighter('knuckles', 20);
     k.sashUsed = true;

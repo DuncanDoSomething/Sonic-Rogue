@@ -1,0 +1,37 @@
+{
+ "idle": {
+  "key": "eggrobo_idle",
+  "frames": [
+   "eggrobo_idle_0"
+  ],
+  "frameRate": 1,
+  "repeat": -1
+ },
+ "hurt": {
+  "key": "eggrobo_hurt",
+  "frames": [
+   "eggrobo_hurt_0"
+  ],
+  "frameRate": 1,
+  "repeat": -1
+ },
+ "broken": {
+  "key": "eggrobo_broken",
+  "frames": [
+   "eggrobo_broken_0"
+  ],
+  "frameRate": 1,
+  "repeat": -1
+ },
+ "missile": {
+  "key": "eggrobo_missile",
+  "frames": [
+   "eggrobo_missile_0",
+   "eggrobo_missile_1",
+   "eggrobo_missile_2",
+   "eggrobo_missile_3"
+  ],
+  "frameRate": 12,
+  "repeat": -1
+ }
+}

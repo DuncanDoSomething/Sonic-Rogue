@@ -38,6 +38,19 @@ const EXPERIMENTS: Record<string, () => void> = {
   // Knuckles (Guardian): kans om een KO te overleven
   sash30: () => { Battle.opts.sashChance = 0.3; },
   b1: () => { Battle.opts.badnikHp = 1; Battle.opts.badnikAtk = 1; },
+  // oneindig doorspelen na wave 90 (oude gedrag)
+  endless: () => { Battle.opts.endless = true; },
+  // Super Egg Robo Z tunen
+  roboHp12: () => { Battle.opts.roboHp = 1.2; },
+  roboHp15: () => { Battle.opts.roboHp = 1.5; },
+  roboHp08: () => { Battle.opts.roboHp = 0.8; },
+  roboHp06: () => { Battle.opts.roboHp = 0.6; },
+  roboHp05: () => { Battle.opts.roboHp = 0.5; },
+  robo55: () => { Battle.opts.roboHp = 0.55; Battle.opts.roboAtk = 1.3; },
+  roboAtk12: () => { Battle.opts.roboAtk = 1.2; },
+  roboAtk14: () => { Battle.opts.roboAtk = 1.4; },
+  roboLv3: () => { Battle.opts.roboLevel = 3; },
+  roboLv6: () => { Battle.opts.roboLevel = 6; },
   h13a15: () => { Battle.opts.badnikHp = 1.3; Battle.opts.badnikAtk = 1.5; },
   b15: () => { Battle.opts.badnikHp = 1.5; Battle.opts.badnikAtk = 1.25; },
   b14: () => { Battle.opts.badnikHp = 1.4; Battle.opts.badnikAtk = 1.1; },
@@ -131,6 +144,7 @@ const teamRows = [...byTeam.entries()].map(([k, ls]) => ({
   past60: pct(ls.filter(l => l.reached > 60).length, ls.length),
   past80: pct(ls.filter(l => l.reached > 80).length, ls.length),
   capped: pct(ls.filter(l => l.reached > MAX_WAVE).length, ls.length),
+  won: pct(ls.filter(l => l.won).length, ls.length),
 })).sort((a, b) => b.mean - a.mean);
 
 const heroRows = HEROES.map(h => {
@@ -217,7 +231,7 @@ const economy = { picksPerRun: sumUp(l => l.picks), boughtPerRun: sumUp(l => l.b
 const eggmanByHero = Object.fromEntries(HEROES.map(h => {
   const fights = logs.filter(l => l.party.includes(h)).flatMap(l => l.bosses.filter(b => b.id === 'eggman'));
   const byWave = (w: number) => { const f = fights.filter(b => b.wave === w); return pct(f.filter(b => b.won).length, f.length); };
-  return [h, { all: pct(fights.filter(b => b.won).length, fights.length), w20: byWave(20), w40: byWave(40), w60: byWave(60), w80: byWave(80) }];
+  return [h, { all: pct(fights.filter(b => b.won).length, fights.length), w20: byWave(20), w40: byWave(40), w60: byWave(60), w80: byWave(80), w90: byWave(90) }];
 }));
 
 const result = {
@@ -226,13 +240,14 @@ const result = {
     mean: Math.round(mean(logs.map(l => l.reached)) * 10) / 10,
     median: median(logs.map(l => l.reached)),
     capped: pct(logs.filter(l => l.reached > MAX_WAVE).length, logs.length),
+    won: pct(logs.filter(l => l.won).length, logs.length),
   },
   survival, moveUse, economy, eggmanByHero, teams: teamRows, heroes: heroRows, deathBuckets, deathKinds, deathFoes, bosses: bossRows, rivals: rivalRows, fights: fightRows, levels: levelRows,
 };
 writeFileSync(OUT, JSON.stringify(result, null, 1));
 
 console.log(`${logs.length} runs in ${secs.toFixed(1)}s  ->  ${OUT}`);
-console.log(`gemiddeld wave ${result.overall.mean}, mediaan ${result.overall.median}, ${result.overall.capped}% haalt wave ${MAX_WAVE}`);
+console.log(`gemiddeld wave ${result.overall.mean}, mediaan ${result.overall.median}, ${result.overall.capped}% haalt wave ${MAX_WAVE}, ${result.overall.won}% wint classic`);
 console.table(heroRows);
 console.table(teamRows.slice(0, 6));
 console.table(teamRows.slice(-6));

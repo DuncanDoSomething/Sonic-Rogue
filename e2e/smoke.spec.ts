@@ -452,11 +452,66 @@ test.describe('Sonic Rogue smoke tests', () => {
     expect(b).toEqual({ elite: true, rank: 'ELITE', lv: 6 });
   });
 
-  test('a lost run deletes the save', async ({ page }) => {
+  test('a lost run deletes the save and shows the run summary, then the title screen', async ({ page }) => {
+    const errors = trackErrors(page);
     await openGame(page);
     await startRun(page);
-    await setup(page, 's.party.forEach(f => { f.hp = 0; }); s.loseRun();');
+    await setup(page, "s.player.runDmg = 321; s.defeatedBy = 'Foe Buzz Bomber'; s.party.forEach(f => { f.hp = 0; }); s.loseRun();");
     await expect.poll(() => page.evaluate(() => localStorage.getItem('sonicrogue_run'))).toBeNull();
+    await expect.poll(() => activeScenes(page), { timeout: 15_000 }).toContain('Summary');
+    const sum = await page.evaluate(() => (window as any).game.scene.getScene('Summary').data_);
+    expect(sum).toMatchObject({ victory: false, wave: 1, defeatedBy: 'Foe Buzz Bomber' });
+    expect(sum.party.map((f: { id: string }) => f.id)).toEqual(['sonic', 'tails', 'amy']);
+    expect(sum.party[0].dmg).toBe(321);
+    await page.waitForTimeout(700);
+    await press(page, 'z');
+    await expect.poll(() => activeScenes(page)).toContain('Title');
+    expect(errors).toEqual([]);
+  });
+
+  test('wave 90: Super Egg Robo Z with 6 shields and 3 phases; beating it plays the ending and the summary', async ({ page }) => {
+    test.setTimeout(120_000);
+    const errors = trackErrors(page);
+    await openGame(page);
+    await startRun(page);
+    await setup(page, 's.party.forEach(f => { f.level = 60; f.hp = f.maxHp; }); s.wave = 89; s.enemy.hp = 1;');
+    await press(page, 'z', 'ArrowRight', 'z');  // Homing Attack
+    await waitForMenu(page, 'reward');
+    await fixReward(page);
+    await press(page, 'z');
+    await waitForMenu(page, 'choice');
+    await press(page, 'ArrowDown', 'z');
+    await waitForMenu(page, 'command');
+    const boss = () => page.evaluate(() => {
+      const e = (window as any).game.scene.getScene('Battle').enemy;
+      return { id: e.def.id, segments: e.segments, type: e.type, phase: e.phase, atk: e.stages.atk, anim: e.anim('idle') };
+    });
+    expect(await boss()).toMatchObject({ id: 'eggrobo', segments: 6, type: 'power', phase: 1 });
+    // 2 schilden kapot -> fase 2 (SPEED, ATK +1); nog 2 -> fase 3 (FLY, kapot hoofd)
+    // (net boven een schild-grens, zodat één gewone klap precies dat schild breekt)
+    await setup(page, 's.enemy.hp = Math.ceil(s.enemy.maxHp * 4 / 6) + 1; s.player.hp = 9999; s.pickEnemyMove = () => ({ ...window.MOVES.roboBarrage, accuracy: 0 }); s.runTurn({ ...window.MOVES.spinAttack, accuracy: 1000, priority: 5 });');
+    await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
+    await waitForMenu(page, 'command');
+    expect(await boss()).toMatchObject({ phase: 2, type: 'speed', atk: 1 });
+    await setup(page, 's.enemy.hp = Math.ceil(s.enemy.maxHp * 2 / 6) + 1; s.player.hp = 9999; s.pickEnemyMove = () => ({ ...window.MOVES.roboBarrage, accuracy: 1000 }); s.runTurn({ ...window.MOVES.spinAttack, accuracy: 1000, priority: 5 });');
+    await expect.poll(async () => (await battle(page)).menu).not.toBe('command');
+    await waitForMenu(page, 'command');
+    expect(await boss()).toMatchObject({ phase: 3, type: 'fly', atk: 2, anim: 'eggrobo_broken' });
+    // gewonnen: ending (X slaat over), summary, titelscherm; de save is weg
+    await setup(page, 's.menu = "busy"; s.enemy.hp = 0; s.winWave();');
+    await expect.poll(() => activeScenes(page), { timeout: 30_000 }).toContain('Ending');
+    await page.waitForTimeout(2500);
+    await press(page, 'z');                       // eerste regel van het gesprekje
+    await press(page, 'x');
+    await expect.poll(() => activeScenes(page), { timeout: 15_000 }).toContain('Summary');
+    const sum = await page.evaluate(() => (window as any).game.scene.getScene('Summary').data_);
+    expect(sum).toMatchObject({ victory: true, wave: 90, mode: 'Classic' });
+    expect(sum.defeatedBy).toBeUndefined();
+    expect(await page.evaluate(() => localStorage.getItem('sonicrogue_run'))).toBeNull();
+    await page.waitForTimeout(700);
+    await press(page, 'z');
+    await expect.poll(() => activeScenes(page)).toContain('Title');
+    expect(errors).toEqual([]);
   });
 
   test('help and settings open and close again', async ({ page }) => {

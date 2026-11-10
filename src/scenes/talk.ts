@@ -18,7 +18,8 @@ const PORTRAIT_SCALE = 1.4;
 
 export interface TalkHandle { next(): void; skip(): void; done: Promise<void>; }
 
-export function playTalk(scene: Phaser.Scene, lines: Exchange, allyId: string, rivalId: string): TalkHandle {
+/** `friendly`: de rechterkant is een teamgenoot (blauw naam-tabje i.p.v. rood), bijv. in de ending. */
+export function playTalk(scene: Phaser.Scene, lines: Exchange, allyId: string, rivalId: string, friendly = false): TalkHandle {
   const depth = 56;
   const parts: Phaser.GameObjects.GameObject[] = [];
   const add = <T extends Phaser.GameObjects.GameObject>(o: T) => { parts.push(o); return o; };
@@ -90,7 +91,7 @@ export function playTalk(scene: Phaser.Scene, lines: Exchange, allyId: string, r
     tag.setX(tx);
     tagBg.clear();
     tagBg.fillStyle(HUD.outline).fillRoundedRect(tx - 5, PANEL_Y - 8, tag.width + 10, 14, 4);
-    tagBg.fillStyle(isAlly ? 0x2c3cc0 : 0xc02c4a).fillRoundedRect(tx - 4, PANEL_Y - 7, tag.width + 8, 12, 3);
+    tagBg.fillStyle(isAlly || friendly ? 0x2c3cc0 : 0xc02c4a).fillRoundedRect(tx - 4, PANEL_Y - 7, tag.width + 8, 12, 3);
     // tekst letter voor letter
     full = line.text;
     text.setText('');

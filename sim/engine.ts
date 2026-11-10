@@ -9,12 +9,12 @@
 import {
   BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, BOSS_REVIVE_HP, chaoCareBench, CHAO_CARE_HEAL, FIGHTER_TYPES, FLINCH_CHANCE,
   Fighter, FIGHTERS, HEROES, MAX_BOOST, MAX_PARTY, MOVES, MoveDef, LIFEFORM_KO_BOOST, RIVAL_HEROES, SASH_MIN_HP, dodgeChance, StageKey, ULT_CHAIN_MAX,
-  benchExpRate, calcHit, emptyStages, expShareAfter, shieldCap,
+  benchExpRate, calcHit, emptyStages, expShareAfter, shieldCap, FINAL_PHASE_TYPES, finalPhaseFor, enterFinalPhase,
   CHARGE_MULT, chargeMult, luckyExtraChance, isGuardian, GUARDIAN_MAX_ATK, GUARDIAN_SURVIVE_CHANCE, ELITE_IDS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, type EliteId, PIGGY_MAX_DEF, regenTick, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove, traitEndOfTurn, mirrorReflect, THIEF_BONUS,
 } from '../src/data/fighters';
 import {
   EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZoneEffect,
-  enemyScaling, BADNIK_HP_MULT, BADNIK_ATK_MULT, START_RINGS, isBossWave, isEliteWave, isMainBossWave, mainBossFor, rivalChance, rivalLevelBonus, rollZoneOrder, zoneForWave,
+  enemyScaling, BADNIK_HP_MULT, BADNIK_ATK_MULT, START_RINGS, isBossWave, isEliteWave, isMainBossWave, mainBossFor, rivalChance, rivalLevelBonus, rollZoneOrder, zoneForWave, isFinalWave, FINAL_BOSS_SHIELDS, FINAL_BOSS_HP, FINAL_BOSS_ATK,
 } from '../src/data/zones';
 import { BOSS_TIER_ODDS, HAMMER_CRIT, MAGNET_BONUS, RewardCtx, RewardDef, RunBuffs, SHIELD_FACTOR, TIER_ODDS, Tier, emptyBuffs, rollRewards } from '../src/data/rewards';
 import { BAG_SIZE, ITEMS, ITEMS_PER_FIGHT, ItemDef, bagCount, shopStock, waveRings } from '../src/data/items';
@@ -62,7 +62,9 @@ export interface RunLog {
   reached: number;
   /** waar je op verloor: soort vijand */
   lostTo: string;
-  lostKind: 'normal' | 'elite' | 'boss' | 'mainBoss' | 'rival' | 'none';
+  lostKind: 'normal' | 'elite' | 'boss' | 'mainBoss' | 'final' | 'rival' | 'none';
+  /** classic gewonnen (Super Egg Robo Z op wave 90 verslagen) */
+  won?: boolean;
   /** per character: schade gedaan, KO's gemaakt, keren KO gegaan, beurten in het veld */
   per: Record<string, { dmg: number; kos: number; downs: number; turns: number; ults: number; level: number; moves: Record<string, number>; switches: number }>;
   /** gekozen rewards en gekochte items */
@@ -114,7 +116,7 @@ export class Battle {
   log: RunLog;
 
   /** Experimenten met regels die niet in src/data staan (zie run.ts --exp). */
-  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number]; noTraits?: boolean; noEliteTraits?: boolean; tankNoShell?: boolean; extraMult?: number; oldRivals?: boolean; rivalElite?: EliteId; rivalShields?: number; noRivalTraits?: boolean; onlyTrait?: string; noRivalLevel?: boolean; lateRivalMult?: number; guardMax?: number; sashChance?: number; badnikHp?: number; badnikAtk?: number } = {};
+  static opts: { bossRandomType?: boolean; eggmanLevel?: number; noSash?: boolean; sashMin?: number; dodge?: [number, number]; noTraits?: boolean; noEliteTraits?: boolean; tankNoShell?: boolean; extraMult?: number; oldRivals?: boolean; rivalElite?: EliteId; rivalShields?: number; noRivalTraits?: boolean; onlyTrait?: string; noRivalLevel?: boolean; lateRivalMult?: number; guardMax?: number; sashChance?: number; badnikHp?: number; badnikAtk?: number; endless?: boolean; roboHp?: number; roboLevel?: number; roboAtk?: number } = {};
 
   constructor(partyIds: string[], private policy: Policy, seed: number, private maxWave = 200) {
     this.rng = seeded(seed);
@@ -133,7 +135,7 @@ export class Battle {
   get isBoss() { return isBossWave(this.wave); }
   get kind(): RunLog['lostKind'] {
     if (this.rival) return 'rival';
-    if (this.isBoss) return isMainBossWave(this.wave) ? 'mainBoss' : 'boss';
+    if (this.isBoss) return isFinalWave(this.wave) && !Battle.opts.endless ? 'final' : isMainBossWave(this.wave) ? 'mainBoss' : 'boss';
     return this.elite ? 'elite' : 'normal';
   }
 
@@ -142,6 +144,8 @@ export class Battle {
     while (this.wave <= this.maxWave) {
       const won = this.playWave();
       if (!won) break;
+      // classic: Super Egg Robo Z op wave 90 verslagen = run gewonnen
+      if (isFinalWave(this.wave) && !Battle.opts.endless) { this.log.won = true; this.wave++; break; }
       this.wave++;
     }
     this.log.reached = this.wave;
@@ -169,11 +173,12 @@ export class Battle {
     this.buffs.eliteNext = false;
     const zone = zoneForWave(this.wave, this.zoneOrder);
     const boss = isBossWave(this.wave);
-    const rivalId = this.rng() < rivalChance(this.wave) * (this.wave % 10 === 5 ? 1 : (Battle.opts.lateRivalMult ?? 1)) ? this.pickRival() : undefined;
+    const finalBoss = boss && isFinalWave(this.wave) && !Battle.opts.endless;
+    const rivalId = !finalBoss && this.rng() < rivalChance(this.wave) * (this.wave % 10 === 5 ? 1 : (Battle.opts.lateRivalMult ?? 1)) ? this.pickRival() : undefined;
     this.rival = !!rivalId;
     this.elite = (isEliteWave(this.wave) || this.alarmWave) && !this.rival && !boss;
     const mainBoss = boss && isMainBossWave(this.wave);
-    const id = rivalId ?? (mainBoss ? mainBossFor(this.wave, this.party.map(f => f.def.id), this.rng) : boss ? zone.boss : pick(this.rng, zone.enemies));
+    const id = rivalId ?? (finalBoss ? 'eggrobo' : mainBoss ? mainBossFor(this.wave, this.party.map(f => f.def.id), this.rng) : boss ? zone.boss : pick(this.rng, zone.enemies));
     this.enemy = new Fighter(id, 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || this.elite ? 2 : 0) + (rivalId && !Battle.opts.noRivalLevel ? rivalLevelBonus(this.wave) : 0));
     this.charFoe = HEROES.includes(id);
     if (!this.charFoe) {
@@ -185,7 +190,14 @@ export class Battle {
     this.foeUltUsed = false;
     this.foeBless = 0;
     if (this.charFoe && boss) { this.enemy.hpMult = SHADOW_BOSS_HP; this.enemy.hp = this.enemy.maxHp; }
-    if (boss) this.enemy.segments = mainBoss ? MAIN_BOSS_SHIELDS : ZONE_BOSS_SHIELDS;
+    if (boss) this.enemy.segments = finalBoss ? FINAL_BOSS_SHIELDS : mainBoss ? MAIN_BOSS_SHIELDS : ZONE_BOSS_SHIELDS;
+    if (finalBoss) {
+      this.enemy.phase = 1; this.enemy.typeOverride = FINAL_PHASE_TYPES[0];
+      if (Battle.opts.roboLevel) this.enemy.level += Battle.opts.roboLevel;
+      this.enemy.hpMult = Battle.opts.roboHp ?? FINAL_BOSS_HP;
+      this.enemy.atkMult = Battle.opts.roboAtk ?? FINAL_BOSS_ATK;
+      this.enemy.hp = this.enemy.maxHp;
+    }
     if (this.elite && !Battle.opts.noEliteTraits) applyElite(this.enemy, pick(this.rng, ELITE_IDS));
     if (Battle.opts.noTraits) { this.enemy.shell = false; }
     if (rivalId) {
@@ -422,6 +434,7 @@ export class Battle {
       if (tgt.hp === 0 && !tgt.sashUsed && !Battle.opts.noSash && ((isGuardian(tgt) && this.rng() < (Battle.opts.sashChance ?? GUARDIAN_SURVIVE_CHANCE)) || (tgt.def.passive?.id === 'flinch' && before > tgt.maxHp * (Battle.opts.sashMin ?? SASH_MIN_HP)))) { tgt.hp = 1; tgt.sashUsed = true; }
       ironWill(tgt);
       dealt = before - tgt.hp;
+      if (broken && tgt.def.id === 'eggrobo' && !tgt.fainted) enterFinalPhase(tgt, finalPhaseFor(FINAL_BOSS_SHIELDS, tgt.hp, tgt.maxHp));
       if (isPlayer) {
         this.stat(att).dmg += before - tgt.hp;
         if (tgt.fainted) this.stat(att).kos++;

@@ -11,7 +11,9 @@ const VERSION = 1;
 
 export interface SavedFighter { id: string; level: number; exp: number; hp: number; boost: number; stages: Stages; sash?: boolean; chip?: boolean;
   /** Shadow: Chaos Control / Super Barrage gratis, en de ketting */
-  chaosFree?: boolean; ultFree?: boolean; ultChain?: number; }
+  chaosFree?: boolean; ultFree?: boolean; ultChain?: number;
+  /** run summary: schade, KO's, keren neergegaan */
+  dmg?: number; kos?: number; downs?: number; }
 
 export interface RunSave {
   v: number;
@@ -27,6 +29,8 @@ export interface RunSave {
   buffs?: Partial<RunBuffs>;
   /** zone-ids in de volgorde van deze run (oude saves: de vaste volgorde) */
   zoneOrder?: string[];
+  /** speeltijd van de run in ms (voor de run summary) */
+  timeMs?: number;
   /** index in `party` van wie er vecht */
   active: number;
   party: SavedFighter[];
@@ -34,7 +38,8 @@ export interface RunSave {
 
 export function fighterToSave(f: Fighter): SavedFighter {
   return { id: f.def.id, level: f.level, exp: f.exp, hp: f.hp, boost: f.boost, stages: { ...f.stages }, sash: f.sashUsed, chip: f.spinChip,
-    chaosFree: f.chaosFree || undefined, ultFree: f.ultFree || undefined, ultChain: f.ultChain || undefined };
+    chaosFree: f.chaosFree || undefined, ultFree: f.ultFree || undefined, ultChain: f.ultChain || undefined,
+    dmg: f.runDmg || undefined, kos: f.runKos || undefined, downs: f.runDowns || undefined };
 }
 
 export function fighterFromSave(s: SavedFighter): Fighter {
@@ -48,6 +53,9 @@ export function fighterFromSave(s: SavedFighter): Fighter {
   f.chaosFree = !!s.chaosFree;
   f.ultFree = !!s.ultFree;
   f.ultChain = s.ultChain ?? 0;
+  f.runDmg = s.dmg ?? 0;
+  f.runKos = s.kos ?? 0;
+  f.runDowns = s.downs ?? 0;
   return f;
 }
 

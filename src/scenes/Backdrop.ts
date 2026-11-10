@@ -163,6 +163,16 @@ export const BACKDROPS: Record<string, { build: Builder; platform: PlatformStyle
       return { container: scene.add.container(0, 0, [top, clouds]), stop: () => tw.stop() };
     },
   },
+  // het laatste gevecht (wave 90): de aarde vanuit de ruimte, uit XX Zone (Sonic Advance 2)
+  finalspace: {
+    platform: { top: 0xdfe6ff, side: 0x6a78c8, shadow: 0x0a0f3a },
+    build: (scene, h) => {
+      const sc = Math.max(W / 256, h / 160) * 1.05;
+      const img = scene.add.image(W / 2, h, 'space_final').setOrigin(0.5, 1).setScale(sc);
+      const tw = scene.tweens.add({ targets: img, x: W / 2 - 12, duration: 20000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      return { container: scene.add.container(0, 0, [img]), stop: () => tw.stop() };
+    },
+  },
   chaosangel: {
     platform: { top: 0xf2e8ff, side: 0xa58ad8, shadow: 0x3a2a6a },
     build: (scene) => {

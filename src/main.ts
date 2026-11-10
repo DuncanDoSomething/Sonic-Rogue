@@ -9,6 +9,8 @@ import { PauseScene } from './scenes/PauseScene';
 import { TeamScene } from './scenes/TeamScene';
 import { CreditsScene } from './scenes/CreditsScene';
 import { HelpScene } from './scenes/HelpScene';
+import { EndingScene } from './scenes/EndingScene';
+import { SummaryScene } from './scenes/SummaryScene';
 import { audio } from './audio';
 import { MOVES } from './data/fighters';
 import { REWARDS } from './data/rewards';
@@ -27,7 +29,7 @@ async function start() {
     pixelArt: true,
     roundPixels: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    scene: [BootScene, TitleScene, CharSelectScene, BattleScene, SettingsScene, PauseScene, TeamScene, CreditsScene, HelpScene],
+    scene: [BootScene, TitleScene, CharSelectScene, BattleScene, SettingsScene, PauseScene, TeamScene, CreditsScene, HelpScene, EndingScene, SummaryScene],
   });
   audio.init(game);
   // handig voor debuggen in de console: game.scene.getScene('Battle')

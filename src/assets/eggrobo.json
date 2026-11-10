@@ -1,0 +1,153 @@
+{
+ "frames": {
+  "eggrobo_idle_0": {
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 105
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 105
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 105
+   }
+  },
+  "eggrobo_hurt_0": {
+   "frame": {
+    "x": 68,
+    "y": 0,
+    "w": 66,
+    "h": 105
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 105
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 105
+   }
+  },
+  "eggrobo_broken_0": {
+   "frame": {
+    "x": 136,
+    "y": 0,
+    "w": 66,
+    "h": 105
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 105
+   },
+   "sourceSize": {
+    "w": 66,
+    "h": 105
+   }
+  },
+  "eggrobo_missile_0": {
+   "frame": {
+    "x": 204,
+    "y": 0,
+    "w": 34,
+    "h": 22
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 34,
+    "h": 22
+   },
+   "sourceSize": {
+    "w": 34,
+    "h": 22
+   }
+  },
+  "eggrobo_missile_1": {
+   "frame": {
+    "x": 240,
+    "y": 0,
+    "w": 34,
+    "h": 22
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 34,
+    "h": 22
+   },
+   "sourceSize": {
+    "w": 34,
+    "h": 22
+   }
+  },
+  "eggrobo_missile_2": {
+   "frame": {
+    "x": 276,
+    "y": 0,
+    "w": 36,
+    "h": 23
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 36,
+    "h": 23
+   },
+   "sourceSize": {
+    "w": 36,
+    "h": 23
+   }
+  },
+  "eggrobo_missile_3": {
+   "frame": {
+    "x": 314,
+    "y": 0,
+    "w": 36,
+    "h": 23
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 36,
+    "h": 23
+   },
+   "sourceSize": {
+    "w": 36,
+    "h": 23
+   }
+  }
+ },
+ "meta": {
+  "image": "eggrobo.png",
+  "size": {
+   "w": 352,
+   "h": 105
+  },
+  "scale": "1",
+  "credits": "Super Egg Robo Z (Sonic Advance 2) ripped by SkyLights"
+ }
+}

@@ -83,6 +83,9 @@ export function zoneForWave(wave: number, order: string[] = DEFAULT_ZONE_ORDER):
 }
 export function waveInZone(wave: number) { return ((wave - 1) % WAVES_PER_ZONE) + 1; }
 export function isBossWave(wave: number) { return waveInZone(wave) === WAVES_PER_ZONE; }
+/** Classic mode eindigt op deze wave, met de eindbaas (Super Egg Robo Z). */
+export const FINAL_WAVE = 90;
+export function isFinalWave(wave: number) { return wave === FINAL_WAVE; }
 export function isEliteWave(wave: number) { return waveInZone(wave) === Math.ceil(WAVES_PER_ZONE / 2); }
 /** Elke tweede boss (wave 20, 40, 60, 80) is een main boss: daarna is het hele team weer fit. */
 export function isMainBossWave(wave: number) { return isBossWave(wave) && wave % (WAVES_PER_ZONE * 2) === 0; }
@@ -126,6 +129,11 @@ export const SHADOW_BOSS_HP = 2;
 /** Boss-schilden (stukken HP-balk): zone-bosses en main bosses. */
 export const ZONE_BOSS_SHIELDS = 4;
 export const MAIN_BOSS_SHIELDS = 5;
+/** De eindbaas: 6 schilden, elke 2 gebroken schilden een nieuwe fase (3 fases). */
+export const FINAL_BOSS_SHIELDS = 6;
+/** Super Egg Robo Z: minder HP maar hardere klappen dan de groei zou geven (sim: ~15 beurten, ~70% wint, ~7% van alle runs) */
+export const FINAL_BOSS_HP = 0.55;
+export const FINAL_BOSS_ATK = 1.3;
 /** Na een zone-boss (wave 10, 30, 50, 70) gaat iedereen onder deze HP er naartoe. */
 export const ZONE_BOSS_HEAL = 0.5;
 /** Na een main boss staat iedereen op minstens zoveel Boost. */

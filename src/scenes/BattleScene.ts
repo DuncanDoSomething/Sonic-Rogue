@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, luckyInfo, isGuardian, GUARDIAN_MAX_ATK, GUARDIAN_SURVIVE_CHANCE, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, chaoCareBench, CHAO_CARE_HEAL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, luckyExtraChance, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove, traitEndOfTurn, mirrorReflect, THIEF_BONUS } from '../data/fighters';
-import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, BADNIK_HP_MULT, BADNIK_ATK_MULT, START_RINGS, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave } from '../data/zones';
+import { BLESS_BONUS, BLESS_TURNS, BOOST_ON_HIT, FIGHTER_TYPES, EMERALD_EXP_BONUS, benchExpRate, PIERCE_BONUS, LIFEFORM_KO_BOOST, SASH_MIN_HP, dodgeChance, speedBonus, luckyInfo, isGuardian, GUARDIAN_MAX_ATK, GUARDIAN_SURVIVE_CHANCE, RIVAL_SHIELDS, RIVAL_TRAITS, RIVAL_REVIVE_ATK, applyRival, chaoRevival, ironWill, rivalOptions, ULT_CHAIN_MAX, shieldCap, FIGHTERS, Fighter, HEROES, RIVAL_HEROES, MAX_BOOST, MOVES, MoveDef, StageKey, ULTIMATE_LEVEL, calcHit, BOSS_REVIVE_HP, chaoCareBench, CHAO_CARE_HEAL, emptyStages, expShareAfter, FLINCH_CHANCE, MAX_PARTY, movePower, stageMultiplier, typeMultiplier, chargeMult, luckyExtraChance, ELITE_IDS, PIGGY_MAX_DEF, regenTick, ELITE_TRAITS, SHELL_FACTOR, applyElite, poisonDamage, shellHit, spikeRecoil, traitMove, traitEndOfTurn, mirrorReflect, THIEF_BONUS, FINAL_PHASE_TYPES, finalPhaseFor, enterFinalPhase } from '../data/fighters';
+import { DEFAULT_ZONE_ORDER, EMERALDS, MAIN_BOSS_BOOST, MAIN_BOSS_SHIELDS, SHADOW_BOSS_HP, ZONE_BOSS_HEAL, ZONE_BOSS_SHIELDS, ZONES, mainBossFor, enemyScaling, BADNIK_HP_MULT, BADNIK_ATK_MULT, START_RINGS, isBossWave, isEliteWave, isMainBossWave, rivalChance, rivalLevelBonus, rollZoneOrder, waveInZone, zoneForWave, isFinalWave, FINAL_BOSS_SHIELDS, FINAL_BOSS_HP, FINAL_BOSS_ATK } from '../data/zones';
+import { buildSummary } from '../data/summary';
 import { isUnlocked, unlock } from '../data/unlocks';
 import { clearRun, fighterFromSave, fighterToSave, saveRun, type RunSave } from '../data/save';
 import type { ZoneEffect } from '../data/zones';
@@ -103,6 +104,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private rival = false;
   /** save waarmee deze run verder gaat (Continue op het title screen) */
   private saved?: RunSave;
+  /** wanneer de run begon (Date.now, min de al gespeelde tijd uit de save) */
+  private runStart = 0;
+  /** wie je laatste character neerhaalde (run summary) */
+  private defeatedBy = '';
   /** wie deze beurt geflinched is (Knuckles' Iron Fists) */
   private flinched = new Set<Fighter>();
   /** moves met `stunOnce` die deze wave al verdoofd hebben (per kant: 'p:glovePunch' / 'e:glovePunch') */
@@ -303,6 +308,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.statsRows = [];
     this.zoneOrder = rollZoneOrder();
     const sv = this.saved;
+    this.runStart = Date.now() - (sv?.timeMs ?? 0);
+    this.defeatedBy = '';
     if (sv) {
       this.party = sv.party.map(fighterFromSave);
       this.player = this.party[sv.active] ?? this.party.find(f => !f.fainted) ?? this.party[0];
@@ -1043,8 +1050,6 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     } else if (this.menu === 'reward') {
       if (this.rewardRow === 0) this.pickReward(this.cursor);
       else this.buyItem(this.cursor);
-    } else if (this.menu === 'gameover') {
-      this.toStarter();
     }
   }
 
@@ -1459,7 +1464,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (this.tutorialMode) return; // oefenen telt niet
     saveRun({
       wave, rings: this.rings, emeralds: this.emeralds, expShare: this.expShare,
-      bag: { ...this.bag }, rivalsMet: [...this.rivalsMet], fieldCleared: this.fieldCleared, buffs: { ...this.buffs }, zoneOrder: [...this.zoneOrder],
+      bag: { ...this.bag }, rivalsMet: [...this.rivalsMet], fieldCleared: this.fieldCleared, buffs: { ...this.buffs }, zoneOrder: [...this.zoneOrder], timeMs: Date.now() - this.runStart,
       active: Math.max(0, this.party.indexOf(this.player)), party: this.party.map(fighterToSave),
     });
   }
@@ -1496,14 +1501,16 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const zone = zoneForWave(this.wave, this.zoneOrder);
     const boss = isBossWave(this.wave);
     // rivals: vaak op waves die op 5 eindigen, en later soms ook op een gewone wave
-    const rivalId = !this.forceFoe && (this.forceRival || (!this.tutorialMode && Math.random() < rivalChance(this.wave))) ? this.pickRival() : undefined;
+    // wave 90: de laatste boss, Super Egg Robo Z (dan nooit een rival)
+    const finalBoss = boss && isFinalWave(this.wave) && !this.tutorialMode && !this.forceFoe;
+    const rivalId = !this.forceFoe && !finalBoss && (this.forceRival || (!this.tutorialMode && Math.random() < rivalChance(this.wave))) ? this.pickRival() : undefined;
     this.forceRival = false;
     this.rival = !!rivalId;
     const elite = ((isEliteWave(this.wave) || this.alarmWave) && !this.rival && !boss) || !!this.forceElite;
     this.elite = elite;
     // main boss (wave 20, 40, ...): Eggman of Shadow; zone-boss: die van de zone
     const mainBoss = boss && isMainBossWave(this.wave) && !this.tutorialMode;
-    const id = this.forceFoe ?? (this.tutorialMode ? 'beetle' : undefined) ?? rivalId ?? (mainBoss ? mainBossFor(this.wave, this.party.map(f => f.def.id), this.mainBossRoll) : boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
+    const id = this.forceFoe ?? (this.tutorialMode ? 'beetle' : undefined) ?? rivalId ?? (finalBoss ? 'eggrobo' : mainBoss ? mainBossFor(this.wave, this.party.map(f => f.def.id), this.mainBossRoll) : boss ? zone.boss : Phaser.Utils.Array.GetRandom(zone.enemies));
     // vijanden stijgen ~0,65 level per wave; jij blijft dan net iets voor (bosses/elites +2, rivals op gelijk niveau)
     this.enemy = new Fighter(id, this.tutorialMode ? 3 : 4 + Math.floor(0.65 * (this.wave - 1)) + (boss || elite ? 2 : 0) + (rivalId ? rivalLevelBonus(this.wave) : 0));
     this.charFoe = HEROES.includes(id);
@@ -1519,7 +1526,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.foeBless = 0;
     // boss-Shadow: meer HP; bosses krijgen schilden (stukken HP-balk)
     if (this.charFoe && boss) { this.enemy.hpMult = SHADOW_BOSS_HP; this.enemy.hp = this.enemy.maxHp; }
-    if (boss && !this.tutorialMode) this.enemy.segments = mainBoss ? MAIN_BOSS_SHIELDS : ZONE_BOSS_SHIELDS;
+    if (boss && !this.tutorialMode) this.enemy.segments = id === 'eggrobo' ? FINAL_BOSS_SHIELDS : mainBoss ? MAIN_BOSS_SHIELDS : ZONE_BOSS_SHIELDS;
     // elites krijgen een random extra eigenschap (Armored, Enraged, Regenerating, Swift)
     if (elite) applyElite(this.enemy, this.forceElite ?? Phaser.Utils.Array.GetRandom(ELITE_IDS));
     this.forceFoe = undefined;
@@ -1529,15 +1536,21 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (boss && BOSS_TYPE_NEUTRAL) this.enemy.typeOverride = this.player.type;
     // Eggman bouwt zijn Egg Mobile elke keer anders: een random type (anders is één type altijd sterk tegen hem)
     if (id === 'eggman') this.enemy.typeOverride = Phaser.Utils.Array.GetRandom(FIGHTER_TYPES);
+    // Super Egg Robo Z begint als POWER en wisselt per fase van type
+    if (id === 'eggrobo') {
+      this.enemy.phase = 1; this.enemy.typeOverride = FINAL_PHASE_TYPES[0];
+      this.enemy.hpMult = FINAL_BOSS_HP; this.enemy.atkMult = FINAL_BOSS_ATK; this.enemy.hp = this.enemy.maxHp;
+    }
 
     // nieuwe zone: achtergrond wisselen + zone-titel; boss-wave: Chaos Angel
     const firstOfZone = waveInZone(this.wave) === 1;
     // main bosses in de ruimte: X-Zone (wave 20, 60) en XX (wave 40, 80, en altijd bij Shadow)
     const space = id === 'shadow' || this.wave % 40 === 0 ? 'xx' : 'xzone';
-    this.setBackdrop(mainBoss ? space : boss ? 'chaosangel' : zone.backdrop, this.wave === 1 ? 0 : 600);
+    this.setBackdrop(id === 'eggrobo' ? 'finalspace' : mainBoss ? space : boss ? 'chaosangel' : zone.backdrop, this.wave === 1 ? 0 : 600);
     this.applyZoneEffect(this.fieldCleared ? undefined : zone.effect);
-    audio.playMusic(id === 'eggman' ? 'eggman' : boss || this.rival ? 'boss' : (zone.backdrop as MusicKey));
-    this.waveText.setText(`${zone.name} - Wave ${this.wave}`);
+    audio.playMusic(id === 'eggman' || id === 'eggrobo' ? 'eggman' : boss || this.rival ? 'boss' : (zone.backdrop as MusicKey));
+    const zoneName = id === 'eggrobo' ? 'Final Battle' : zone.name;
+    this.waveText.setText(`${zoneName} - Wave ${this.wave}`);
     this.hero.play(this.player.anim('idle'));
     if (firstOfZone) await this.zoneBanner(zone.name, Math.floor((this.wave - 1) / 10) + 1);
     if (firstOfZone && zone.effect && !this.fieldCleared) {
@@ -1545,7 +1558,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       await this.tip('zone');
     }
     const d = this.enemy.def;
-    this.waveText.setText(this.tutorialMode ? 'TUTORIAL  -  M: quit' : `${zone.name} - Wave ${this.wave}`);
+    this.waveText.setText(this.tutorialMode ? 'TUTORIAL  -  M: quit' : `${zoneName} - Wave ${this.wave}`);
     this.ringText.setText(`${this.rings}`);
 
     this.foeHover?.stop();
@@ -1563,12 +1576,14 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     this.tweens.add({ targets: this.eBox.root, alpha: 1, duration: 250 });
     if (boss) this.cameras.main.shake(300, 0.006);
     if (this.rival) { await this.rivalBanner(); await this.rivalTalk('intro'); }
+    else if (id === 'eggrobo') await this.rivalBanner('FINAL BOSS!');
     else if (mainBoss) await this.rivalBanner('BOSS!');
     if (id === 'shadow' && boss) audio.voice('shadowlaugh');
     else if (id === 'eggman') audio.voice('eggmanlaugh');
     const rt = this.rival && this.enemy.rivalTrait ? RIVAL_TRAITS[this.enemy.def.id] : undefined;
     await this.say(this.rival ? `Rival ${this.enemy.name} wants to battle!`
       : id === 'shadow' && boss ? 'Shadow blocks the way! "Show me what you\'ve got."'
+      : id === 'eggrobo' ? `Dr. Eggman's ultimate weapon: Super Egg Robo Z! "This time, I'll crush you for good!"`
       : id === 'eggman' ? `Dr. Eggman appeared in a ${this.enemy.type.toUpperCase()} type Egg Mobile! "Hohoho! You won't get past me!"`
       : boss ? `Watch out! ${this.enemy.name} appeared!` : elite ? `A strong ${this.enemy.name} appeared! It's ${ELITE_TRAITS[this.enemy.elite!].name.toLowerCase()}!` : `A wild ${this.enemy.name} appeared!`, 500);
     if (rt) await this.say(`${rt.name}! ${rt.desc}`, 600);
@@ -1943,6 +1958,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       if (ironWill(tgt)) { hungOn = true; ironWilled = true; }
       // tutorial: niemand van je team gaat neer, en de vijand pas bij de laatste stap
       if (this.tutorialMode && tgt.hp === 0 && (this.party.includes(tgt) || this.tutGuard)) tgt.hp = 1;
+      // run summary: schade van jouw team
+      if (isPlayer) att.runDmg += hpBefore - tgt.hp;
       const spr = isPlayer ? this.foe : this.hero;
       const c = this.center(spr);
       this.burst(c.x, c.y, hit.crit ? 0xf2c230 : 0xffffff, hit.crit ? 16 : 10);
@@ -1997,6 +2014,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     if (shieldsBroken) {
       audio.sfx('monitorbreak', { volume: 0.7 });
       await this.say(shieldsBroken > 1 ? `${shieldsBroken} of ${this.who(tgt)}'s shields broke at once!` : `${this.who(tgt)}'s shield broke!`, 400);
+      // Super Egg Robo Z: na elke 2 schilden een nieuwe fase (ander type, ATK +1, in fase 3 een kapot hoofd)
+      if (tgt.def.id === 'eggrobo' && !tgt.fainted && enterFinalPhase(tgt, finalPhaseFor(FINAL_BOSS_SHIELDS, tgt.hp, tgt.maxHp))) await this.roboPhase(tgt);
       // Shell Up (Shell Tank): kruipt in zijn schelp en laadt Tank Slam op
       if (tgt.def.trait === 'shellUp' && !tgt.fainted) {
         tgt.shell = true;
@@ -2700,7 +2719,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const attackAnim = e.anim('attack');
     await this.anticipate(b, e.def.scale); // ook badniks nemen even aanloop
 
-    if (move.anim === 'missile' || move.anim === 'bomb' || move.anim === 'laugh') {
+    if (move.anim === 'robomissile') {
+      await this.roboMissiles(move, strike, missed);
+    } else if (move.anim === 'missile' || move.anim === 'bomb' || move.anim === 'laugh') {
       await this.eggmanAttack(move, strike, missed);
     } else if (move.anim === 'shoot') {
       const anim = this.playOnce(b, attackAnim);
@@ -2771,8 +2792,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async winWave() {
     this.tut?.event('win');
     this.foeHover?.stop();
+    if (!this.foeFled && !this.player.fainted) this.player.runKos++;
     if (this.charFoe) return this.winRival();
     if (this.enemy.def.id === 'eggman') return this.winEggman();
+    if (this.enemy.def.id === 'eggrobo') return this.winFinal();
     const c = this.center(this.foe);
     const boom = this.add.sprite(c.x, c.y + 10, 'badniks').setOrigin(0.5, 1).setScale(this.enemy.def.scale * 1.1).setDepth(16);
     boom.play('explosion');
@@ -2785,6 +2808,94 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     await this.wait(450);
     await this.say(`Foe ${this.enemy.name} was destroyed!`, 300);
     await this.finishWin(c);
+  }
+
+  /** Super Egg Robo Z: raketten uit zijn rugzak, in een boog naar je toe (Missile Barrage: een hele zwerm). */
+  private async roboMissiles(move: MoveDef, strike: () => void, missed: boolean) {
+    const b = this.foe;
+    const heroC = this.center(this.hero);
+    const count = move.id === 'roboBarrage' ? 5 : 2;
+    await this.tween({ targets: b, y: b.y + 4, duration: 120, yoyo: true });
+    const sx = b.x + 16, sy = b.y - b.displayHeight * 0.85;
+    const flights: Promise<void>[] = [];
+    for (let i = 0; i < count; i++) {
+      flights.push(new Promise<void>(done => this.time.delayedCall(i * 120, () => {
+        const m = this.add.sprite(sx, sy, 'eggrobo', 'eggrobo_missile_0').setDepth(15).play('eggrobo_missile');
+        audio.sfx('jump', { volume: 0.4 });
+        const tx = missed ? heroC.x - 70 : heroC.x + Phaser.Math.Between(-10, 10);
+        const ty = missed ? heroC.y - 50 : heroC.y + Phaser.Math.Between(-12, 12);
+        const arc = { t: 0 };
+        const lift = 70 + (i % 3) * 18;
+        this.tweens.add({
+          targets: arc, t: 1, duration: 520, ease: 'Sine.easeIn',
+          onUpdate: () => {
+            const x = sx + (tx - sx) * arc.t, y = sy + (ty - sy) * arc.t - Math.sin(arc.t * Math.PI) * lift;
+            m.setRotation(Math.atan2(y - m.y, x - m.x)).setPosition(x, y);
+          },
+          onComplete: () => {
+            m.destroy();
+            const boom = this.add.sprite(tx, ty + 16, 'badniks').setOrigin(0.5, 1).setScale(1.2).setDepth(16).play('explosion');
+            boom.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => boom.destroy());
+            audio.sfx('explosion', { volume: 0.4 });
+            if (i === 0) strike(); else if (!missed) { this.burst(tx, ty, 0xffa040, 6); this.cameras.main.shake(90, 0.004); }
+            done();
+          },
+        });
+      })));
+    }
+    if (missed) this.tween({ targets: this.hero, y: PLAYER_POS.y - 34, duration: 180, yoyo: true, ease: 'Quad.easeOut' });
+    await Promise.all(flights);
+    await this.wait(200);
+  }
+
+  /** Super Egg Robo Z gaat een fase verder: flitsen, nieuw type, ATK omhoog (en in fase 3 het kapotte hoofd). */
+  private async roboPhase(e: Fighter) {
+    const c = this.center(this.foe);
+    audio.sfx('bigexplosion', { volume: 0.6 });
+    this.cameras.main.flash(300, 255, 255, 255);
+    this.cameras.main.shake(400, 0.01);
+    for (let i = 0; i < 3; i++) {
+      this.time.delayedCall(i * 110, () => {
+        const boom = this.add.sprite(c.x + Phaser.Math.Between(-24, 24), c.y + Phaser.Math.Between(-30, 30), 'badniks').setOrigin(0.5, 1).setScale(1.3).setDepth(16).play('explosion');
+        boom.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => boom.destroy());
+      });
+    }
+    this.foe.play(e.anim('idle'));
+    this.setBox(this.eBox, e, false);
+    this.updateTypeArrow();
+    await this.say(e.phase >= 3
+      ? `Super Egg Robo Z is falling apart... and goes all out! It's now ${e.type.toUpperCase()} type!`
+      : `Super Egg Robo Z switched modes! It's now ${e.type.toUpperCase()} type!`, 500);
+    await this.say(`Its ATK rose!`, 300);
+  }
+
+  /** Super Egg Robo Z verslagen: een hele reeks explosies, en dan de ending. */
+  private async winFinal() {
+    const c = this.center(this.foe);
+    this.foe.play(this.enemy.anim('broken'));
+    this.tween({ targets: this.eBox.root, alpha: 0, duration: 300 });
+    audio.stopMusic(800);
+    for (let i = 0; i < 12; i++) {
+      this.time.delayedCall(i * 140, () => {
+        const boom = this.add.sprite(c.x + Phaser.Math.Between(-36, 36), c.y + Phaser.Math.Between(-50, 50), 'badniks').setOrigin(0.5, 1).setScale(1.7).setDepth(16).play('explosion');
+        boom.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => boom.destroy());
+        audio.sfx(i % 3 ? 'explosion' : 'explosion2', { volume: 0.5 });
+      });
+    }
+    this.cameras.main.shake(1700, 0.012);
+    this.tweens.add({ targets: this.foe, x: this.foe.x + 6, duration: 50, yoyo: true, repeat: 16 });
+    await this.wait(1700);
+    audio.sfx('bigexplosion');
+    this.cameras.main.flash(500, 255, 255, 255);
+    this.foe.setVisible(false);
+    if (!this.player.fainted) this.hero.play(this.anims.exists(this.player.anim('bosswin')) ? this.player.anim('bosswin') : this.player.anim('victory'));
+    this.victoryVoice();
+    await this.wait(600);
+    await this.say('Super Egg Robo Z was destroyed!', 500);
+    await this.say('Dr. Eggman\'s plans are ruined for good!', 700);
+    clearRun();
+    this.menu = 'busy';
+    this.toSummary(true);
   }
 
   /** Eggman verslagen: explosies op de Egg Mobile, en dan tolt hij het scherm uit. */
@@ -3258,6 +3369,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
 
   /** Je character is KO: volgende kiezen, of game over als niemand meer kan. */
   private async handleFaint(): Promise<boolean> {
+    this.player.runDowns++;
+    if (this.enemy) this.defeatedBy = this.who(this.enemy);
     this.hero.play(this.player.anim('ko'));
     this.refreshPartyHeads();
     const alive = this.party.filter(f => !f.fainted);
@@ -3663,7 +3776,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     checkerBand(g, 0, 0, 250, 1, 4);
     checkerBand(g, 0, 42, 250, 1, 4);
     g.fillStyle(HUD.outline).fillRect(0, 4, 250, 1).fillRect(0, 41, 250, 1);
-    const head = this.add.image(18, 23, 'ui', `head_${this.enemy.def.id}`).setScale(2).setOrigin(0, 0.5);
+    const own = this.textures.exists(`head_${this.enemy.def.id}`);
+    const head = own ? this.add.image(14, 23, `head_${this.enemy.def.id}`).setOrigin(0, 0.5)
+      : this.add.image(18, 23, 'ui', `head_${this.enemy.def.id}`).setScale(2).setOrigin(0, 0.5);
     const t1 = this.add.text(62, 10, label, { fontFamily: FONT, fontSize: '8px', color: '#e8443a' }).setScale(2);
     const t2 = this.add.text(62, 30, this.enemy.name.toUpperCase(), { fontFamily: FONT, fontSize: '8px', color: '#ffffff' });
     c.add([g, head, t1, t2]);
@@ -3729,9 +3844,17 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     clearRun();
     audio.stopMusic(1200);
     await this.say(this.party.length > 1 ? 'The whole team is down!' : `${this.player.name} is down!`, 400);
-    await this.say(`Run over at wave ${this.wave}.\nPress Z / tap to retry.`, 0);
+    await this.say(`Run over at wave ${this.wave}.`, 600);
     this.menu = 'gameover';
-    this.input.once('pointerdown', () => { if (this.menu === 'gameover') this.toStarter(); });
+    this.toSummary(false);
+  }
+
+  /** Naar de run summary (game over of gewonnen). */
+  private toSummary(victory: boolean) {
+    const data = buildSummary({ victory, wave: this.wave, rings: this.rings, emeralds: this.emeralds, bag: this.bag,
+      timeMs: Date.now() - this.runStart, defeatedBy: this.defeatedBy, party: this.party, test: TEST_MODE });
+    this.cameras.main.fadeOut(400, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(victory ? 'Ending' : 'Summary', data));
   }
 
   // ---------------------------------------------------------------- rewards + shop

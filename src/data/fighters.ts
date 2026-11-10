@@ -5,7 +5,7 @@
 
 /** Hoe een move er in beeld uitziet. Player-moves en badnik-moves hebben eigen stijlen. */
 export type MoveAnim =
-  | 'spin' | 'homing' | 'dash' | 'punch' | 'fly'   // team
+  | 'robomissile' | 'spin' | 'homing' | 'dash' | 'punch' | 'fly'   // team
   | 'glide' | 'hammer' | 'twirl' | 'heal' | 'chao' | 'ultimate'
   | 'spear' | 'chaos'                               // Shadow
   | 'missile' | 'bomb' | 'laugh'                    // Eggman
@@ -140,6 +140,34 @@ export function traitEndOfTurn(e: Fighter, rings: number) {
   }
   return out;
 }
+// ---------------------------------------------------------------- de eindbaas (Super Egg Robo Z, wave 90)
+/** Type per fase: zo is geen team de hele tijd in het nadeel (en wisselen loont). */
+export const FINAL_PHASE_TYPES: FighterType[] = ['power', 'speed', 'fly'];
+/** Fase hoort bij het aantal gebroken schilden: elke 2 een fase verder. */
+export function finalPhaseFor(segmentsTotal: number, hp: number, maxHp: number) {
+  // schilden over: tel de grenzen (zelfde afronding als shieldCap) die nog onder de HP liggen
+  const size = maxHp / segmentsTotal;
+  let left = hp > 0 ? 1 : 0;
+  for (let k = 1; k < segmentsTotal; k++) if (Math.round(size * k) < hp) left++;
+  return Math.min(3, 1 + Math.floor((segmentsTotal - left) / 2));
+}
+/** Zet de nieuwe fase: ander type, ATK +1. Geeft true als de fase veranderde. */
+export function enterFinalPhase(e: Fighter, phase: number) {
+  if (phase <= e.phase) return false;
+  // ATK +1 per fase (ook als één harde klap er twee overslaat)
+  e.raise('atk', phase - e.phase);
+  e.phase = phase;
+  e.typeOverride = FINAL_PHASE_TYPES[phase - 1];
+  return true;
+}
+/** Fase 1: raketten en klappen; fase 2: ook een salvo; fase 3: elke 2e beurt een salvo. */
+function finalBossMove(e: Fighter): MoveDef {
+  const t = e.foeTurns;
+  if (e.phase >= 3) return t % 2 === 0 ? MOVES.roboBarrage : t % 4 === 1 ? MOVES.roboPunch : MOVES.roboMissile;
+  if (e.phase === 2) return t % 3 === 0 ? MOVES.roboBarrage : t % 3 === 1 ? MOVES.roboMissile : MOVES.roboPunch;
+  return t % 2 === 1 ? MOVES.roboMissile : MOVES.roboPunch;
+}
+
 /** Mirror Shine: zoveel van je schade kaatst terug (nooit KO). */
 export function mirrorReflect(target: Fighter, attacker: Fighter, dealt: number) {
   if (!target.shining || dealt <= 0) return 0;
@@ -377,6 +405,9 @@ export const MOVES: Record<string, MoveDef> = {
   // --- Eggman (main boss)
   eggMissile: { id: 'eggMissile', name: 'Egg Missile', power: 40, accuracy: 95, priority: 0, anim: 'missile', desc: '' },
   eggBomb:    { id: 'eggBomb', name: 'Egg Bomb', power: 60, accuracy: 85, priority: 0, anim: 'bomb', desc: '' },
+  roboMissile: { id: 'roboMissile', name: 'Robo Missile', power: 45, accuracy: 95, priority: 0, anim: 'robomissile', desc: '' },
+  roboPunch:   { id: 'roboPunch', name: 'Robo Punch', power: 70, accuracy: 90, priority: 0, anim: 'tackle', desc: '' },
+  roboBarrage: { id: 'roboBarrage', name: 'Missile Barrage', power: 85, accuracy: 85, priority: 0, anim: 'robomissile', desc: '' },
   eggLaugh:   { id: 'eggLaugh', name: 'Evil Laugh', power: 0, accuracy: 100, priority: 0, anim: 'laugh', selfStages: { atk: 1 }, desc: '' },
   // --- badniks
   stingShot:  { id: 'stingShot', tag: 'POISON', name: 'Sting Shot', power: 34, accuracy: 92, priority: 0, anim: 'shoot', poison: 3, desc: 'Poisons: 1/16 HP per turn for 3 turns.', tint: 0xb06aff },
@@ -514,6 +545,9 @@ export const FIGHTERS: Record<string, FighterDef> = {
   // ------------------------------------------------------------- main bosses (wave 20, 40, 60, 80)
   eggman:   { type: 'power', id: 'eggman', name: 'Dr. Eggman', atlas: 'eggman', animPrefix: 'eggman', scale: 2, facesRight: true, hover: 26,
     base: { hp: 40, atk: 10, def: 10, spd: 6 }, growth: { hp: 5.0, atk: 1.7, def: 1.4, spd: 0.9 }, moves: ['eggMissile', 'eggBomb', 'eggLaugh'], expYield: 40 },
+  // de eindbaas (wave 90): 3 fases, elke fase een ander type
+  eggrobo:  { type: 'power', id: 'eggrobo', name: 'Super Egg Robo Z', atlas: 'eggrobo', animPrefix: 'eggrobo', scale: 1,
+    base: { hp: 60, atk: 11, def: 11, spd: 7 }, growth: { hp: 6.0, atk: 1.8, def: 1.5, spd: 1.0 }, moves: ['roboMissile', 'roboPunch', 'roboBarrage'], expYield: 60 },
   turtle:   { type: 'power', id: 'turtle', name: 'Shell Tank', atlas: 'badniks', animPrefix: 'turtle', scale: 2.2,
     base: { hp: 30, atk: 9, def: 9, spd: 6 }, growth: { hp: 4.2, atk: 1.6, def: 1.3, spd: 0.9 }, moves: ['shellCannon', 'tankSlam'], expYield: 25, trait: 'shellUp' },
 };
@@ -567,6 +601,12 @@ export class Fighter {
   charged = false;
   /** Bomb Toss: beurten tot de bom ontploft. */
   fuse = 0;
+  /** Eindbaas: de fase (1-3). */
+  phase = 1;
+  /** run-statistieken voor de run summary: schade gedaan, KO's, keren neergegaan */
+  runDmg = 0;
+  runKos = 0;
+  runDowns = 0;
   /** Mirror Shine: glimt deze beurt (schade kaatst terug). */
   shining = false;
   /** Ring Thief: gestolen rings en beurten tot hij vlucht. */
@@ -600,13 +640,15 @@ export class Fighter {
 
   get name() { return this.def.name; }
   anim(name: string) {
+    // eindbaas: in de laatste fase het kapotte hoofd
+    if (name === 'idle' && this.def.id === 'eggrobo' && this.phase >= 3) name = 'broken';
     // Mirror Shine: zolang hij glimt staat hij open (zijn 'attack'-frames)
     if (name === 'idle' && this.shining) name = 'attack';
     return `${this.def.animPrefix}_${name}`;
   }
   /** Vijanden worden per zone sterker (HP, ATK, DEF; niet SPD), zie enemyScaling in zones.ts. */
   statMult = 1;
-  private stat(k: keyof Stats) {
+  stat(k: keyof Stats) {
     const v = this.def.base[k] + this.def.growth[k] * (this.level - 1);
     return Math.floor(k === 'spd' ? v : v * this.statMult * (k === 'atk' ? this.atkMult : 1));
   }
@@ -769,6 +811,7 @@ export function shieldCap(target: Fighter, damage: number): { damage: number; br
 /** Vijand kiest zijn move met het ritme van zijn eigenschap: Charge laadt op beurt 2, 5, 8 ... op; Shell Up slaat na het opladen met Tank Slam. */
 export function traitMove(e: Fighter, normal: () => MoveDef): MoveDef {
   e.foeTurns++;
+  if (e.def.id === 'eggrobo') return finalBossMove(e);
   if (e.def.trait === 'bomber' && e.fuse <= 0) { e.fuse = BOMB_FUSE; return MOVES.bombBlast; }
   if (e.def.trait === 'shellUp' && e.charged) return MOVES.tankSlam;
   if (e.def.trait === 'charger' && !e.charged && e.foeTurns % CHARGE_EVERY === 2) return MOVES.chargeUp;
