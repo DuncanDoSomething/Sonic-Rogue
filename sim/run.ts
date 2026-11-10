@@ -38,6 +38,7 @@ const EXPERIMENTS: Record<string, () => void> = {
   // Knuckles (Guardian): kans om een KO te overleven
   sash30: () => { Battle.opts.sashChance = 0.3; },
   b1: () => { Battle.opts.badnikHp = 1; Battle.opts.badnikAtk = 1; },
+  h13a15: () => { Battle.opts.badnikHp = 1.3; Battle.opts.badnikAtk = 1.5; },
   b15: () => { Battle.opts.badnikHp = 1.5; Battle.opts.badnikAtk = 1.25; },
   b14: () => { Battle.opts.badnikHp = 1.4; Battle.opts.badnikAtk = 1.1; },
   b17: () => { Battle.opts.badnikHp = 1.7; Battle.opts.badnikAtk = 1.35; },

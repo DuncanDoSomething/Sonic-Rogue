@@ -605,9 +605,10 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       box.badge.on('pointerdown', () => { if (this.hudTip) this.hideHudTip(); else show(); });
     }
     if (isPlayer) {
-      // Passive-tabje boven de box, alleen als het iets doet: Sonic Speed (extra schade) en Lucky Swing (Amy's crits)
+      // Passive-tabje boven de box, links (rechts staat het zone-effect), alleen als het iets doet:
+      // Sonic Speed (extra schade) en Lucky Swing (Amy's crits)
       box.speedTagBg = this.add.graphics();
-      box.speedTag = this.add.text(w - 10, -11, '', { fontFamily: FONT, fontSize: '8px', color: '#6ad8ff' }).setOrigin(1, 0);
+      box.speedTag = this.add.text(10, -11, '', { fontFamily: FONT, fontSize: '8px', color: '#6ad8ff' }).setOrigin(0, 0);
       root.add([box.speedTagBg, box.speedTag]);
       box.speedTag.setInteractive({ useHandCursor: true });
       const showSpeed = () => {
@@ -619,13 +620,13 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
           if (l.mult > 1.5) parts.push(`crits do ${l.mult}x`);
           if (l.extra) parts.push(`${Math.round(l.extra * 100)}% chance to swing again`);
           const next = l.next ? ` At ATK +${l.next.at}: ${l.next.what}.` : '';
-          this.showHudTip(root.x + w - 6, root.y - 72, 'LUCKY SWING', `ATK +${l.atk}: ${parts.join(', ')}.${next}`, true);
+          this.showHudTip(root.x + 6, root.y - 72, 'LUCKY SWING', `ATK +${l.atk}: ${parts.join(', ')}.${next}`, false);
           return;
         }
         if (p.def.passive?.id !== 'speedster') return;
         const dmg = Math.round((speedBonus(p, e) - 1) * 100), dodge = Math.round(dodgeChance(p, e) * 100);
-        this.showHudTip(root.x + w - 6, root.y - 72, 'SONIC SPEED',
-          `${p.name} is ${(p.spd / Math.max(1, e.spd)).toFixed(1)}x as fast as ${e.name}: +${dmg}% damage and ${dodge}% dodge chance.`, true);
+        this.showHudTip(root.x + 6, root.y - 72, 'SONIC SPEED',
+          `${p.name} is ${(p.spd / Math.max(1, e.spd)).toFixed(1)}x as fast as ${e.name}: +${dmg}% damage and ${dodge}% dodge chance.`, false);
       };
       box.speedTag.on('pointerover', showSpeed);
       box.speedTag.on('pointerout', () => this.hideHudTip());
@@ -3630,9 +3631,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     g.clear();
     if (!text) return;
     const bw = tag.width + 8;
-    g.fillStyle(HUD.outline, 0.95).fillRoundedRect(tag.x - bw + 4, tag.y - 2, bw, 12, 3);
-    g.fillStyle(HUD.blueBottom, 0.95).fillRect(tag.x - bw + 5, tag.y - 1, bw - 2, 10);
-    g.lineStyle(1, color).strokeRect(tag.x - bw + 5.5, tag.y - 0.5, bw - 3, 9);
+    g.fillStyle(HUD.outline, 0.95).fillRoundedRect(tag.x - 4, tag.y - 2, bw, 12, 3);
+    g.fillStyle(HUD.blueBottom, 0.95).fillRect(tag.x - 3, tag.y - 1, bw - 2, 10);
+    g.lineStyle(1, color).strokeRect(tag.x - 2.5, tag.y - 0.5, bw - 3, 9);
   }
 
   /** "!" boven een opgeladen vijand, zodat je ziet dat er een dubbele klap aankomt. */
