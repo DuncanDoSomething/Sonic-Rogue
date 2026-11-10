@@ -212,7 +212,7 @@ export class Battle {
     }
     if (id === 'eggman' || (boss && !mainBoss && Battle.opts.bossRandomType)) this.enemy.typeOverride = pick(this.rng, FIGHTER_TYPES);
     if (id === 'eggman' && Battle.opts.eggmanLevel) { this.enemy.level += Battle.opts.eggmanLevel; this.enemy.hp = this.enemy.maxHp; }
-    this.applyZoneEffect(this.fieldCleared ? undefined : zone.effect);
+    this.applyZoneEffect(this.fieldCleared || finalBoss ? undefined : zone.effect);
     // Battle Style "Switch" (standaard): gratis wisselen voor elke wave behalve de eerste
     if (this.wave > 1 && this.party.filter(f => !f.fainted).length > 1) {
       const to = this.policy.preWave(this);

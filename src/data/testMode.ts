@@ -12,7 +12,7 @@ export const TEST_MODE = typeof window !== 'undefined' && readFlag();
 /** Sneltoetsen in een gevecht (testmodus). */
 export const TEST_KEYS: Array<[string, string]> = [
   ['1', 'Full Boost'],
-  ['2', 'Team to Lv.30 (ultimates)'],
+  ['2', 'Team +10 levels'],
   ['3', 'Win this wave'],
   ['4', 'Heal + revive the team'],
   ['5', 'Jump to the zone boss'],

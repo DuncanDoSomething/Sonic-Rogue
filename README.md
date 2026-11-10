@@ -79,7 +79,7 @@ npm run sim      # balance simulation (whole runs, every team)
 npm run build    # production build in dist/
 ```
 
-Add `?test` to the URL (locally or on the live site) for test mode: every character is unlocked, nothing is saved, and in battle the number keys give you full Boost, level 30, a skip to the zone boss and more (press **T** for the list).
+Add `?test` to the URL (locally or on the live site) for test mode: every character is unlocked, nothing is saved, and in battle the number keys give you full Boost, +10 levels, a skip to the zone boss, the next zone and more (press **T** for the list).
 
 ## Project structure
 

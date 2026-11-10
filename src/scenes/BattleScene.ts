@@ -1547,7 +1547,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     // main bosses in de ruimte: X-Zone (wave 20, 60) en XX (wave 40, 80, en altijd bij Shadow)
     const space = id === 'shadow' || this.wave % 40 === 0 ? 'xx' : 'xzone';
     this.setBackdrop(id === 'eggrobo' ? 'finalspace' : mainBoss ? space : boss ? 'chaosangel' : zone.backdrop, this.wave === 1 ? 0 : 600);
-    this.applyZoneEffect(this.fieldCleared ? undefined : zone.effect);
+    // de eindbaas vecht zonder zone-effect (alleen jij tegen hem)
+    this.applyZoneEffect(this.fieldCleared || id === 'eggrobo' ? undefined : zone.effect);
     audio.playMusic(id === 'eggman' || id === 'eggrobo' ? 'eggman' : boss || this.rival ? 'boss' : (zone.backdrop as MusicKey));
     const zoneName = id === 'eggrobo' ? 'Final Battle' : zone.name;
     this.waveText.setText(`${zoneName} - Wave ${this.wave}`);
@@ -1745,8 +1746,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     switch (k) {
       case '1': this.party.forEach(f => { f.boost = MAX_BOOST; }); done('full Boost.'); break;
       case '2':
-        this.party.forEach(f => { if (f.level < ULTIMATE_LEVEL) { f.level = ULTIMATE_LEVEL; f.exp = 0; } if (!f.fainted) f.hp = f.maxHp; });
-        done(`team is Lv.${ULTIMATE_LEVEL}, ultimates unlocked.`);
+        // +10 levels (zo kun je snel genoeg levelen voor een latere wave, bijv. de eindbaas op 90)
+        this.party.forEach(f => { const before = f.maxHp; f.level += 10; f.exp = 0; if (!f.fainted) f.hp = Math.min(f.maxHp, f.hp + f.maxHp - before); });
+        done(`team +10 levels (${this.player.name} is Lv.${this.player.level}).`);
         break;
       case '3': this.menu = 'busy'; this.enemy.hp = 0; this.setBox(this.eBox, this.enemy, false); void this.winWave(); break;
       case '4': this.party.forEach(f => { f.hp = f.maxHp; }); done('team healed and revived.'); break;

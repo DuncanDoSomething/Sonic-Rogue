@@ -285,11 +285,13 @@ test.describe('Sonic Rogue smoke tests', () => {
     const errors = trackErrors(page);
     await openGame(page, '/?test');
     await startRun(page);
+    const level = () => page.evaluate(() => (window as any).game.scene.getScene('Battle').player.level);
+    const start = await level();
     await press(page, '2');
     await waitForMenu(page, 'command');
     await press(page, '1');
     await expect.poll(async () => (await battle(page)).boost).toBe(6);
-    expect(await page.evaluate(() => (window as any).game.scene.getScene('Battle').player.level)).toBe(30);
+    expect(await level()).toBe(start + 10);
     expect(await page.evaluate(() => localStorage.getItem('sonicrogue_run'))).toBeNull();
     expect(await page.evaluate(() => localStorage.getItem('sonicrogue_unlocked'))).toBeNull();
     expect(errors).toEqual([]);

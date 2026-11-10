@@ -172,7 +172,7 @@ const deathBuckets: Record<string, number> = {};
 const deathKinds: Record<string, number> = {};
 const deathFoes: Record<string, number> = {};
 for (const l of logs) {
-  if (l.reached > MAX_WAVE) continue;
+  if (l.reached > MAX_WAVE || l.won) continue;   // gewonnen runs gaan niet dood
   const b = `${Math.floor((l.reached - 1) / 10) * 10 + 1}-${Math.floor((l.reached - 1) / 10) * 10 + 10}`;
   deathBuckets[b] = (deathBuckets[b] ?? 0) + 1;
   deathKinds[l.lostKind] = (deathKinds[l.lostKind] ?? 0) + 1;
