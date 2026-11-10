@@ -107,7 +107,7 @@ export const ENEMY_ZONE_SCALING = 0.08;
 export const START_RINGS = 100;
 /**
  * Badniks (gewone waves en elites, geen bosses) hebben extra HP en ATK, zodat ze geen voer zijn.
- * Moe koos eerst "heel zwaar", toen 1,5x HP / 1,5x ATK, en nu 1,3x HP / 1,5x ATK (badniks doen echt schade, maar
+ * Duncan koos eerst "heel zwaar", toen 1,5x HP / 1,5x ATK, en nu 1,3x HP / 1,5x ATK (badniks doen echt schade, maar
  * zijn niet te taai), met Piggy Bank tot DEF +2. Sim, 1.000 runs per team:
  *   HP 1,5x ATK 1,5x -> gem. wave 54, mediaan 50, 6% haalt wave 90, 3,7 beurten, 8,3% HP per gevecht
  *   HP 1,3x ATK 1,5x -> gem. wave 62, mediaan 59, 10% haalt wave 90, 3,4 beurten, 7,7% HP per gevecht (gekozen)

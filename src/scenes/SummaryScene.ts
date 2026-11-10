@@ -33,8 +33,8 @@ export class SummaryScene extends Phaser.Scene {
     bg.setScale(Math.max(W / bg.width, H / bg.height));
     this.add.rectangle(0, 0, W, H, 0x05060c, d.victory ? 0.45 : 0.6).setOrigin(0);
     this.cameras.main.fadeIn(400, 0, 0, 0);
-    if (d.victory) audio.playMusic('victory');
-    else audio.stopMusic(600);
+    // na de ending loopt het overwinningsliedje nog (één keer); bij game over wordt het stil
+    if (!d.victory) audio.stopMusic(600);
 
     this.buildLeft(d);
     d.party.forEach((f, i) => this.buildCard(f, 8 + i * (CARD_H + 4), i));
@@ -118,10 +118,13 @@ export class SummaryScene extends Phaser.Scene {
     const type = this.add.image(34 + name.width + 6, 11, `type_${f.type}`).setOrigin(0, 0.5);
     const lv = t(CARD_W - 10, 7, `Lv.${f.level}`, HUD.label).setOrigin(1, 0);
     const passive = t(34, 19, f.passive ?? '', HUD.muted);
-    const stats = t(10, 32, `HP ${f.hp}/${f.maxHp}  ATK ${f.atk}  DEF ${f.def}  SPD ${f.spd}`);
+    // stats in kleur: HP groen, ATK rood, SPD blauw
+    const statParts: Array<[string, string]> = [[`HP ${f.hp}/${f.maxHp}`, '#4ade5a'], [`ATK ${f.atk}`, '#ff6a5a'], [`DEF ${f.def}`, '#ffffff'], [`SPD ${f.spd}`, '#5ab4ff']];
+    let sx = 10;
+    const stats = statParts.map(([text, color]) => { const o = t(sx, 32, text, color); sx += o.width + 12; return o; });
     const moves = f.moves.map((m, k) => t(10 + (k % 2) * 150, 44 + Math.floor(k / 2) * 10, m, '#cfe8ff'));
     const run = t(10, 66, `DMG ${f.dmg}   KOs ${f.kos}   DOWNS ${f.downs}`, '#f2c230');
-    c.add([g, head, name, type, lv, passive, stats, ...moves, run]);
+    c.add([g, head, name, type, lv, passive, ...stats, ...moves, run]);
     if (f.fainted) c.add(t(CARD_W - 10, 19, 'KO', '#ff6a5a').setOrigin(1, 0));
     this.tweens.add({ targets: c, x: CARD_X, duration: 380, delay: 150 + i * 110, ease: 'Cubic.easeOut' });
   }

@@ -1300,7 +1300,7 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private hpColor(frac: number) { return frac > 0.5 ? 0x4ade5a : frac > 0.2 ? 0xf2c230 : 0xe8443a; }
 
   private setBox(box: InfoBox, f: Fighter, animate: boolean) {
-    box.name.setText(f.name);
+    box.name.setText(f.def.boxName ?? f.name);
     if (box === this.pBox) this.refreshPartyHeads();
     box.typeIcon.setTexture(`type_${f.type}`).setX(box.name.x + box.name.width + 4);
     if (box.badge) {

@@ -7,7 +7,7 @@ const FONT = '"Press Start 2P", monospace';
 /** Alle credits. Kopjes in geel, namen in wit. Lege string = witregel. */
 const CREDITS: Array<[string, string?]> = [
   ['SONIC ROGUE', 'title'],
-  ['A fan game by Moe'],
+  ['A fan game by Duncan'],
   ['Inspired by PokeRogue'],
   [''],
   ['SONIC THE HEDGEHOG', 'head'],
@@ -48,7 +48,7 @@ const CREDITS: Array<[string, string?]> = [
   [''],
   ['BUILT WITH', 'head'],
   ['Phaser 3 + TypeScript'],
-  ['Code: Moe and Claude'],
+  ['Code: Duncan and Claude'],
   [''],
   ['Non-commercial. Not affiliated', 'warn'],
   ['with SEGA.', 'warn'],

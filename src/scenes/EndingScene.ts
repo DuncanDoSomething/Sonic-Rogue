@@ -53,14 +53,15 @@ export class EndingScene extends Phaser.Scene {
 
   create() {
     this.add.rectangle(0, 0, W, H, 0x000000).setOrigin(0);
-    audio.playMusic('victory');
+    // het overwinningsliedje één keer, niet in een loop
+    audio.playMusic('victory', false);
     // groepsfoto: langzaam van boven naar beneden pannen
     const art = this.add.image(W / 2, 0, 'ending_group').setOrigin(0.5, 0);
     art.setScale(W / art.width);
     art.setAlpha(0);
     const pan = art.displayHeight - H;
     this.tweens.add({ targets: art, alpha: 1, duration: 900 });
-    this.tweens.add({ targets: art, y: -pan, duration: 7000, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: art, y: -pan, duration: 11000, ease: 'Sine.easeInOut' });
     this.cameras.main.fadeIn(600, 255, 255, 255);
 
     const skip = this.add.text(W - 8, 6, 'X: skip', { fontFamily: FONT, fontSize: '8px', color: '#ffffff', stroke: '#281060', strokeThickness: 3 }).setOrigin(1, 0).setDepth(70);
@@ -104,7 +105,7 @@ export class EndingScene extends Phaser.Scene {
       strip.add([frame, this.add.image(x, 0, `ending_panel_${i}`).setOrigin(0).setScale(scale)]);
     }
     const len = 4 * (pw + gap);
-    await new Promise<void>(r => this.tweens.add({ targets: strip, x: -len, duration: 9000, ease: 'Linear', onComplete: () => r() }));
+    await new Promise<void>(r => this.tweens.add({ targets: strip, x: -len, duration: 16000, ease: 'Linear', onComplete: () => r() }));
     if (this.done) return;
 
     // CONGRATULATIONS!

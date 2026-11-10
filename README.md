@@ -121,4 +121,4 @@ This project uses community sprite rips from [The Spriters Resource](https://www
 
 Gameplay inspired by [PokéRogue](https://pokerogue.net).
 
-Design and development by Moe, with Claude (Anthropic) as a coding assistant.
+Design and development by Duncan, with Claude (Anthropic) as a coding assistant.

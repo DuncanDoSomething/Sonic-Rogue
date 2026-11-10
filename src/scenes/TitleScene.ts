@@ -200,7 +200,7 @@ export class TitleScene extends Phaser.Scene {
   private playCards() {
     const cards = [
       this.makeCard('INSPIRED BY', 'POKÉROGUE'),
-      this.makeCard('A FAN GAME BY', 'MOE', 'thanks for playing!'),
+      this.makeCard('A FAN GAME BY', 'DUNCAN', 'thanks for playing!'),
       this.makeRightsCard(),
     ];
     const holds = [1600, 1600, 2600];

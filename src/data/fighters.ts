@@ -433,6 +433,8 @@ export interface Stats { hp: number; atk: number; def: number; spd: number; }
 export interface FighterDef {
   id: string;
   name: string;
+  /** korte naam voor de HP-box als de echte naam niet naast het type en level past */
+  boxName?: string;
   /** Texture-atlas en animatie-prefix, bijv. atlas 'badniks' + prefix 'frog' -> anim 'frog_idle'. */
   atlas: string;
   animPrefix: string;
@@ -546,7 +548,7 @@ export const FIGHTERS: Record<string, FighterDef> = {
   eggman:   { type: 'power', id: 'eggman', name: 'Dr. Eggman', atlas: 'eggman', animPrefix: 'eggman', scale: 2, facesRight: true, hover: 26,
     base: { hp: 40, atk: 10, def: 10, spd: 6 }, growth: { hp: 5.0, atk: 1.7, def: 1.4, spd: 0.9 }, moves: ['eggMissile', 'eggBomb', 'eggLaugh'], expYield: 40 },
   // de eindbaas (wave 90): 3 fases, elke fase een ander type
-  eggrobo:  { type: 'power', id: 'eggrobo', name: 'Super Egg Robo Z', atlas: 'eggrobo', animPrefix: 'eggrobo', scale: 1,
+  eggrobo:  { type: 'power', id: 'eggrobo', name: 'Super Egg Robo Z', boxName: 'Egg Robo Z', atlas: 'eggrobo', animPrefix: 'eggrobo', scale: 1,
     base: { hp: 60, atk: 11, def: 11, spd: 7 }, growth: { hp: 6.0, atk: 1.8, def: 1.5, spd: 1.0 }, moves: ['roboMissile', 'roboPunch', 'roboBarrage'], expYield: 60 },
   turtle:   { type: 'power', id: 'turtle', name: 'Shell Tank', atlas: 'badniks', animPrefix: 'turtle', scale: 2.2,
     base: { hp: 30, atk: 9, def: 9, spd: 6 }, growth: { hp: 4.2, atk: 1.6, def: 1.3, spd: 0.9 }, moves: ['shellCannon', 'tankSlam'], expYield: 25, trait: 'shellUp' },
