@@ -9,6 +9,9 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: true,
+  // lokaal 2 tegelijk (de standaard zou hier 1 zijn: helft van 2 kernen); in CI de standaard,
+  // en daar worden de tests ook nog over 3 jobs verdeeld (--shard, zie de workflow)
+  workers: process.env.CI ? undefined : 2,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
