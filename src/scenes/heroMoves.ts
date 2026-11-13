@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // De eigen moves van het team, zonder Shadow (die staat in shadowMoves.ts):
 // 1 Boost: Homing Attack, Copter Dive, Glide Attack, Chao Attack, Piko Hammer.
-// 2-3 Boost: Spin Dash, Glove Punch, Knuckle Punch, Hammer Twirl en Chao Cheer.
+// 2-3 Boost: Blue Blur Combo, Glove Punch, Knuckle Punch, Hammer Twirl en Chao Cheer.
 // Net als shadowMoves.ts alleen beeld en geluid; de schade gaat via `strike()` uit de BattleScene.
 // Sprites: de eigen atlas van elk character, plus 'sbmoves' (Sonic Battle-frames en effecten, tools/build_sb_moves.py).
 // Elke animatie doet wat de naam van de move zegt: Knuckle Punch is een vuist, Glove Punch een boxhandschoen, enz.
@@ -102,53 +102,117 @@ async function hopHome(c: HeroCtx) {
   c.dust(s.x, s.y, 4);
 }
 
-// ---------------------------------------------------------------- Sonic: Spin Dash
-/** Op de plek oprollen en drie keer optoeren (steeds sneller, vonken en ringen), dan als een vuurbal dwars door het doelwit. */
-export async function spinDash(c: HeroCtx) {
+// ---------------------------------------------------------------- Sonic: Blue Blur Combo (de move met id spinDash)
+/** Een klap met een witte knal en een paar lijntjes eromheen. */
+function impact(scene: Phaser.Scene, x: number, y: number, dir: number, color: number, size = 1) {
+  const ring = scene.add.circle(x, y, 6 * size, color, 0.9).setDepth(20).setBlendMode(ADD);
+  scene.tweens.add({ targets: ring, scale: 2.4, alpha: 0, duration: 160, ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
+  for (let i = 0; i < 4 + Math.round(size * 2); i++) {
+    const a = rndF(-1.1, 1.1) + (dir > 0 ? 0 : Math.PI);
+    const len = rnd(10, 18) * size;
+    const l = scene.add.rectangle(x, y, len, 2, 0xffffff, 1).setDepth(20).setBlendMode(ADD).setRotation(a);
+    scene.tweens.add({ targets: l, x: x + Math.cos(a) * len * 1.6, y: y + Math.sin(a) * len * 1.6, scaleX: 0.2, alpha: 0, duration: 180, onComplete: () => l.destroy() });
+  }
+}
+
+/** Het doelwit schokt even mee met een klap (alleen x, zodat het zweven gewoon doorloopt). */
+function jolt(scene: Phaser.Scene, t: Sprite, dir: number, px = 3) {
+  scene.tweens.add({ targets: t, x: t.x + dir * px, duration: 35, yoyo: true });
+}
+
+/** Blauwe schim van Sonic die vanuit een andere hoek uithaalt (de "te snel om te zien"-klappen). */
+function afterimage(c: HeroCtx, x: number, y: number, frame: string, faceRight: boolean) {
+  const g = c.scene.add.sprite(x, y, 'sbmoves', frame).setOrigin(0.5, 1).setScale(c.s.scaleX)
+    .setFlipX(faceRight).setTint(0x6ab0ff).setAlpha(0.9).setDepth(c.s.depth + 1);
+  c.scene.tweens.add({ targets: g, alpha: 0, duration: 200, delay: 60, onComplete: () => g.destroy() });
+}
+
+/**
+ * Geen bal deze keer: in een blauwe flits naar het doelwit, punch, kick, een reeks klappen van alle kanten
+ * die te snel zijn om te zien, en een top kick als afsluiter. Dan in een flits weer terug.
+ */
+export async function blueBlurCombo(c: HeroCtx) {
   const { scene, s, target, home, dir } = c;
   const cam = scene.cameras.main;
-  const tc = c.center(target);
-  s.play(c.p.anim('spin'));
-  // 1. optoeren: elke rev een ring die naar binnen klapt, stof en vonken naar achteren
-  for (let rev = 0; rev < 3; rev++) {
-    s.anims.timeScale = 1.5 + rev;
-    audio.sfx('spindash', { volume: 0.4 + rev * 0.15 });
-    const ring = scene.add.circle(s.x, s.y - 14, 34 - rev * 4).setStrokeStyle(2, rev === 2 ? 0xffd23a : 0x8ad8ff, 0.9).setFillStyle(0, 0).setDepth(16).setBlendMode(ADD);
-    scene.tweens.add({ targets: ring, scale: 0.2, alpha: 0, duration: 220, ease: 'Quad.easeIn', onComplete: () => ring.destroy() });
-    for (let i = 0; i < 4 + rev * 2; i++) {
-      const sp = scene.add.rectangle(s.x - dir * 8, s.y - rnd(2, 10), rnd(3, 6), 1, 0xffe27a, 1).setDepth(16).setBlendMode(ADD);
-      scene.tweens.add({ targets: sp, x: sp.x - dir * rnd(20, 50), y: sp.y - rnd(0, 14), alpha: 0, duration: rnd(160, 260), onComplete: () => sp.destroy() });
-    }
-    c.dust(s.x - dir * 12, s.y, 2 + rev);
-    await tween(scene, { targets: s, x: home.x - dir * (4 + rev * 2), duration: 45, yoyo: true, repeat: 1 });
-  }
-  s.anims.timeScale = 1;
-  // 2. los! schokgolf, vuurstaart en snelheidslijnen
-  shockwave(scene, s.x, s.y - 14, 0xffffff, 50, 260);
-  cam.shake(120, 0.005);
-  audio.sfx('spinrelease', { volume: 0.9 });
-  if (scene.anims.exists(c.p.anim('dashfire'))) s.play(c.p.anim('dashfire'));
-  const stop = speedLines(scene, dir, 360);
-  const trail = scene.time.addEvent({ delay: 18, loop: true, callback: () => c.ghost(s, 0xffd23a) });
-  const hitX = tc.x - dir * 6, footY = tc.y + c.bodyHeight(s) * 0.45;
-  await tween(scene, { targets: s, x: hitX, y: footY, duration: 170, ease: 'Expo.easeIn' });
-  // 3. raak: een blauw-witte knal, en hij schiet er dwars doorheen
-  if (!c.missed) {
-    c.strike();
-    cam.flash(90, 200, 230, 255);
-    shockwave(scene, tc.x, tc.y, 0x8ad8ff, 70, 300);
-    for (let i = 0; i < 6; i++) {
-      const l = scene.add.rectangle(tc.x, tc.y, rnd(24, 44), 2, 0xffffff, 1).setDepth(19).setBlendMode(ADD).setRotation(rndF(-0.5, 0.5));
-      scene.tweens.add({ targets: l, x: tc.x + dir * rnd(30, 60), scaleX: 0.2, alpha: 0, duration: 220, onComplete: () => l.destroy() });
-    }
-  }
-  await tween(scene, { targets: s, x: hitX + dir * 70, alpha: 0.8, duration: 120, ease: 'Quad.easeOut' });
+  // net buiten bereik van het doelwit, zodat de vuist en de voet het raken in plaats van erin te staan
+  const gap = Math.max(34, target.displayWidth * 0.5 + 22);
+  const pos = closeIn(c, gap);
+  const tc = pos.tc;
+  const facing = s.flipX;
+  const hitAt = { x: tc.x - dir * 6, y: tc.y };
+  const hit = (size: number, rate: number) => {
+    if (c.missed) { audio.sfx('whoosh', { volume: 0.5, rate }); return; }
+    audio.sfx('punch', { volume: 0.7, rate });
+    impact(scene, hitAt.x + rnd(-4, 4), hitAt.y + rnd(-8, 6), dir, 0x8ad8ff, size);
+    jolt(scene, target, dir);
+    cam.shake(50, 0.003);
+  };
+
+  // 1. wegsprinten: stof, een blauwe schokgolf, snelheidslijnen en een spoor van schimmen
+  s.play('sonic_sbleap');
+  s.anims.timeScale = 1.6;
+  audio.sfx('dash', { volume: 0.8 });
+  c.dust(s.x - dir * 10, s.y, 4);
+  shockwave(scene, s.x, s.y - 14, 0x5aa8ff, 36, 220);
+  const stopLines = speedLines(scene, dir, 240, 0x9ad8ff);
+  let trail = scene.time.addEvent({ delay: 16, loop: true, callback: () => c.ghost(s, 0x5aa8ff) });
+  await tween(scene, { targets: s, x: pos.x, y: pos.y, duration: 170, ease: 'Expo.easeIn' });
   trail.remove();
-  stop();
-  // 4. remmen, en met een boog terug
-  s.setAlpha(1).play(c.p.anim('spin'));
-  await tween(scene, { targets: s, x: (s.x + home.x) / 2, y: home.y - 80, duration: 280, ease: 'Quad.easeOut' });
-  await tween(scene, { targets: s, x: home.x, y: home.y, duration: 240, ease: 'Quad.easeIn' });
+  stopLines();
+  s.anims.timeScale = 1;
+
+  // 2. punch, 3. kick (Sonic Battle: 1st en 2nd attack)
+  await playUntil(scene, s, 'sonic_punch', '13_3', 400);
+  hit(1, 1);
+  await sleep(scene, 40);
+  await playUntil(scene, s, 'sonic_kick', '14_3', 400);
+  hit(1.1, 1.08);
+  await sleep(scene, 50);
+
+  // 4. weg in een flits, en van alle kanten tegelijk: schimmen die om het doelwit heen uithalen
+  s.setAlpha(0);
+  audio.sfx('dash', { volume: 0.5, rate: 1.3 });
+  const spots: Array<[number, number, string]> = [
+    [-1, 0, 'sb_sonic_13_3'], [1, -18, 'sb_sonic_14_3'], [-1, -26, 'sb_sonic_14_2'],
+    [1, 0, 'sb_sonic_13_3'], [-1, -10, 'sb_sonic_13_2'], [1, -30, 'sb_sonic_14_3'],
+  ];
+  for (let i = 0; i < spots.length; i++) {
+    const [side, dy, frame] = spots[i];
+    // side -1 = jouw kant van het doelwit, +1 = erachter (en dan kijkt de schim de andere kant op)
+    const gx = tc.x + side * dir * (gap - 4 + rnd(0, 6));
+    afterimage(c, gx, pos.y + dy, frame, side < 0 ? facing : !facing);
+    if (!c.missed) {
+      audio.sfx('punch', { volume: 0.55, rate: 1.1 + i * 0.06 });
+      impact(scene, tc.x + side * dir * 6, tc.y + dy * 0.5 + rnd(-4, 4), side < 0 ? dir : -dir, 0xffffff, 0.8);
+      jolt(scene, target, side < 0 ? dir : -dir, 2);
+    } else audio.sfx('whoosh', { volume: 0.35, rate: 1.2 + i * 0.05 });
+    await sleep(scene, 55);
+  }
+  cam.shake(90, 0.004);
+
+  // 5. weer zichtbaar recht voor het doelwit: de top kick die alles afmaakt
+  s.setPosition(pos.x, pos.y).setAlpha(1);
+  c.ghost(s, 0x5aa8ff);
+  await playUntil(scene, s, 'sonic_topkick', '15_5', 600);
+  c.strike();
+  if (!c.missed) {
+    audio.sfx('punch', { volume: 1, rate: 0.85 });
+    impact(scene, hitAt.x, hitAt.y - 6, dir, 0xffd23a, 1.8);
+    shockwave(scene, tc.x, tc.y, 0x8ad8ff, 64, 300);
+    cam.flash(80, 200, 230, 255);
+    cam.shake(140, 0.006);
+  }
+  await sleep(scene, 260);
+
+  // 6. in een flits terug naar huis, en daar weer omdraaien
+  s.setFlipX(!facing).play('sonic_sbleap');
+  s.anims.timeScale = 1.6;
+  audio.sfx('dash', { volume: 0.6 });
+  trail = scene.time.addEvent({ delay: 16, loop: true, callback: () => c.ghost(s, 0x5aa8ff) });
+  await tween(scene, { targets: s, x: home.x, y: home.y, duration: 200, ease: 'Quad.easeIn' });
+  trail.remove();
+  s.anims.timeScale = 1;
+  s.setFlipX(facing);
   s.play(c.p.anim('idle'));
   c.dust(s.x, s.y, 4);
 }

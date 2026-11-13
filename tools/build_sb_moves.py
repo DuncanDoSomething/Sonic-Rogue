@@ -124,6 +124,12 @@ CHAR_ANIMS = {
     'cream_call':         ('cream', [(15, 1, 60), (15, 2, 100), (15, 3, 80), (15, 4, 80), (15, 5, 80), (15, 6, 80), (15, 7, 80),
                                      (15, 8, 80), (15, 9, 80), (15, 10, 80), (15, 11, 80)], None, 0),
     'cream_point':        ('cream', [(15, 12, 90), (15, 13, 300)], None, 0),
+    # Light Speed Combo (Spin Dash): wegsprinten, punch, kick, top kick
+    'sonic_sbleap':       ('sonic', [(5, c) for c in range(1, 7)], 20, -1),
+    'sonic_punch':        ('sonic', [(13, 0, 30), (13, 1, 30), (13, 2, 40), (13, 3, 60), (13, 4, 50), (13, 5, 50)], None, 0),
+    'sonic_kick':         ('sonic', [(14, 0, 30), (14, 1, 30), (14, 2, 40), (14, 3, 60), (14, 4, 50), (14, 5, 50)], None, 0),
+    'sonic_topkick':      ('sonic', [(15, 0, 40), (15, 1, 40), (15, 2, 50), (15, 4, 70), (15, 5, 60), (15, 6, 60),
+                                     (15, 7, 80), (15, 8, 160)], None, 0),
     # ---- 1 Boost
     # Homing Attack: oprollen tot een bal met een blauwe draaikolk, en weer uitrollen
     'sonic_ballet':       ('sonic', [(9, c) for c in (0, 1, 2)], 20, -1),
