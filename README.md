@@ -14,7 +14,7 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 | ![Title screen](docs/title.png) | ![Character select](docs/character-select.png) |
 | ![Battle in Music Plant](docs/battle.png) | ![Switching characters: HP and Boost per teammate](docs/team.png) |
 | ![Buff icons with hover info](docs/hud-tooltip.png) | ![Rewards and shop, with your whole team](docs/rewards.png) |
-| ![Ultimate cut-in](docs/cut-in.png) | ![Super Sonic Combo](docs/super-sonic.png) |
+| ![Ultimate cut-in](docs/cut-in.png) | ![Super Sonic's Super Combo](docs/super-sonic.png) |
 | ![Knuckles' Maximum Heat](docs/maximum-heat.png) | ![Character kits (I)](docs/kits.png) |
 | ![Practice fight with Tails](docs/tutorial.png) | ![How to Play, by topic](docs/how-to-play.png) |
 | ![Shadow's Chaos Control: time stops](docs/chaos-control.png) | ![Super Shadow's Chaos Blast](docs/super-shadow.png) |
