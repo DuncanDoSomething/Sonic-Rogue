@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // De eigen moves van het team, zonder Shadow (die staat in shadowMoves.ts):
 // 1 Boost: Homing Attack, Copter Dive, Glide Attack, Chao Attack, Piko Hammer.
-// 2-3 Boost: Blue Blur Combo, Glove Punch, Knuckle Punch, Hammer Twirl en Chao Cheer.
+// 2-3 Boost: Light Speed Combo, Glove Punch, Knuckle Punch, Hammer Twirl en Chao Cheer.
 // Net als shadowMoves.ts alleen beeld en geluid; de schade gaat via `strike()` uit de BattleScene.
 // Sprites: de eigen atlas van elk character, plus 'sbmoves' (Sonic Battle-frames en effecten, tools/build_sb_moves.py).
 // Elke animatie doet wat de naam van de move zegt: Knuckle Punch is een vuist, Glove Punch een boxhandschoen, enz.
@@ -102,7 +102,7 @@ async function hopHome(c: HeroCtx) {
   c.dust(s.x, s.y, 4);
 }
 
-// ---------------------------------------------------------------- Sonic: Blue Blur Combo (de move met id spinDash)
+// ---------------------------------------------------------------- Sonic: Light Speed Combo (de move met id spinDash)
 /** Een klap met een witte knal en een paar lijntjes eromheen. */
 function impact(scene: Phaser.Scene, x: number, y: number, dir: number, color: number, size = 1) {
   const ring = scene.add.circle(x, y, 6 * size, color, 0.9).setDepth(20).setBlendMode(ADD);
@@ -131,7 +131,7 @@ function afterimage(c: HeroCtx, x: number, y: number, frame: string, faceRight: 
  * Geen bal deze keer: in een blauwe flits naar het doelwit, punch, kick, een reeks klappen van alle kanten
  * die te snel zijn om te zien, en een top kick als afsluiter. Dan in een flits weer terug.
  */
-export async function blueBlurCombo(c: HeroCtx) {
+export async function lightSpeedCombo(c: HeroCtx) {
   const { scene, s, target, home, dir } = c;
   const cam = scene.cameras.main;
   // net buiten bereik van het doelwit, zodat de vuist en de voet het raken in plaats van erin te staan

@@ -16,7 +16,7 @@ import { addHelpButton, addMenuButton } from './ui';
 import { HUD, RingCounter, checkerBand, sonicPanel, tooltip } from './hud';
 import { richText } from './richText';
 import { audio, MusicKey } from '../audio';
-import { chaoAttack, chaoCheer, chaoFriends, copterDive, glideAttack, glovePunch, hammerTwirl, blueBlurCombo, homingAttack, knucklePunch, pikoHammer, type HeroCtx } from './heroMoves';
+import { chaoAttack, chaoCheer, chaoFriends, copterDive, glideAttack, glovePunch, hammerTwirl, lightSpeedCombo, homingAttack, knucklePunch, pikoHammer, type HeroCtx } from './heroMoves';
 import { pickTalk, pickFinalTalk } from '../data/dialogue';
 import { playTalk, type TalkHandle } from './talk';
 import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
@@ -49,7 +49,7 @@ const HERO_MOVES: Record<string, [string, (c: HeroCtx) => Promise<void>]> = {
   glideAttack: ['knuckles', glideAttack],
   hammerSmash: ['amy', pikoHammer],
   cheeseAttack: ['cream', chaoAttack],
-  spinDash: ['sonic', blueBlurCombo],
+  spinDash: ['sonic', lightSpeedCombo],
   glovePunch: ['tails', glovePunch],
   drillPunch: ['knuckles', knucklePunch],
   hammerTwirl: ['amy', hammerTwirl],
@@ -869,7 +869,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
       const m = id ? MOVES[id] : undefined;
       // gratis (Shadow na een KO) = groen
       const color = !m ? HUD.inkMuted : !this.player.canUse(m) ? HUD.inkMuted : this.player.isFree(m) ? '#108a30' : m.anim === 'ultimate' ? '#d04000' : HUD.ink;
-      const t = this.add.text(26 + (i % 2) * 150, PANEL_Y + 15 + Math.floor(i / 2) * 15, m ? m.name : '-',
+      // kolom 2 iets naar rechts, zodat lange namen (Light Speed Combo) niet tegen elkaar aan lopen
+      const t = this.add.text(24 + (i % 2) * 154, PANEL_Y + 15 + Math.floor(i / 2) * 15, m ? m.name : '-',
         { fontFamily: FONT, fontSize: '8px', color });
       // groene gloed = type-voordeel tegen deze vijand, oranje = nadeel (zoals in PokéRogue)
       const eff = m && !m.heal && m.power > 0 ? typeMultiplier(this.player.type, this.enemy.type) : 1;

@@ -14,7 +14,7 @@ Non-commercial fan project. Not affiliated with SEGA or Sonic Team.
 | ![Title screen](docs/title.png) | ![Character select](docs/character-select.png) |
 | ![Battle in Music Plant](docs/battle.png) | ![Switching characters: HP and Boost per teammate](docs/team.png) |
 | ![Buff icons with hover info](docs/hud-tooltip.png) | ![Rewards and shop, with your whole team](docs/rewards.png) |
-| ![Ultimate cut-in](docs/cut-in.png) | ![Super Sonic's Light Speed Attack](docs/super-sonic.png) |
+| ![Ultimate cut-in](docs/cut-in.png) | ![Super Sonic Combo](docs/super-sonic.png) |
 | ![Knuckles' Maximum Heat](docs/maximum-heat.png) | ![Character kits (I)](docs/kits.png) |
 | ![Practice fight with Tails](docs/tutorial.png) | ![How to Play, by topic](docs/how-to-play.png) |
 | ![Shadow's Chaos Control: time stops](docs/chaos-control.png) | ![Super Shadow's Chaos Blast](docs/super-shadow.png) |
@@ -62,7 +62,7 @@ Mouse and touch work too.
 - **GitHub Actions** runs both test suites on every push to `main`, then builds the game and deploys it to GitHub Pages. A failing test blocks the deploy, and the Playwright report (screenshots and traces) is uploaded when something breaks.
 - A **balance simulation** (`npm run sim`) plays whole runs without graphics, with the same rules as the game: every team of 3, a few hundred runs each, and writes the results to `sim/results.json`. `npm run sim -- --exp gloveOnce` tries a balance change first (see `sim/run.ts`).
 - An **asset pipeline in Python** (Pillow, NumPy, SciPy) that cuts sprites out of ripped sprite sheets, aligns animation frames on the character's body and builds Phaser texture atlases. Idles that need pixel-perfect alignment are rebuilt from upscaled reference GIFs by sampling the pixel grid back to sprite resolution.
-- Layered idles like the Advance games (stand, get impatient, then sit or nap), run-ups, anticipation, knockback and landing dust on attacks, upgraded move animations (lock-on Homing Attack, Sonic's Blue Blur Combo, fire-blast Knuckle Punch, spinning discs), ultimates and hit effects are built from sprite animations plus code-drawn effects (lightning, flames, shockwaves, masked cut-in bands), with a short hit-stop on every hit.
+- Layered idles like the Advance games (stand, get impatient, then sit or nap), run-ups, anticipation, knockback and landing dust on attacks, upgraded move animations (lock-on Homing Attack, Sonic's Light Speed Combo, fire-blast Knuckle Punch, spinning discs), ultimates and hit effects are built from sprite animations plus code-drawn effects (lightning, flames, shockwaves, masked cut-in bands), with a short hit-stop on every hit.
 - The intro recreates the Mode 7 ocean from Sonic Advance 2 by drawing the water line by line on a canvas, with perspective and distance blending.
 - Game data (characters, moves, zones, items) is kept apart from the scenes, so balance changes don't touch battle code.
 
