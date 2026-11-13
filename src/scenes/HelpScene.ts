@@ -147,7 +147,7 @@ export function categories(): Category[] {
             `start a run with ${START_BOOST}, and it stays`,
             'between waves.',
             '',
-            'Spin Attack is free and gives +1',
+            'Attack is free and gives +1',
             '(Shadow: +2). Getting hit: +1.',
             'Stronger moves cost 1 to 4 Boost',
             'and never miss (an ACC drop, like',

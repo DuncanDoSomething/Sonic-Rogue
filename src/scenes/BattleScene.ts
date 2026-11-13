@@ -16,7 +16,7 @@ import { addHelpButton, addMenuButton } from './ui';
 import { HUD, RingCounter, checkerBand, sonicPanel, tooltip } from './hud';
 import { richText } from './richText';
 import { audio, MusicKey } from '../audio';
-import { chaoAttack, chaoCheer, chaoFriends, copterDive, glideAttack, glovePunch, hammerTwirl, lightSpeedCombo, homingAttack, knucklePunch, pikoHammer, type HeroCtx } from './heroMoves';
+import { basicAttack, chaoAttack, chaoCheer, chaoFriends, copterDive, glideAttack, glovePunch, hammerTwirl, hasBasicAttack, lightSpeedCombo, homingAttack, knucklePunch, pikoHammer, type HeroCtx } from './heroMoves';
 import { pickTalk, pickFinalTalk } from '../data/dialogue';
 import { playTalk, type TalkHandle } from './talk';
 import { bigText, chaoBlessing, cutIn, fxOnce, hearts, playUltimate, shockwave, type UltCtx } from './ultimates';
@@ -1882,6 +1882,8 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     }
     this.flinched.clear();
     this.player.guarding = false;
+    // niemand viel aan: de guard-pose weer los
+    if (this.hero.anims.currentAnim?.key.endsWith('_guard')) this.hero.play(this.player.anim('idle'));
     await this.tickSuper();
 
     if (this.enemy.fainted) return this.winWave();
@@ -2362,7 +2364,9 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     const run = this.anims.exists(p.anim('run')) ? p.anim('run') : p.anim('spin');
     // aanloop: eerst even door de knieën (niet bij de ultimate en de Spin Dash, die hebben hun eigen opbouw)
     // de grote moves van het team hebben hun eigen animatie (heroMoves.ts); die zetten de sprite zelf weer thuis
-    const signature = HERO_MOVES[move.id];
+    // Attack (spinAttack) heeft per character een eigen klap
+    const signature: [string, (c: HeroCtx) => Promise<void>] | undefined =
+      move.id === 'spinAttack' && hasBasicAttack(p.def.id) ? [p.def.id, basicAttack] : HERO_MOVES[move.id];
     if (signature && p.def.id === signature[0]) {
       await signature[1]({ ...this.ultCtx(s, p, target, home, dir, strike), missed, dust: (x, y, n) => this.dust(x, y, n), bodyHeight: spr => this.bodyHeight(spr),
         lockOn: t => this.lockOn(t), rotorWash: (x, y) => this.rotorWash(x, y) });
@@ -3643,6 +3647,12 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
   private async doGuard(att: Fighter) {
     att.guarding = true;
     const spr = att === this.player ? this.hero : this.foe;
+    // vuisten omhoog (Sonic Battle: Guarding) en zo blijven staan tot de klap komt of de beurt voorbij is
+    const pose = `${att.def.id}_guard`;
+    if (this.anims.exists(pose)) {
+      spr.play(pose);
+      this.dust(spr.x, spr.y, 3);
+    }
     this.guardFx(spr);
     await this.wait(350);
     await this.say(`${this.who(att)} raised his fists and is on guard!`, 400);
@@ -3667,6 +3677,13 @@ export class BattleScene extends Phaser.Scene implements TutorialHost {
     shockwave(this, c.x, c.y, 0xff9a8a, 30, 220);
     this.popNumber(spr.x, spr.y - this.bodyHeight(spr) - 4, 'BLOCK', '#ff9a8a');
     this.cameras.main.shake(80, 0.003);
+    // in de guard-pose: een stukje naar achteren geschoven door de klap, voeten blijven staan
+    if (spr.anims.currentAnim?.key.endsWith('_guard')) {
+      const back = spr === this.hero ? -1 : 1;
+      const x0 = spr.x;
+      this.tweens.add({ targets: spr, x: x0 + back * 8, duration: 70, ease: 'Quad.easeOut', yoyo: true, hold: 120 });
+      this.dust(x0 + back * 6, spr.y, 3);
+    }
   }
   /** Maximum Heat (Knuckles): een beurt opladen; de beurt erna duikt hij vanzelf. */
   private async doWindup(att: Fighter, move: MoveDef) {

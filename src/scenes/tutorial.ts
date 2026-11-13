@@ -31,7 +31,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   { showOn: 'command', text: "Hey Sonic! Let's practice before the real thing. I'll walk you through a fight." },
   { focus: 'pBox', text: 'This is you: your HP, and below it the Boost meter. Boost powers your strongest moves.' },
   { focus: 'eBox', serious: true, text: "That's the foe. Bring its HP down to zero to win the wave." },
-  { focus: 'move:spinAttack', text: "Pick FIGHT, then Spin Attack. It's free and gives you +1 Boost!", allow: ['cmd:0', 'move:spinAttack'], waitFor: 'move:spinAttack' },
+  { focus: 'move:spinAttack', text: "Pick FIGHT, then Attack. It's free and gives you +1 Boost!", allow: ['cmd:0', 'move:spinAttack'], waitFor: 'move:spinAttack' },
   { showOn: 'command', focus: 'pBox', text: 'Nice! Your Boost went up. Getting hit gives +1 Boost too.' },
   { focus: 'move:homingAttack', text: 'Now Homing Attack. It costs 1 Boost, never misses and always goes first.', allow: ['cmd:0', 'move:homingAttack'], waitFor: 'move:homingAttack' },
   { showOn: 'command', prep: 'hurt', focus: 'bag', serious: true, text: "You took some hits. Your bag is up here: hover it to see what's inside." },

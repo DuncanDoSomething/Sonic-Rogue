@@ -107,6 +107,8 @@ sheets['chao'] = Sheet(os.path.join(CS, 'Cream', '7164.png'), white_bg_rows=400)
 CHAR_ANIMS = {
     # Knuckle Punch: aanlopen, arm als een windmolen rond laten draaien, dan de Megaton Hook
     'knuckles_sbdash':    ('knuckles', [(19, 3), (19, 4)], 14, -1),
+    # Guard: vuisten omhoog en zo blijven staan tot de klap komt
+    'knuckles_guard':     ('knuckles', [(10, 0, 50), (10, 1, 60), (10, 2, 100)], None, 0),
     'knuckles_megaton':   ('knuckles', [(15, 0, 60), (15, 1, 60), (15, 2, 80)], None, 0),
     'knuckles_windmill':  ('knuckles', [(15, c) for c in range(3, 10)], 24, -1),
     'knuckles_hook':      ('knuckles', [(15, 10, 50), (15, 11, 50), (15, 12, 140), (15, 13, 320)], None, 0),
@@ -124,6 +126,12 @@ CHAR_ANIMS = {
     'cream_call':         ('cream', [(15, 1, 60), (15, 2, 100), (15, 3, 80), (15, 4, 80), (15, 5, 80), (15, 6, 80), (15, 7, 80),
                                      (15, 8, 80), (15, 9, 80), (15, 10, 80), (15, 11, 80)], None, 0),
     'cream_point':        ('cream', [(15, 12, 90), (15, 13, 300)], None, 0),
+    # Attack (basismove): per character de eerste aanval uit Sonic Battle
+    'tails_tailwhip':     ('tails', [(13, 0, 40), (13, 1, 40), (13, 2, 50), (13, 3, 60), (13, 4, 50), (13, 5, 50), (13, 6, 60), (13, 7, 80)], None, 0),
+    'knuckles_straight':  ('knuckles', [(12, 0, 40), (12, 1, 40), (12, 2, 50), (12, 3, 80), (12, 4, 60), (12, 5, 80)], None, 0),
+    'amy_swing':          ('amy', [(16, 1, 50), (16, 2, 50), (16, 3, 60), (16, 4, 40), (16, 5, 40), (16, 6, 50), (16, 7, 50),
+                                   (16, 8, 50), (16, 9, 60), (16, 10, 60), (16, 11, 70), (16, 12, 90)], None, 0),
+    'cream_arch':         ('cream', [(12, 0, 40), (12, 1, 40), (12, 2, 50), (12, 3, 50), (12, 4, 80), (12, 5, 60), (12, 6, 80)], None, 0),
     # Light Speed Combo (Spin Dash): wegsprinten, punch, kick, top kick
     'sonic_sbleap':       ('sonic', [(5, c) for c in range(1, 7)], 20, -1),
     'sonic_punch':        ('sonic', [(13, 0, 30), (13, 1, 30), (13, 2, 40), (13, 3, 60), (13, 4, 50), (13, 5, 50)], None, 0),

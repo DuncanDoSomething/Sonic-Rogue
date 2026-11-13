@@ -681,3 +681,63 @@ export function chaoFriends(scene: Phaser.Scene, s: Sprite): () => Promise<void>
     await sleep(scene, 300);
   };
 }
+
+// ---------------------------------------------------------------- Attack (basismove, id spinAttack)
+/** Per character de eerste aanval uit Sonic Battle: animatie, het frame waarop de klap raakt, en afstand tot het doelwit. */
+const BASIC: Record<string, { key: (c: HeroCtx) => string; hit: string; gap: number; approach?: string }> = {
+  sonic: { key: () => 'sonic_punch', hit: '13_3', gap: 30 },
+  // Tails vliegt erheen met zijn staarten (zijn ren-animatie zag er raar uit op die afstand)
+  tails: { key: () => 'tails_tailwhip', hit: '13_3', gap: 30, approach: 'tails_sbfly' },
+  knuckles: { key: () => 'knuckles_straight', hit: '12_3', gap: 30 },
+  amy: { key: () => 'amy_swing', hit: '16_5', gap: 34 },
+  cream: { key: () => 'cream_arch', hit: '12_4', gap: 30 },
+  shadow: { key: c => c.p.anim('chop'), hit: '14_3', gap: 30 },
+};
+export const hasBasicAttack = (id: string) => id in BASIC;
+
+/** Animatie die tot het eind afspeelt (of tot max ms, voor de zekerheid). */
+function playOut(scene: Phaser.Scene, s: Sprite, max = 800) {
+  return new Promise<void>(r => {
+    let done = false;
+    const fin = () => { if (!done) { done = true; r(); } };
+    s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, fin);
+    scene.time.delayedCall(max, fin);
+  });
+}
+
+/**
+ * Attack: geen balletje meer, maar een korte sprint naar het doelwit en dan de eigen klap van het character
+ * (Sonic een punch, Tails een staartzwiep, Knuckles een rechte, Amy haar hamer, Cream een sprongetje, Shadow een chop).
+ * Heen en terug in een rechte lijn, ook naar een vliegend doelwit.
+ */
+export async function basicAttack(c: HeroCtx) {
+  const { scene, s, target, home, dir } = c;
+  const cfg = BASIC[c.p.def.id];
+  const key = cfg.key(c);
+  const facing = s.flipX;
+  const pos = closeIn(c, Math.max(cfg.gap, target.displayWidth * 0.5 + cfg.gap - 10));
+  const high = pos.y < home.y - 16;
+  const approach = cfg.approach ?? c.p.anim('run');
+
+  // 1. aanloop: in een rechte lijn op het doelwit af (bij een vliegend doelwit dus schuin omhoog)
+  s.play(approach);
+  c.dust(s.x - dir * 8, s.y, 3);
+  if (high) audio.sfx('jump', { volume: 0.5 });
+  await tween(scene, { targets: s, x: pos.x, y: pos.y, duration: high ? 280 : 240, ease: 'Quad.easeIn' });
+
+  // 2. de klap
+  await playUntil(scene, s, key, cfg.hit, 600);
+  c.strike();
+  if (!c.missed) {
+    audio.sfx('punch', { volume: 0.7 });
+    impact(scene, pos.tc.x - dir * 6, pos.tc.y + rnd(-4, 4), dir, 0xffffff, 1.1);
+  } else audio.sfx('whoosh', { volume: 0.5 });
+  await playOut(scene, s, 500);
+
+  // 3. ook in een rechte lijn terug naar huis
+  s.setFlipX(!facing).play(approach);
+  await tween(scene, { targets: s, x: home.x, y: home.y, duration: high ? 300 : 260, ease: 'Quad.easeInOut' });
+  s.setFlipX(facing);
+  s.play(c.p.anim('idle'));
+  c.dust(s.x, s.y, 3);
+}

@@ -376,7 +376,7 @@ export interface MoveDef {
 
 export const MOVES: Record<string, MoveDef> = {
   // --- team
-  spinAttack:   { id: 'spinAttack', name: 'Spin Attack', power: 40, accuracy: 95, priority: 0, anim: 'spin', boostGain: 1, desc: 'Curls into a ball and rolls into the foe.' },
+  spinAttack:   { id: 'spinAttack', name: 'Attack', power: 40, accuracy: 95, priority: 0, anim: 'spin', boostGain: 1, desc: 'A quick basic attack. Free, and builds Boost.' },
   homingAttack: { id: 'homingAttack', name: 'Homing Attack', power: 50, scaling: 'speed', speedTable: [[4, 80], [3, 70], [2, 60], [1, 50], [0, 40]], accuracy: 100, priority: 1, anim: 'homing', cost: 1, selfStages: { spd: 1 }, extraHit: 0.5, desc: 'Locks on and strikes first. Raises SPD by 1. Hits harder the faster Sonic is (40-80). 50% chance to home in for a second hit.' },
   spinDash:     { id: 'spinDash', name: 'Light Speed Combo', power: 70, scaling: 'speed', accuracy: 100, priority: 0, anim: 'dash', cost: 2, ignoreDefBoost: true, desc: 'A flurry of punches and kicks too fast to see. The faster Sonic is than the foe, the harder it hits (50-150). Ignores the foe\'s DEF boosts.' },
   glovePunch:   { id: 'glovePunch', name: 'Glove Punch', power: 70, accuracy: 100, priority: 0, anim: 'punch', cost: 3, stun: [2, 2], stunOnce: true, desc: 'Pulls a boxing glove out of thin air, swings it on its chain and lets it fly. Stuns the foe for 2 turns (once per fight).' },

@@ -134,9 +134,9 @@ export const REWARDS: RewardDef[] = [
     available: c => c.buffs.dodgeWaves === 0,
     apply: c => { c.buffs.dodgeNext = false; c.buffs.dodgeWaves = 3; return 'Invincible+! The first attack in each of the next 3 waves will miss.'; } },
   // ---- ultra rare
-  { id: 'moveChip', name: 'Move Chip', tier: 'ultraRare', icon: 'movechip', desc: () => `Spin Attack\n+${MOVE_CHIP_POWER} power`, target: 'pick',
+  { id: 'moveChip', name: 'Move Chip', tier: 'ultraRare', icon: 'movechip', desc: () => `Basic Attack\n+${MOVE_CHIP_POWER} power`, target: 'pick',
     available: c => c.party.some(f => !f.spinChip), canTarget: f => !f.spinChip,
-    apply: (_c, t) => { t!.spinChip = true; return `${t!.name}'s Spin Attack got ${MOVE_CHIP_POWER} more power!`; } },
+    apply: (_c, t) => { t!.spinChip = true; return `${t!.name}'s basic Attack got ${MOVE_CHIP_POWER} more power!`; } },
 ];
 
 /** Tier trekken; `min` = minimaal deze tier (na een Eggman Alarm). */
